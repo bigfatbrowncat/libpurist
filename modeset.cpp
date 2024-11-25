@@ -41,11 +41,11 @@
 
 
 // The static fields for class modeset
-std::list<std::shared_ptr<Display>> modeset::modeset_list;
-std::set<std::shared_ptr<modeset::page_flip_data>> modeset::page_flip_data_cache;
+std::list<std::shared_ptr<Display>> Card::modeset_list;
+std::set<std::shared_ptr<Card::page_flip_data>> Card::page_flip_data_cache;
 
 
-modeset::modeset(const char *node)
+Card::Card(const char *node)
 {
 	int ret;
 	uint64_t has_dumb;
@@ -75,7 +75,7 @@ modeset::modeset(const char *node)
  * So lets be safe here and simply wait for any page-flips to complete. This is
  * a blocking operation, but it's mostly just <16ms so we can ignore that.
  */
-modeset::~modeset() {
+Card::~Card() {
     // Cleanup
     drmEventContext ev;
 	int ret;
@@ -83,7 +83,7 @@ modeset::~modeset() {
 	/* init variables */
 	memset(&ev, 0, sizeof(ev));
 	ev.version = DRM_EVENT_CONTEXT_VERSION;
-	ev.page_flip_handler = modeset::modeset_page_flip_event;
+	ev.page_flip_handler = Card::modeset_page_flip_event;
 
 	while (!modeset_list.empty()) {
 		/* remove from global list */
@@ -128,7 +128,7 @@ modeset::~modeset() {
  * modeset_prepare() stays the same.
  */
 
-int modeset::prepare()
+int Card::prepare()
 {
 	drmModeRes *res;
 	drmModeConnector *conn;
@@ -184,7 +184,7 @@ int modeset::prepare()
 	return 0;
 }
 
-int modeset::set_modes() {
+int Card::set_modes() {
 	struct Display *iter;
 	struct modeset_buf *buf;
 	int ret;
@@ -208,7 +208,7 @@ int modeset::set_modes() {
  * modeset_setup_dev() stays the same.
  */
 
-int modeset::setup_dev( drmModeRes *res, drmModeConnector *conn,
+int Card::setup_dev( drmModeRes *res, drmModeConnector *conn,
 			     std::shared_ptr<Display> dev)
 {
 	int ret;
@@ -269,7 +269,7 @@ int modeset::setup_dev( drmModeRes *res, drmModeConnector *conn,
  * modeset_find_crtc() stays the same.
  */
 
-int modeset::find_crtc( drmModeRes *res, drmModeConnector *conn,
+int Card::find_crtc( drmModeRes *res, drmModeConnector *conn,
 			     std::shared_ptr<Display> dev)
 {
 	drmModeEncoder *enc;
@@ -350,7 +350,7 @@ int modeset::find_crtc( drmModeRes *res, drmModeConnector *conn,
  * modeset_create_fb() stays the same.
  */
 
-int modeset::create_fb( struct modeset_buf *buf)
+int Card::create_fb( struct modeset_buf *buf)
 {
 	struct drm_mode_create_dumb creq;
 	struct drm_mode_destroy_dumb dreq;
@@ -421,7 +421,7 @@ err_destroy:
  * modeset_destroy_fb() stays the same.
  */
 
-void modeset::destroy_fb( struct modeset_buf *buf)
+void Card::destroy_fb( struct modeset_buf *buf)
 {
 	struct drm_mode_destroy_dumb dreq;
 
@@ -446,7 +446,7 @@ void modeset::destroy_fb( struct modeset_buf *buf)
  * allows to wait for outstanding page-flips during cleanup.
  */
 
-void modeset::modeset_page_flip_event(int fd, unsigned int frame,
+void Card::modeset_page_flip_event(int fd, unsigned int frame,
 				    unsigned int sec, unsigned int usec, void *data)
 {
 	page_flip_data* user_data = reinterpret_cast<page_flip_data*>(data);
@@ -509,7 +509,7 @@ void modeset::modeset_page_flip_event(int fd, unsigned int frame,
  * (you need to press RETURN after each keyboard input to make this work).
  */
 
-void modeset::draw()
+void Card::draw()
 {
 	int ret;
 	fd_set fds;
@@ -527,7 +527,7 @@ void modeset::draw()
 	 * introduced the page_flip_handler, so we use that. */
 	ev.version = 2;
 	
-	ev.page_flip_handler = modeset::modeset_page_flip_event; //  unsigned int frame, unsigned int sec, unsigned int usec, void *data
+	ev.page_flip_handler = Card::modeset_page_flip_event; //  unsigned int frame, unsigned int sec, unsigned int usec, void *data
 
 	/* redraw all outputs */
 	for (auto& iter : modeset_list) {
@@ -597,7 +597,7 @@ void modeset::draw()
  * did, too.
  */
 
-void modeset::draw_dev( Display* dev)
+void Card::draw_dev( Display* dev)
 {
 	struct modeset_buf *buf;
 	unsigned int j, k, off;

@@ -83,12 +83,12 @@ public:
 };
 
 
-class modeset {
+class Card {
 private:
     struct page_flip_data {
-        modeset* ms;
+        Card* ms;
         Display* dev;
-        page_flip_data(modeset* ms, Display* dev) : ms(ms), dev(dev) { }
+        page_flip_data(Card* ms, Display* dev) : ms(ms), dev(dev) { }
     };
 
     static void modeset_page_flip_event(int fd, unsigned int frame, unsigned int sec, unsigned int usec, void *data);
@@ -105,11 +105,11 @@ private:
     int fd;
 
 public:
-    modeset(const char *node);
+    Card(const char *node);
 
     int prepare();
     int set_modes();
     void draw();
     
-    virtual ~modeset();
+    virtual ~Card();
 };

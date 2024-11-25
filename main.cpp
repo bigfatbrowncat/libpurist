@@ -21,7 +21,7 @@ int main(int argc, char **argv)
 
 		fprintf(stderr, "using card '%s'\n", card);
 
-		auto ms = std::make_unique<modeset>(card);
+		auto ms = std::make_unique<Card>(card);
 
 		/* prepare all connectors and CRTCs */
 		ret = ms->prepare();

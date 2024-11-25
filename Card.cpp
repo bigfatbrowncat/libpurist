@@ -1,5 +1,3 @@
-#include "modeset.h"
-
 /*
  * modeset - DRM Double-Buffered VSync'ed Modesetting Example
  *
@@ -23,7 +21,7 @@
  * the differences between both files are highlighted here.
  */
 
-#include "modeset.h"
+#include "Card.h"
 
 #include <cstddef>
 #include <errno.h>

@@ -8,7 +8,7 @@ project(purist)
 
 add_executable(purist 
     main.cpp
-    modeset.cpp
+    Card.cpp
 )
 
 target_include_directories(purist PRIVATE /usr/include/libdrm)

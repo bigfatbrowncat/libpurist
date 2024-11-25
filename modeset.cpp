@@ -28,6 +28,7 @@
 #include <cstddef>
 #include <errno.h>
 #include <fcntl.h>
+#include <memory>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -40,7 +41,7 @@
 
 
 // The static fields for class modeset
-std::list<std::shared_ptr<modeset_dev>> modeset::modeset_list;
+std::list<std::shared_ptr<Display>> modeset::modeset_list;
 std::set<std::shared_ptr<modeset::page_flip_data>> modeset::page_flip_data_cache;
 
 
@@ -132,7 +133,7 @@ int modeset::prepare()
 	drmModeRes *res;
 	drmModeConnector *conn;
 	unsigned int i;
-	std::shared_ptr<modeset_dev> dev;
+	std::shared_ptr<Display> dev;
 	int ret;
 
 	/* retrieve resources */
@@ -154,7 +155,7 @@ int modeset::prepare()
 		}
 
 		/* create a device structure */
-		dev = std::make_shared<modeset_dev>();
+		dev = std::make_shared<Display>();
 		//memset(dev, 0, sizeof(*dev));
 		dev->conn = conn->connector_id;
 
@@ -184,7 +185,7 @@ int modeset::prepare()
 }
 
 int modeset::set_modes() {
-	struct modeset_dev *iter;
+	struct Display *iter;
 	struct modeset_buf *buf;
 	int ret;
 
@@ -208,7 +209,7 @@ int modeset::set_modes() {
  */
 
 int modeset::setup_dev( drmModeRes *res, drmModeConnector *conn,
-			     std::shared_ptr<modeset_dev> dev)
+			     std::shared_ptr<Display> dev)
 {
 	int ret;
 
@@ -269,7 +270,7 @@ int modeset::setup_dev( drmModeRes *res, drmModeConnector *conn,
  */
 
 int modeset::find_crtc( drmModeRes *res, drmModeConnector *conn,
-			     std::shared_ptr<modeset_dev> dev)
+			     std::shared_ptr<Display> dev)
 {
 	drmModeEncoder *enc;
 	unsigned int i, j;
@@ -449,7 +450,7 @@ void modeset::modeset_page_flip_event(int fd, unsigned int frame,
 				    unsigned int sec, unsigned int usec, void *data)
 {
 	page_flip_data* user_data = reinterpret_cast<page_flip_data*>(data);
-	modeset_dev *dev = user_data->dev;
+	Display *dev = user_data->dev;
 
 	dev->pflip_pending = false;
 	if (!dev->cleanup)
@@ -515,7 +516,7 @@ void modeset::draw()
 	time_t start, cur;
 	struct timeval v;
 	drmEventContext ev;
-	struct modeset_dev *iter;
+	struct Display *iter;
 
 	/* init variables */
 	srand(time(&start));
@@ -530,10 +531,11 @@ void modeset::draw()
 
 	/* redraw all outputs */
 	for (auto& iter : modeset_list) {
-		iter->r = rand() % 0xff;
-		iter->g = rand() % 0xff;
-		iter->b = rand() % 0xff;
-		iter->r_up = iter->g_up = iter->b_up = true;
+        iter->contents = std::make_shared<DisplayContents>();
+		iter->contents->r = rand() % 0xff;
+		iter->contents->g = rand() % 0xff;
+		iter->contents->b = rand() % 0xff;
+		iter->contents->r_up = iter->contents->g_up = iter->contents->b_up = true;
 
 		draw_dev(iter.get());
 	}
@@ -557,23 +559,6 @@ void modeset::draw()
 	}
 }
 
-/*
- * A short helper function to compute a changing color value. No need to
- * understand it.
- */
-
-static uint8_t next_color(bool *up, uint8_t cur, unsigned int mod)
-{
-	uint8_t next;
-
-	next = cur + (*up ? 1 : -1) * (rand() % mod);
-	if ((*up && next < cur) || (!*up && next > cur)) {
-		*up = !*up;
-		next = cur;
-	}
-
-	return next;
-}
 
 /*
  * modeset_draw_dev() is a new function that redraws the screen of a single
@@ -612,22 +597,22 @@ static uint8_t next_color(bool *up, uint8_t cur, unsigned int mod)
  * did, too.
  */
 
-void modeset::draw_dev( modeset_dev* dev)
+void modeset::draw_dev( Display* dev)
 {
 	struct modeset_buf *buf;
 	unsigned int j, k, off;
 	int ret;
 
-	dev->r = next_color(&dev->r_up, dev->r, 20);
-	dev->g = next_color(&dev->g_up, dev->g, 10);
-	dev->b = next_color(&dev->b_up, dev->b, 5);
-
 	buf = &dev->bufs[dev->front_buf ^ 1];
+
+	dev->contents->r = DisplayContents::next_color(&dev->contents->r_up, dev->contents->r, 20);
+	dev->contents->g = DisplayContents::next_color(&dev->contents->g_up, dev->contents->g, 10);
+	dev->contents->b = DisplayContents::next_color(&dev->contents->b_up, dev->contents->b, 5);
 	for (j = 0; j < buf->height; ++j) {
 		for (k = 0; k < buf->width; ++k) {
 			off = buf->stride * j + k * 4;
 			*(uint32_t*)&buf->map[off] =
-				     (dev->r << 16) | (dev->g << 8) | dev->b;
+				     (dev->contents->r << 16) | (dev->contents->g << 8) | dev->contents->b;
 		}
 	}
 

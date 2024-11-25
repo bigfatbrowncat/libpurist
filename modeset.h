@@ -32,7 +32,31 @@ struct modeset_buf {
 	uint32_t fb = 0;
 };
 
-struct modeset_dev {
+struct DisplayContents {
+	uint8_t r, g, b;
+	bool r_up, g_up, b_up;
+
+   /*
+    * A short helper function to compute a changing color value. No need to
+    * understand it.
+    */
+
+    static uint8_t next_color(bool *up, uint8_t cur, unsigned int mod)
+    {
+        uint8_t next;
+
+        next = cur + (*up ? 1 : -1) * (rand() % mod);
+        if ((*up && next < cur) || (!*up && next > cur)) {
+            *up = !*up;
+            next = cur;
+        }
+
+        return next;
+    }
+
+};
+
+struct Display {
 	unsigned int front_buf = 0;
 	struct modeset_buf bufs[2];
 
@@ -44,9 +68,9 @@ struct modeset_dev {
 	bool pflip_pending;
 	bool cleanup;
 
-	uint8_t r, g, b;
-	bool r_up, g_up, b_up;
+    std::shared_ptr<DisplayContents> contents;
 };
+
 
 class errcode_exception : public std::runtime_error {
 public:
@@ -58,24 +82,25 @@ public:
         std::runtime_error("System error " + std::to_string(errcode) + ": " + message) { }
 };
 
+
 class modeset {
 private:
     struct page_flip_data {
         modeset* ms;
-        modeset_dev* dev;
-        page_flip_data(modeset* ms, modeset_dev* dev) : ms(ms), dev(dev) { }
+        Display* dev;
+        page_flip_data(modeset* ms, Display* dev) : ms(ms), dev(dev) { }
     };
 
     static void modeset_page_flip_event(int fd, unsigned int frame, unsigned int sec, unsigned int usec, void *data);
 
     static std::set<std::shared_ptr<page_flip_data>> page_flip_data_cache;
-    static std::list<std::shared_ptr<modeset_dev>> modeset_list;
+    static std::list<std::shared_ptr<Display>> modeset_list;
 
-    int find_crtc(drmModeRes *res, drmModeConnector *conn, std::shared_ptr<modeset_dev> dev);
+    int find_crtc(drmModeRes *res, drmModeConnector *conn, std::shared_ptr<Display> dev);
     int create_fb(struct modeset_buf *buf);
     void destroy_fb(struct modeset_buf *buf);
-    int setup_dev(drmModeRes *res, drmModeConnector *conn, std::shared_ptr<modeset_dev> dev);
-    void draw_dev(modeset_dev* dev);
+    int setup_dev(drmModeRes *res, drmModeConnector *conn, std::shared_ptr<Display> dev);
+    void draw_dev(Display* dev);
 
     int fd;
 

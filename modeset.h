@@ -5,6 +5,7 @@
 #include <memory>
 #include <list>
 #include <set>
+#include <stdexcept>
 
 
 struct modeset_buf {
@@ -33,6 +34,16 @@ struct modeset_dev {
 	bool r_up, g_up, b_up;
 };
 
+class errcode_exception : public std::runtime_error {
+public:
+    int errcode;
+    std::string message;
+
+    errcode_exception(int errcode, const std::string& message) : 
+        errcode(errcode), message(message),
+        std::runtime_error("System error " + std::to_string(errcode) + ": " + message) { }
+};
+
 class modeset {
 private:
     struct page_flip_data {
@@ -52,10 +63,12 @@ public:
     int modeset_create_fb(struct modeset_buf *buf);
     void modeset_destroy_fb(struct modeset_buf *buf);
     int modeset_setup_dev(drmModeRes *res, drmModeConnector *conn, std::shared_ptr<modeset_dev> dev);
-    int modeset_open(const char *node);
     int modeset_prepare();
+    int set_modes();
     void modeset_draw();
     void modeset_draw_dev(modeset_dev* dev);
     void modeset_cleanup();
     
+    modeset(const char *node);
+    virtual ~modeset();
 };

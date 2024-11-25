@@ -23,6 +23,7 @@
 
 #include "modeset.h"
 
+#include <cstddef>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdbool.h>
@@ -40,7 +41,7 @@
  * modeset_open() stays the same.
  */
 
-int modeset::modeset_open(const char *node)
+modeset::modeset(const char *node)
 {
 	int ret;
 	uint64_t has_dumb;
@@ -48,20 +49,19 @@ int modeset::modeset_open(const char *node)
 	fd = open(node, O_RDWR | O_CLOEXEC);
 	if (fd < 0) {
 		ret = -errno;
-		fprintf(stderr, "cannot open '%s': %m\n", node);
-		return ret;
+		throw errcode_exception(ret, "cannot open '" + std::string(node) + "'");
 	}
 
-	if (drmGetCap(fd, DRM_CAP_DUMB_BUFFER, &has_dumb) < 0 ||
-	    !has_dumb) {
-		fprintf(stderr, "drm device '%s' does not support dumb buffers\n",
-			node);
+	if (drmGetCap(fd, DRM_CAP_DUMB_BUFFER, &has_dumb) < 0 || !has_dumb) {
 		close(fd);
-		return -EOPNOTSUPP;
+		throw errcode_exception(-EOPNOTSUPP, "drm device '" + std::string(node) + "' does not support dumb buffers");
 	}
-
-	return 0;
 }
+
+modeset::~modeset() {
+	close(fd);
+}
+
 
 /*
  * modeset_buf and modeset_dev stay mostly the same. But 6 new fields are added
@@ -140,6 +140,26 @@ int modeset::modeset_prepare()
 	drmModeFreeResources(res);
 	return 0;
 }
+
+int modeset::set_modes() {
+	struct modeset_dev *iter;
+	struct modeset_buf *buf;
+	int ret;
+
+	/* perform actual modesetting on each found connector+CRTC */
+	for (auto& iter : modeset_list) {
+		iter->saved_crtc = drmModeGetCrtc(fd, iter->crtc);
+		buf = &iter->bufs[iter->front_buf];
+		ret = drmModeSetCrtc(fd, iter->crtc, buf->fb, 0, 0,
+					&iter->conn, 1, &iter->mode);
+		if (ret)
+			fprintf(stderr, "cannot set CRTC for connector %u (%d): %m\n",
+				iter->conn, errno);
+	}
+	return ret;
+
+}
+
 
 /*
  * modeset_setup_dev() stays the same.
@@ -380,60 +400,42 @@ void modeset::modeset_destroy_fb( struct modeset_buf *buf)
 
 int main(int argc, char **argv)
 {
-	int ret;
-	const char *card;
-	struct modeset_dev *iter;
-	struct modeset_buf *buf;
+	try {
+		int ret;
+		const char *card;
 
-	/* check which DRM device to open */
-	if (argc > 1)
-		card = argv[1];
-	else
-		card = "/dev/dri/card1";
+		/* check which DRM device to open */
+		if (argc > 1)
+			card = argv[1];
+		else
+			card = "/dev/dri/card1";
 
-	fprintf(stderr, "using card '%s'\n", card);
+		fprintf(stderr, "using card '%s'\n", card);
 
-	auto ms = std::make_shared<modeset>();
+		auto ms = std::make_shared<modeset>(card);
 
-	/* open the DRM device */
-	ret = ms->modeset_open(card);
-	if (ret)
-		goto out_return;
-
-	/* prepare all connectors and CRTCs */
-	ret = ms->modeset_prepare();
-	if (ret)
-		goto out_close;
-
-	/* perform actual modesetting on each found connector+CRTC */
-	for (auto& iter : modeset_list) {
-		iter->saved_crtc = drmModeGetCrtc(ms->fd, iter->crtc);
-		buf = &iter->bufs[iter->front_buf];
-		ret = drmModeSetCrtc(ms->fd, iter->crtc, buf->fb, 0, 0,
-				     &iter->conn, 1, &iter->mode);
+		/* prepare all connectors and CRTCs */
+		ret = ms->modeset_prepare();
 		if (ret)
-			fprintf(stderr, "cannot set CRTC for connector %u (%d): %m\n",
-				iter->conn, errno);
-	}
+			throw errcode_exception(ret, "modeset::prepare failed");
 
-	/* draw some colors for 5seconds */
-	ms->modeset_draw();
+		ret = ms->set_modes();
+		if (ret)
+			throw errcode_exception(ret, "modeset::set_modes failed");
+		
+		/* draw some colors for 5seconds */
+		ms->modeset_draw();
 
-	/* cleanup everything */
-	ms->modeset_cleanup();
+		/* cleanup everything */
+		ms->modeset_cleanup();
 
-	ret = 0;
-
-out_close:
-	close(ms->fd);
-out_return:
-	if (ret) {
-		errno = -ret;
-		fprintf(stderr, "modeset failed with error %d: %m\n", errno);
-	} else {
 		fprintf(stderr, "exiting\n");
+		return 0;
 	}
-	return ret;
+	catch (const errcode_exception& ex) {
+		fprintf(stderr, "%s\n", ex.what());
+		return ex.errcode;
+	}
 }
 
 /*

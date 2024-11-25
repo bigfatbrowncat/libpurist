@@ -21,6 +21,8 @@
  * the differences between both files are highlighted here.
  */
 
+#include "modeset.h"
+
 #include <errno.h>
 #include <fcntl.h>
 #include <stdbool.h>
@@ -32,28 +34,12 @@
 #include <time.h>
 #include <unistd.h>
 #include <xf86drm.h>
-#include <xf86drmMode.h>
-
-#include <memory>
-#include <list>
-
-struct modeset_buf;
-struct modeset_dev;
-static int modeset_find_crtc(int fd, drmModeRes *res, drmModeConnector *conn, std::shared_ptr<modeset_dev> dev);
-static int modeset_create_fb(int fd, struct modeset_buf *buf);
-static void modeset_destroy_fb(int fd, struct modeset_buf *buf);
-static int modeset_setup_dev(int fd, drmModeRes *res, drmModeConnector *conn, std::shared_ptr<modeset_dev> dev);
-static int modeset_open(int *out, const char *node);
-static int modeset_prepare(int fd);
-static void modeset_draw(int fd);
-static void modeset_draw_dev(int fd, modeset_dev* dev);
-static void modeset_cleanup(int fd);
 
 /*
  * modeset_open() stays the same.
  */
 
-static int modeset_open(int *out, const char *node)
+int modeset::modeset_open(int *out, const char *node)
 {
 	int fd, ret;
 	uint64_t has_dumb;
@@ -92,33 +78,6 @@ static int modeset_open(int *out, const char *node)
  * routines.
  */
 
-struct modeset_buf {
-	uint32_t width = 0;
-	uint32_t height = 0;
-	uint32_t stride = 0;
-	uint32_t size = 0;
-	uint32_t handle = 0;
-	uint8_t *map = nullptr;
-	uint32_t fb = 0;
-};
-
-struct modeset_dev {
-	//struct modeset_dev *next;
-
-	unsigned int front_buf = 0;
-	struct modeset_buf bufs[2];
-
-	drmModeModeInfo mode;
-	uint32_t conn;
-	uint32_t crtc;
-	drmModeCrtc *saved_crtc;
-
-	bool pflip_pending;
-	bool cleanup;
-
-	uint8_t r, g, b;
-	bool r_up, g_up, b_up;
-};
 
 static std::list<std::shared_ptr<modeset_dev>> modeset_list;
 
@@ -126,7 +85,7 @@ static std::list<std::shared_ptr<modeset_dev>> modeset_list;
  * modeset_prepare() stays the same.
  */
 
-static int modeset_prepare(int fd)
+int modeset::modeset_prepare(int fd)
 {
 	drmModeRes *res;
 	drmModeConnector *conn;
@@ -186,7 +145,7 @@ static int modeset_prepare(int fd)
  * modeset_setup_dev() stays the same.
  */
 
-static int modeset_setup_dev(int fd, drmModeRes *res, drmModeConnector *conn,
+int modeset::modeset_setup_dev(int fd, drmModeRes *res, drmModeConnector *conn,
 			     std::shared_ptr<modeset_dev> dev)
 {
 	int ret;
@@ -247,7 +206,7 @@ static int modeset_setup_dev(int fd, drmModeRes *res, drmModeConnector *conn,
  * modeset_find_crtc() stays the same.
  */
 
-static int modeset_find_crtc(int fd, drmModeRes *res, drmModeConnector *conn,
+int modeset::modeset_find_crtc(int fd, drmModeRes *res, drmModeConnector *conn,
 			     std::shared_ptr<modeset_dev> dev)
 {
 	drmModeEncoder *enc;
@@ -328,7 +287,7 @@ static int modeset_find_crtc(int fd, drmModeRes *res, drmModeConnector *conn,
  * modeset_create_fb() stays the same.
  */
 
-static int modeset_create_fb(int fd, struct modeset_buf *buf)
+int modeset::modeset_create_fb(int fd, struct modeset_buf *buf)
 {
 	struct drm_mode_create_dumb creq;
 	struct drm_mode_destroy_dumb dreq;
@@ -399,7 +358,7 @@ err_destroy:
  * modeset_destroy_fb() stays the same.
  */
 
-static void modeset_destroy_fb(int fd, struct modeset_buf *buf)
+void modeset::modeset_destroy_fb(int fd, struct modeset_buf *buf)
 {
 	struct drm_mode_destroy_dumb dreq;
 
@@ -435,12 +394,12 @@ int main(int argc, char **argv)
 	fprintf(stderr, "using card '%s'\n", card);
 
 	/* open the DRM device */
-	ret = modeset_open(&fd, card);
+	ret = modeset::modeset_open(&fd, card);
 	if (ret)
 		goto out_return;
 
 	/* prepare all connectors and CRTCs */
-	ret = modeset_prepare(fd);
+	ret = modeset::modeset_prepare(fd);
 	if (ret)
 		goto out_close;
 
@@ -456,10 +415,10 @@ int main(int argc, char **argv)
 	}
 
 	/* draw some colors for 5seconds */
-	modeset_draw(fd);
+	modeset::modeset_draw(fd);
 
 	/* cleanup everything */
-	modeset_cleanup(fd);
+	modeset::modeset_cleanup(fd);
 
 	ret = 0;
 
@@ -483,7 +442,7 @@ out_return:
  * allows to wait for outstanding page-flips during cleanup.
  */
 
-static void modeset_page_flip_event(int fd, unsigned int frame,
+void modeset::modeset_page_flip_event(int fd, unsigned int frame,
 				    unsigned int sec, unsigned int usec,
 				    void *data)
 {
@@ -491,7 +450,7 @@ static void modeset_page_flip_event(int fd, unsigned int frame,
 
 	dev->pflip_pending = false;
 	if (!dev->cleanup)
-		modeset_draw_dev(fd, dev);
+		modeset::modeset_draw_dev(fd, dev);
 }
 
 /*
@@ -546,7 +505,7 @@ static void modeset_page_flip_event(int fd, unsigned int frame,
  * (you need to press RETURN after each keyboard input to make this work).
  */
 
-static void modeset_draw(int fd)
+void modeset::modeset_draw(int fd)
 {
 	int ret;
 	fd_set fds;
@@ -563,7 +522,7 @@ static void modeset_draw(int fd)
 	/* Set this to only the latest version you support. Version 2
 	 * introduced the page_flip_handler, so we use that. */
 	ev.version = 2;
-	ev.page_flip_handler = modeset_page_flip_event;
+	ev.page_flip_handler = modeset::modeset_page_flip_event;
 
 	/* redraw all outputs */
 	for (auto& iter : modeset_list) {
@@ -572,7 +531,7 @@ static void modeset_draw(int fd)
 		iter->b = rand() % 0xff;
 		iter->r_up = iter->g_up = iter->b_up = true;
 
-		modeset_draw_dev(fd, iter.get());
+		modeset::modeset_draw_dev(fd, iter.get());
 	}
 
 	/* wait 5s for VBLANK or input events */
@@ -649,7 +608,7 @@ static uint8_t next_color(bool *up, uint8_t cur, unsigned int mod)
  * did, too.
  */
 
-static void modeset_draw_dev(int fd, modeset_dev* dev)
+void modeset::modeset_draw_dev(int fd, modeset_dev* dev)
 {
 	struct modeset_buf *buf;
 	unsigned int j, k, off;
@@ -692,7 +651,7 @@ static void modeset_draw_dev(int fd, modeset_dev* dev)
  * a blocking operation, but it's mostly just <16ms so we can ignore that.
  */
 
-static void modeset_cleanup(int fd)
+void modeset::modeset_cleanup(int fd)
 {
 	drmEventContext ev;
 	int ret;
@@ -700,7 +659,7 @@ static void modeset_cleanup(int fd)
 	/* init variables */
 	memset(&ev, 0, sizeof(ev));
 	ev.version = DRM_EVENT_CONTEXT_VERSION;
-	ev.page_flip_handler = modeset_page_flip_event;
+	ev.page_flip_handler = modeset::modeset_page_flip_event;
 
 	while (!modeset_list.empty()) {
 		/* remove from global list */
@@ -729,8 +688,8 @@ static void modeset_cleanup(int fd)
 		drmModeFreeCrtc(iter->saved_crtc);
 
 		/* destroy framebuffers */
-		modeset_destroy_fb(fd, &iter->bufs[1]);
-		modeset_destroy_fb(fd, &iter->bufs[0]);
+		modeset::modeset_destroy_fb(fd, &iter->bufs[1]);
+		modeset::modeset_destroy_fb(fd, &iter->bufs[0]);
 
 		/* free allocated memory */
 		iter = nullptr;

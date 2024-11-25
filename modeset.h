@@ -7,6 +7,20 @@
 #include <set>
 #include <stdexcept>
 
+/*
+ * modeset_buf and modeset_dev stay mostly the same. But 6 new fields are added
+ * to modeset_dev: r, g, b, r_up, g_up, b_up. They are used to compute the
+ * current color that is drawn on this output device. You can ignore them as
+ * they aren't important for this example.
+ * The modeset-double-buffered.c example used exactly the same fields but as
+ * local variables in modeset_draw().
+ *
+ * The \pflip_pending variable is true when a page-flip is currently pending,
+ * that is, the kernel will flip buffers on the next vertical blank. The
+ * \cleanup variable is true if the device is currently cleaned up and no more
+ * pageflips should be scheduled. They are used to synchronize the cleanup
+ * routines.
+ */
 
 struct modeset_buf {
 	uint32_t width = 0;
@@ -52,10 +66,10 @@ private:
         page_flip_data(modeset* ms, modeset_dev* dev) : ms(ms), dev(dev) { }
     };
 
-    std::set<std::shared_ptr<page_flip_data>> page_flip_data_cache;
     static void modeset_page_flip_event(int fd, unsigned int frame, unsigned int sec, unsigned int usec, void *data);
 
-
+    static std::set<std::shared_ptr<page_flip_data>> page_flip_data_cache;
+    static std::list<std::shared_ptr<modeset_dev>> modeset_list;
 public:
     int fd;
 

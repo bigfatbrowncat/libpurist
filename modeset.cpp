@@ -110,8 +110,8 @@ modeset::~modeset() {
 		drmModeFreeCrtc(iter->saved_crtc);
 
 		/* destroy framebuffers */
-		modeset::destroy_fb(&iter->bufs[1]);
-		modeset::destroy_fb(&iter->bufs[0]);
+		destroy_fb(&iter->bufs[1]);
+		destroy_fb(&iter->bufs[0]);
 
 		/* free allocated memory */
 		iter = nullptr;
@@ -126,7 +126,7 @@ modeset::~modeset() {
 /*
  * modeset_prepare() stays the same.
  */
- 
+
 int modeset::prepare()
 {
 	drmModeRes *res;
@@ -535,7 +535,7 @@ void modeset::draw()
 		iter->b = rand() % 0xff;
 		iter->r_up = iter->g_up = iter->b_up = true;
 
-		modeset::draw_dev(iter.get());
+		draw_dev(iter.get());
 	}
 
 	/* wait 5s for VBLANK or input events */

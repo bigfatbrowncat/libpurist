@@ -70,19 +70,21 @@ private:
 
     static std::set<std::shared_ptr<page_flip_data>> page_flip_data_cache;
     static std::list<std::shared_ptr<modeset_dev>> modeset_list;
-public:
-    int fd;
 
     int find_crtc(drmModeRes *res, drmModeConnector *conn, std::shared_ptr<modeset_dev> dev);
     int create_fb(struct modeset_buf *buf);
     void destroy_fb(struct modeset_buf *buf);
     int setup_dev(drmModeRes *res, drmModeConnector *conn, std::shared_ptr<modeset_dev> dev);
+    void draw_dev(modeset_dev* dev);
+
+    int fd;
+
+public:
+    modeset(const char *node);
+
     int prepare();
     int set_modes();
     void draw();
-    void draw_dev(modeset_dev* dev);
-    void cleanup();
     
-    modeset(const char *node);
     virtual ~modeset();
 };

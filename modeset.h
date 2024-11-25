@@ -59,15 +59,15 @@ private:
 public:
     int fd;
 
-    int modeset_find_crtc(drmModeRes *res, drmModeConnector *conn, std::shared_ptr<modeset_dev> dev);
-    int modeset_create_fb(struct modeset_buf *buf);
-    void modeset_destroy_fb(struct modeset_buf *buf);
-    int modeset_setup_dev(drmModeRes *res, drmModeConnector *conn, std::shared_ptr<modeset_dev> dev);
-    int modeset_prepare();
+    int find_crtc(drmModeRes *res, drmModeConnector *conn, std::shared_ptr<modeset_dev> dev);
+    int create_fb(struct modeset_buf *buf);
+    void destroy_fb(struct modeset_buf *buf);
+    int setup_dev(drmModeRes *res, drmModeConnector *conn, std::shared_ptr<modeset_dev> dev);
+    int prepare();
     int set_modes();
-    void modeset_draw();
-    void modeset_draw_dev(modeset_dev* dev);
-    void modeset_cleanup();
+    void draw();
+    void draw_dev(modeset_dev* dev);
+    void cleanup();
     
     modeset(const char *node);
     virtual ~modeset();

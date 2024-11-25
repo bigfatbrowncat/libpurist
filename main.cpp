@@ -85,7 +85,7 @@ static std::list<std::shared_ptr<modeset_dev>> modeset_list;
  * modeset_prepare() stays the same.
  */
 
-int modeset::modeset_prepare()
+int modeset::prepare()
 {
 	drmModeRes *res;
 	drmModeConnector *conn;
@@ -117,7 +117,7 @@ int modeset::modeset_prepare()
 		dev->conn = conn->connector_id;
 
 		/* call helper function to prepare this connector */
-		ret = modeset_setup_dev(res, conn, dev);
+		ret = setup_dev(res, conn, dev);
 		if (ret) {
 			if (ret != -ENOENT) {
 				errno = -ret;
@@ -165,7 +165,7 @@ int modeset::set_modes() {
  * modeset_setup_dev() stays the same.
  */
 
-int modeset::modeset_setup_dev( drmModeRes *res, drmModeConnector *conn,
+int modeset::setup_dev( drmModeRes *res, drmModeConnector *conn,
 			     std::shared_ptr<modeset_dev> dev)
 {
 	int ret;
@@ -195,7 +195,7 @@ int modeset::modeset_setup_dev( drmModeRes *res, drmModeConnector *conn,
 		conn->connector_id, dev->bufs[0].width, dev->bufs[0].height);
 
 	/* find a crtc for this connector */
-	ret = modeset_find_crtc(res, conn, dev);
+	ret = find_crtc(res, conn, dev);
 	if (ret) {
 		fprintf(stderr, "no valid crtc for connector %u\n",
 			conn->connector_id);
@@ -203,7 +203,7 @@ int modeset::modeset_setup_dev( drmModeRes *res, drmModeConnector *conn,
 	}
 
 	/* create framebuffer #1 for this CRTC */
-	ret = modeset_create_fb(&dev->bufs[0]);
+	ret = create_fb(&dev->bufs[0]);
 	if (ret) {
 		fprintf(stderr, "cannot create framebuffer for connector %u\n",
 			conn->connector_id);
@@ -211,11 +211,11 @@ int modeset::modeset_setup_dev( drmModeRes *res, drmModeConnector *conn,
 	}
 
 	/* create framebuffer #2 for this CRTC */
-	ret = modeset_create_fb(&dev->bufs[1]);
+	ret = create_fb(&dev->bufs[1]);
 	if (ret) {
 		fprintf(stderr, "cannot create framebuffer for connector %u\n",
 			conn->connector_id);
-		modeset_destroy_fb(&dev->bufs[0]);
+		destroy_fb(&dev->bufs[0]);
 		return ret;
 	}
 
@@ -226,7 +226,7 @@ int modeset::modeset_setup_dev( drmModeRes *res, drmModeConnector *conn,
  * modeset_find_crtc() stays the same.
  */
 
-int modeset::modeset_find_crtc( drmModeRes *res, drmModeConnector *conn,
+int modeset::find_crtc( drmModeRes *res, drmModeConnector *conn,
 			     std::shared_ptr<modeset_dev> dev)
 {
 	drmModeEncoder *enc;
@@ -307,7 +307,7 @@ int modeset::modeset_find_crtc( drmModeRes *res, drmModeConnector *conn,
  * modeset_create_fb() stays the same.
  */
 
-int modeset::modeset_create_fb( struct modeset_buf *buf)
+int modeset::create_fb( struct modeset_buf *buf)
 {
 	struct drm_mode_create_dumb creq;
 	struct drm_mode_destroy_dumb dreq;
@@ -378,7 +378,7 @@ err_destroy:
  * modeset_destroy_fb() stays the same.
  */
 
-void modeset::modeset_destroy_fb( struct modeset_buf *buf)
+void modeset::destroy_fb( struct modeset_buf *buf)
 {
 	struct drm_mode_destroy_dumb dreq;
 
@@ -415,7 +415,7 @@ int main(int argc, char **argv)
 		auto ms = std::make_shared<modeset>(card);
 
 		/* prepare all connectors and CRTCs */
-		ret = ms->modeset_prepare();
+		ret = ms->prepare();
 		if (ret)
 			throw errcode_exception(ret, "modeset::prepare failed");
 
@@ -424,10 +424,10 @@ int main(int argc, char **argv)
 			throw errcode_exception(ret, "modeset::set_modes failed");
 		
 		/* draw some colors for 5seconds */
-		ms->modeset_draw();
+		ms->draw();
 
 		/* cleanup everything */
-		ms->modeset_cleanup();
+		ms->cleanup();
 
 		fprintf(stderr, "exiting\n");
 		return 0;
@@ -455,7 +455,7 @@ void modeset::modeset_page_flip_event(int fd, unsigned int frame,
 
 	dev->pflip_pending = false;
 	if (!dev->cleanup)
-		user_data->ms->modeset_draw_dev(dev);
+		user_data->ms->draw_dev(dev);
 }
 
 /*
@@ -510,7 +510,7 @@ void modeset::modeset_page_flip_event(int fd, unsigned int frame,
  * (you need to press RETURN after each keyboard input to make this work).
  */
 
-void modeset::modeset_draw()
+void modeset::draw()
 {
 	int ret;
 	fd_set fds;
@@ -537,7 +537,7 @@ void modeset::modeset_draw()
 		iter->b = rand() % 0xff;
 		iter->r_up = iter->g_up = iter->b_up = true;
 
-		modeset::modeset_draw_dev(iter.get());
+		modeset::draw_dev(iter.get());
 	}
 
 	/* wait 5s for VBLANK or input events */
@@ -614,7 +614,7 @@ static uint8_t next_color(bool *up, uint8_t cur, unsigned int mod)
  * did, too.
  */
 
-void modeset::modeset_draw_dev( modeset_dev* dev)
+void modeset::draw_dev( modeset_dev* dev)
 {
 	struct modeset_buf *buf;
 	unsigned int j, k, off;
@@ -660,7 +660,7 @@ void modeset::modeset_draw_dev( modeset_dev* dev)
  * a blocking operation, but it's mostly just <16ms so we can ignore that.
  */
 
-void modeset::modeset_cleanup()
+void modeset::cleanup()
 {
 	drmEventContext ev;
 	int ret;
@@ -696,8 +696,8 @@ void modeset::modeset_cleanup()
 		drmModeFreeCrtc(iter->saved_crtc);
 
 		/* destroy framebuffers */
-		modeset::modeset_destroy_fb(&iter->bufs[1]);
-		modeset::modeset_destroy_fb(&iter->bufs[0]);
+		modeset::destroy_fb(&iter->bufs[1]);
+		modeset::destroy_fb(&iter->bufs[0]);
 
 		/* free allocated memory */
 		iter = nullptr;

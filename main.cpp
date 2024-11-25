@@ -35,6 +35,7 @@
 #include <unistd.h>
 #include <xf86drm.h>
 
+
 /*
  * modeset_open() stays the same.
  */
@@ -393,13 +394,15 @@ int main(int argc, char **argv)
 
 	fprintf(stderr, "using card '%s'\n", card);
 
+	auto ms = std::make_shared<modeset>();
+
 	/* open the DRM device */
-	ret = modeset::modeset_open(&fd, card);
+	ret = ms->modeset_open(&fd, card);
 	if (ret)
 		goto out_return;
 
 	/* prepare all connectors and CRTCs */
-	ret = modeset::modeset_prepare(fd);
+	ret = ms->modeset_prepare(fd);
 	if (ret)
 		goto out_close;
 
@@ -415,10 +418,10 @@ int main(int argc, char **argv)
 	}
 
 	/* draw some colors for 5seconds */
-	modeset::modeset_draw(fd);
+	ms->modeset_draw(fd);
 
 	/* cleanup everything */
-	modeset::modeset_cleanup(fd);
+	ms->modeset_cleanup(fd);
 
 	ret = 0;
 
@@ -446,11 +449,12 @@ void modeset::modeset_page_flip_event(int fd, unsigned int frame,
 				    unsigned int sec, unsigned int usec,
 				    void *data)
 {
-	struct modeset_dev *dev = (modeset_dev *)data;
+	page_flip_data* user_data = reinterpret_cast<page_flip_data*>(data);
+	modeset_dev *dev = user_data->dev;
 
 	dev->pflip_pending = false;
 	if (!dev->cleanup)
-		modeset::modeset_draw_dev(fd, dev);
+		user_data->ms->modeset_draw_dev(fd, dev);
 }
 
 /*
@@ -522,7 +526,8 @@ void modeset::modeset_draw(int fd)
 	/* Set this to only the latest version you support. Version 2
 	 * introduced the page_flip_handler, so we use that. */
 	ev.version = 2;
-	ev.page_flip_handler = modeset::modeset_page_flip_event;
+	
+	ev.page_flip_handler = modeset::modeset_page_flip_event; // int fd, unsigned int frame, unsigned int sec, unsigned int usec, void *data
 
 	/* redraw all outputs */
 	for (auto& iter : modeset_list) {
@@ -627,8 +632,11 @@ void modeset::modeset_draw_dev(int fd, modeset_dev* dev)
 		}
 	}
 
+	auto user_data = std::make_shared<page_flip_data>(this, dev);
+	page_flip_data_cache.insert(user_data);
+
 	ret = drmModePageFlip(fd, dev->crtc, buf->fb,
-			      DRM_MODE_PAGE_FLIP_EVENT, dev);
+			      DRM_MODE_PAGE_FLIP_EVENT, user_data.get());
 	if (ret) {
 		fprintf(stderr, "cannot flip CRTC for connector %u (%d): %m\n",
 			dev->conn, errno);
@@ -664,7 +672,6 @@ void modeset::modeset_cleanup(int fd)
 	while (!modeset_list.empty()) {
 		/* remove from global list */
 		auto& iter = *(modeset_list.begin());
-		modeset_list.pop_front();
 
 		/* if a pageflip is pending, wait for it to complete */
 		iter->cleanup = true;
@@ -693,6 +700,7 @@ void modeset::modeset_cleanup(int fd)
 
 		/* free allocated memory */
 		iter = nullptr;
+		modeset_list.pop_front();
 	}
 }
 

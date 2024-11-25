@@ -4,6 +4,7 @@
 
 #include <memory>
 #include <list>
+#include <set>
 
 
 struct modeset_buf {
@@ -33,18 +34,25 @@ struct modeset_dev {
 };
 
 class modeset {
+private:
+    struct page_flip_data {
+        modeset* ms;
+        modeset_dev* dev;
+        page_flip_data(modeset* ms, modeset_dev* dev) : ms(ms), dev(dev) { }
+    };
+
+    std::set<std::shared_ptr<page_flip_data>> page_flip_data_cache;
+    static void modeset_page_flip_event(int fd, unsigned int frame, unsigned int sec, unsigned int usec, void *data);
+
 public:
-    static int modeset_find_crtc(int fd, drmModeRes *res, drmModeConnector *conn, std::shared_ptr<modeset_dev> dev);
-    static int modeset_create_fb(int fd, struct modeset_buf *buf);
-    static void modeset_destroy_fb(int fd, struct modeset_buf *buf);
-    static int modeset_setup_dev(int fd, drmModeRes *res, drmModeConnector *conn, std::shared_ptr<modeset_dev> dev);
-    static int modeset_open(int *out, const char *node);
-    static int modeset_prepare(int fd);
-    static void modeset_draw(int fd);
-    static void modeset_draw_dev(int fd, modeset_dev* dev);
-    static void modeset_cleanup(int fd);
+    int modeset_find_crtc(int fd, drmModeRes *res, drmModeConnector *conn, std::shared_ptr<modeset_dev> dev);
+    int modeset_create_fb(int fd, struct modeset_buf *buf);
+    void modeset_destroy_fb(int fd, struct modeset_buf *buf);
+    int modeset_setup_dev(int fd, drmModeRes *res, drmModeConnector *conn, std::shared_ptr<modeset_dev> dev);
+    int modeset_open(int *out, const char *node);
+    int modeset_prepare(int fd);
+    void modeset_draw(int fd);
+    void modeset_draw_dev(int fd, modeset_dev* dev);
+    void modeset_cleanup(int fd);
     
-    static void modeset_page_flip_event(int fd, unsigned int frame,
-				    unsigned int sec, unsigned int usec,
-				    void *data);
 };

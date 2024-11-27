@@ -54,10 +54,21 @@ struct DisplayContents {
         return next;
     }
 
-    void update() {
+    void drawIntoBuffer(VideoBuffer* buf) {
        	r = DisplayContents::next_color(&r_up, r, 20);
         g = DisplayContents::next_color(&g_up, g, 10);
         b = DisplayContents::next_color(&b_up, b, 5);
+
+    	unsigned int j, k, off;
+
+       	for (j = 0; j < buf->height; ++j) {
+            for (k = 0; k < buf->width; ++k) {
+                off = buf->stride * j + k * 4;
+                *(uint32_t*)&buf->map[off] =
+                        (r << 16) | (g << 8) | b;
+            }
+        }
+
     }
 };
 
@@ -74,6 +85,7 @@ struct Display {
 	bool cleanup;
 
     std::shared_ptr<DisplayContents> contents;
+    bool mode_set_successfully = false;
 };
 
 
@@ -90,22 +102,22 @@ public:
 
 class Card {
 private:
-    struct page_flip_data {
+    struct page_flip_callback_data {
         Card* ms;
         Display* dev;
-        page_flip_data(Card* ms, Display* dev) : ms(ms), dev(dev) { }
+        page_flip_callback_data(Card* ms, Display* dev) : ms(ms), dev(dev) { }
     };
 
     static void modeset_page_flip_event(int fd, unsigned int frame, unsigned int sec, unsigned int usec, void *data);
 
-    static std::set<std::shared_ptr<page_flip_data>> page_flip_data_cache;
+    static std::set<std::shared_ptr<page_flip_callback_data>> page_flip_callback_data_cache;
     static std::list<std::shared_ptr<Display>> displays_list;
 
     int find_crtc(drmModeRes *res, drmModeConnector *conn, std::shared_ptr<Display> dev);
     int create_fb(struct VideoBuffer *buf);
     void destroy_fb(struct VideoBuffer *buf);
     int setup_display(drmModeRes *res, drmModeConnector *conn, std::shared_ptr<Display> dev);
-    void draw_dev(Display* dev);
+    void drawOneDisplayContents(Display* dev);
 
     int fd;
 
@@ -113,8 +125,8 @@ public:
     Card(const char *node);
 
     int prepare();
-    int set_modes();
-    void draw();
+    bool setAllDisplaysModes();
+    void runDrawingLoop();
 
     std::shared_ptr<DisplayContents> createDisplayContents();
     

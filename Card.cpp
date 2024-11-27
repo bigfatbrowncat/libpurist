@@ -41,7 +41,7 @@
 
 // The static fields for class modeset
 std::list<std::shared_ptr<Display>> Card::displays_list;
-std::set<std::shared_ptr<Card::page_flip_data>> Card::page_flip_data_cache;
+std::set<std::shared_ptr<Card::page_flip_callback_data>> Card::page_flip_callback_data_cache;
 
 
 Card::Card(const char *node)
@@ -178,23 +178,24 @@ int Card::prepare()
 	return 0;
 }
 
-int Card::set_modes() {
-	struct Display *iter;
-	struct VideoBuffer *buf;
-	int ret;
-
+bool Card::setAllDisplaysModes() {
+	bool some_modeset_failed = false;
 	/* perform actual modesetting on each found connector+CRTC */
 	for (auto& iter : displays_list) {
 		iter->saved_crtc = drmModeGetCrtc(fd, iter->crtc);
-		buf = &iter->bufs[iter->front_buf];
-		ret = drmModeSetCrtc(fd, iter->crtc, buf->fb, 0, 0,
+		VideoBuffer *buf = &iter->bufs[iter->front_buf];
+		int ret = drmModeSetCrtc(fd, iter->crtc, buf->fb, 0, 0,
 					&iter->connector_id, 1, &iter->mode);
-		if (ret)
+		if (ret == 0) {
+			iter->mode_set_successfully = true;
+		} else {
+			iter->mode_set_successfully = false;
+			some_modeset_failed = true;
 			fprintf(stderr, "cannot set CRTC for connector %u (%d): %m\n",
 				iter->connector_id, errno);
+		}
 	}
-	return ret;
-
+	return !some_modeset_failed;
 }
 
 
@@ -442,12 +443,12 @@ void Card::destroy_fb( struct VideoBuffer *buf)
 void Card::modeset_page_flip_event(int fd, unsigned int frame,
 				    unsigned int sec, unsigned int usec, void *data)
 {
-	page_flip_data* user_data = reinterpret_cast<page_flip_data*>(data);
+	page_flip_callback_data* user_data = reinterpret_cast<page_flip_callback_data*>(data);
 	Display *dev = user_data->dev;
 
 	dev->pflip_pending = false;
 	if (!dev->cleanup)
-		user_data->ms->draw_dev(dev);
+		user_data->ms->drawOneDisplayContents(dev);
 }
 
 std::shared_ptr<DisplayContents> Card::createDisplayContents() {
@@ -512,7 +513,7 @@ std::shared_ptr<DisplayContents> Card::createDisplayContents() {
  * (you need to press RETURN after each keyboard input to make this work).
  */
 
-void Card::draw()
+void Card::runDrawingLoop()
 {
 	int ret;
 	fd_set fds;
@@ -534,8 +535,10 @@ void Card::draw()
 
 	/* redraw all outputs */
 	for (auto& iter : displays_list) {
-        iter->contents = createDisplayContents();
-		draw_dev(iter.get());
+		if (iter->mode_set_successfully) {
+			iter->contents = createDisplayContents();
+			drawOneDisplayContents(iter.get());
+		}
 	}
 
 	/* wait 5s for VBLANK or input events */
@@ -595,34 +598,23 @@ void Card::draw()
  * did, too.
  */
 
-void Card::draw_dev( Display* dev)
+void Card::drawOneDisplayContents(Display* display)
 {
-	struct VideoBuffer *buf;
-	unsigned int j, k, off;
-	int ret;
+	VideoBuffer *buf = &display->bufs[display->front_buf ^ 1];
 
-	buf = &dev->bufs[dev->front_buf ^ 1];
+	display->contents->drawIntoBuffer(buf);
 
-	dev->contents->update();
-	for (j = 0; j < buf->height; ++j) {
-		for (k = 0; k < buf->width; ++k) {
-			off = buf->stride * j + k * 4;
-			*(uint32_t*)&buf->map[off] =
-				     (dev->contents->r << 16) | (dev->contents->g << 8) | dev->contents->b;
-		}
-	}
+	auto user_data = std::make_shared<page_flip_callback_data>(this, display);
+	page_flip_callback_data_cache.insert(user_data);
 
-	auto user_data = std::make_shared<page_flip_data>(this, dev);
-	page_flip_data_cache.insert(user_data);
-
-	ret = drmModePageFlip(fd, dev->crtc, buf->fb,
+	int ret = drmModePageFlip(fd, display->crtc, buf->fb,
 			      DRM_MODE_PAGE_FLIP_EVENT, user_data.get());
 	if (ret) {
 		fprintf(stderr, "cannot flip CRTC for connector %u (%d): %m\n",
-			dev->connector_id, errno);
+			display->connector_id, errno);
 	} else {
-		dev->front_buf ^= 1;
-		dev->pflip_pending = true;
+		display->front_buf ^= 1;
+		display->pflip_pending = true;
 	}
 }
 

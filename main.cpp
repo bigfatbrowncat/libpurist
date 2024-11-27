@@ -29,12 +29,12 @@ int main(int argc, char **argv)
 		if (ret)
 			throw errcode_exception(ret, "modeset::prepare failed");
 
-		ret = ms->set_modes();
-		if (ret)
-			throw errcode_exception(ret, "modeset::set_modes failed");
+		bool modeset_success = ms->setAllDisplaysModes();
+		if (!modeset_success)
+			throw errcode_exception(ret, "mode setting failed for some displays");
 		
 		/* draw some colors for 5seconds */
-		ms->draw();
+		ms->runDrawingLoop();
 
 		ms = nullptr;
 		fprintf(stderr, "exiting\n");

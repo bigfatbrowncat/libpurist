@@ -7,7 +7,23 @@
 #include <set>
 #include <stdexcept>
 
+
+class errcode_exception : public std::runtime_error {
+public:
+    int errcode;
+    std::string message;
+
+    errcode_exception(int errcode, const std::string& message) : 
+        std::runtime_error("System error " + std::to_string(errcode) + ": " + message), 
+        errcode(errcode), 
+        message(message) { }
+};
+
+
 class Card;
+class Display;
+class Displays;
+class DumbBufferMapping;
 
 /*
  * modeset_buf and modeset_dev stay mostly the same. But 6 new fields are added
@@ -43,8 +59,6 @@ public:
 	virtual ~DumbBuffer();
 };
 
-
-class DumbBufferMapping;
 
 class FrameBuffer {
 private:
@@ -119,21 +133,6 @@ struct DisplayContents {
     }
 };
 
-class Display;
-class Displays;
-
-
-class errcode_exception : public std::runtime_error {
-public:
-    int errcode;
-    std::string message;
-
-    errcode_exception(int errcode, const std::string& message) : 
-        std::runtime_error("System error " + std::to_string(errcode) + ": " + message), 
-        errcode(errcode), 
-        message(message) { }
-};
-
 
 class Card {
     friend class Displays;
@@ -155,7 +154,6 @@ public:
     int prepare();
     bool setAllDisplaysModes();
     void runDrawingLoop();
-
     
     virtual ~Card();
 
@@ -163,7 +161,9 @@ public:
 };
 
 class Display {
+private:
     static std::set<std::shared_ptr<Card::page_flip_callback_data>> page_flip_callback_data_cache;
+
 public:
     const Card& card;
     const Displays& displays;
@@ -183,17 +183,18 @@ public:
 
     bool mode_set_successfully = false;
 
-    Display(const Card& card, const Displays& displays) : card(card), displays(displays), bufs { FrameBuffer(card), FrameBuffer(card) } {}
-    void draw();
-    int setup(drmModeRes *res, drmModeConnector *conn);
+    Display(const Card& card, const Displays& displays)
+            : card(card), displays(displays), bufs { FrameBuffer(card), FrameBuffer(card) } {}
 
+    int setup(drmModeRes *res, drmModeConnector *conn);
+    void draw();
+    bool setDisplayMode();
 };
 
 
 class Displays : protected std::list<std::shared_ptr<Display>> {
 private:
     const Card& card;
-    void drawOneDisplayContents(Display* dev);
 
 public:
     bool empty() const {
@@ -217,6 +218,6 @@ public:
         }
 
     }
-    int find_crtc(drmModeRes *res, drmModeConnector *conn, Display& display) const;
+    int findCrtcForDisplay(drmModeRes *res, drmModeConnector *conn, Display& display) const;
     virtual ~Displays();
 };

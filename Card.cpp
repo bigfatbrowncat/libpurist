@@ -40,23 +40,15 @@
 
 #include <cassert>
 
-
-// The static fields for class modeset
-//std::list<std::shared_ptr<Display>> Card::displays_list;
+// The static fields
 std::set<std::shared_ptr<Card::page_flip_callback_data>> Display::page_flip_callback_data_cache;
 
 bool Displays::setAllDisplaysModes() {
 	bool some_modeset_failed = false;
 	/* perform actual modesetting on each found connector+CRTC */
 	for (auto& iter : *this) {
-		iter->saved_crtc = drmModeGetCrtc(card.fd, iter->crtc_id);
-		FrameBuffer *buf = &iter->bufs[iter->front_buf];
-		int ret = drmModeSetCrtc(card.fd, iter->crtc_id, buf->framebuffer_id, 0, 0,
-					&iter->connector_id, 1, &iter->mode);
-		if (ret == 0) {
-			iter->mode_set_successfully = true;
-		} else {
-			iter->mode_set_successfully = false;
+		bool set_successfully = iter->setDisplayMode();
+		if (!set_successfully) {
 			some_modeset_failed = true;
 			fprintf(stderr, "cannot set CRTC for connector %u (%d): %m\n",
 				iter->connector_id, errno);
@@ -65,16 +57,16 @@ bool Displays::setAllDisplaysModes() {
 	return !some_modeset_failed;
 }
 
-int Displays::find_crtc(drmModeRes *res, drmModeConnector *conn, Display& display) const {
-	drmModeEncoder *enc;
+int Displays::findCrtcForDisplay(drmModeRes *res, drmModeConnector *conn, Display& display) const {
 	unsigned int i, j;
 	int32_t enc_crtc_id;
 
 	/* first try the currently conected encoder+crtc */
+	drmModeEncoder *enc;
 	if (conn->encoder_id)
 		enc = drmModeGetEncoder(card.fd, conn->encoder_id);
 	else
-		enc = NULL;
+		enc = nullptr;
 
 	if (enc) {
 		if (enc->crtc_id) {
@@ -285,6 +277,22 @@ int Card::prepare()
 
 
 
+bool Display::setDisplayMode() {
+	saved_crtc = drmModeGetCrtc(card.fd, crtc_id);
+	FrameBuffer *buf = &bufs[front_buf];
+	int ret = drmModeSetCrtc(card.fd, crtc_id, buf->framebuffer_id, 0, 0,
+				&connector_id, 1, &mode);
+	
+	if (ret == 0) {
+		mode_set_successfully = true;
+	} else {
+		mode_set_successfully = false;
+	}
+
+	return mode_set_successfully;
+}
+
+
 /*
  * modeset_setup_dev() stays the same.
  */
@@ -317,7 +325,7 @@ int Display::setup(drmModeRes *res, drmModeConnector *conn) {
 		conn->connector_id, width, height);
 
 	/* find a crtc for this connector */
-	ret = displays.find_crtc(res, conn, *this);
+	ret = displays.findCrtcForDisplay(res, conn, *this);
 	if (ret) {
 		fprintf(stderr, "no valid crtc for connector %u\n",
 			conn->connector_id);

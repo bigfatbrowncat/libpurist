@@ -22,7 +22,7 @@
  * routines.
  */
 
-struct modeset_buf {
+struct VideoBuffer {
 	uint32_t width = 0;
 	uint32_t height = 0;
 	uint32_t stride = 0;
@@ -54,14 +54,19 @@ struct DisplayContents {
         return next;
     }
 
+    void update() {
+       	r = DisplayContents::next_color(&r_up, r, 20);
+        g = DisplayContents::next_color(&g_up, g, 10);
+        b = DisplayContents::next_color(&b_up, b, 5);
+    }
 };
 
 struct Display {
 	unsigned int front_buf = 0;
-	struct modeset_buf bufs[2];
+	struct VideoBuffer bufs[2];
 
 	drmModeModeInfo mode;
-	uint32_t conn;
+	uint32_t connector_id;
 	uint32_t crtc;
 	drmModeCrtc *saved_crtc;
 
@@ -94,12 +99,12 @@ private:
     static void modeset_page_flip_event(int fd, unsigned int frame, unsigned int sec, unsigned int usec, void *data);
 
     static std::set<std::shared_ptr<page_flip_data>> page_flip_data_cache;
-    static std::list<std::shared_ptr<Display>> modeset_list;
+    static std::list<std::shared_ptr<Display>> displays_list;
 
     int find_crtc(drmModeRes *res, drmModeConnector *conn, std::shared_ptr<Display> dev);
-    int create_fb(struct modeset_buf *buf);
-    void destroy_fb(struct modeset_buf *buf);
-    int setup_dev(drmModeRes *res, drmModeConnector *conn, std::shared_ptr<Display> dev);
+    int create_fb(struct VideoBuffer *buf);
+    void destroy_fb(struct VideoBuffer *buf);
+    int setup_display(drmModeRes *res, drmModeConnector *conn, std::shared_ptr<Display> dev);
     void draw_dev(Display* dev);
 
     int fd;
@@ -110,6 +115,8 @@ public:
     int prepare();
     int set_modes();
     void draw();
+
+    std::shared_ptr<DisplayContents> createDisplayContents();
     
     virtual ~Card();
 };

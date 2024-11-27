@@ -1,7 +1,8 @@
 #include "Card.h"
 
+#include <cstdio>
+
 #include <memory>
-#include <stdio.h>
 
 /*
  * main() also stays the same.

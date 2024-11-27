@@ -23,10 +23,8 @@
 
 #include "Card.h"
 
-#include <cstddef>
 #include <errno.h>
 #include <fcntl.h>
-#include <memory>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -37,9 +35,12 @@
 #include <unistd.h>
 #include <xf86drm.h>
 
+#include <memory>
+#include <cstddef>
+
 
 // The static fields for class modeset
-std::list<std::shared_ptr<Display>> Card::modeset_list;
+std::list<std::shared_ptr<Display>> Card::displays_list;
 std::set<std::shared_ptr<Card::page_flip_data>> Card::page_flip_data_cache;
 
 
@@ -83,9 +84,9 @@ Card::~Card() {
 	ev.version = DRM_EVENT_CONTEXT_VERSION;
 	ev.page_flip_handler = Card::modeset_page_flip_event;
 
-	while (!modeset_list.empty()) {
+	while (!displays_list.empty()) {
 		/* remove from global list */
-		auto& iter = *(modeset_list.begin());
+		auto& iter = *(displays_list.begin());
 
 		/* if a pageflip is pending, wait for it to complete */
 		iter->cleanup = true;
@@ -103,7 +104,7 @@ Card::~Card() {
 				       iter->saved_crtc->buffer_id,
 				       iter->saved_crtc->x,
 				       iter->saved_crtc->y,
-				       &iter->conn,
+				       &iter->connector_id,
 				       1,
 				       &iter->saved_crtc->mode);
 		drmModeFreeCrtc(iter->saved_crtc);
@@ -114,7 +115,7 @@ Card::~Card() {
 
 		/* free allocated memory */
 		iter = nullptr;
-		modeset_list.pop_front();
+		displays_list.pop_front();
 	}
 
     // Closing the video card file
@@ -131,15 +132,13 @@ int Card::prepare()
 	drmModeRes *res;
 	drmModeConnector *conn;
 	unsigned int i;
-	std::shared_ptr<Display> dev;
+	std::shared_ptr<Display> display;
 	int ret;
 
 	/* retrieve resources */
 	res = drmModeGetResources(fd);
 	if (!res) {
-		fprintf(stderr, "cannot retrieve DRM resources (%d): %m\n",
-			errno);
-		return -errno;
+		throw errcode_exception(-errno, "cannot retrieve DRM resources");
 	}
 
 	/* iterate all connectors */
@@ -153,28 +152,25 @@ int Card::prepare()
 		}
 
 		/* create a device structure */
-		dev = std::make_shared<Display>();
-		//memset(dev, 0, sizeof(*dev));
-		dev->conn = conn->connector_id;
+		display = std::make_shared<Display>();
+		display->connector_id = conn->connector_id;
 
 		/* call helper function to prepare this connector */
-		ret = setup_dev(res, conn, dev);
+		ret = setup_display(res, conn, display);
 		if (ret) {
 			if (ret != -ENOENT) {
 				errno = -ret;
 				fprintf(stderr, "cannot setup device for connector %u:%u (%d): %m\n",
 					i, res->connectors[i], errno);
 			}
-			dev = nullptr;
+			display = nullptr;
 			drmModeFreeConnector(conn);
 			continue;
 		}
 
 		/* free connector data and link device into global list */
 		drmModeFreeConnector(conn);
-		//dev->next = modeset_list;
-		//modeset_list = dev;
-		modeset_list.push_front(dev);
+		displays_list.push_front(display);
 	}
 
 	/* free resources again */
@@ -184,18 +180,18 @@ int Card::prepare()
 
 int Card::set_modes() {
 	struct Display *iter;
-	struct modeset_buf *buf;
+	struct VideoBuffer *buf;
 	int ret;
 
 	/* perform actual modesetting on each found connector+CRTC */
-	for (auto& iter : modeset_list) {
+	for (auto& iter : displays_list) {
 		iter->saved_crtc = drmModeGetCrtc(fd, iter->crtc);
 		buf = &iter->bufs[iter->front_buf];
 		ret = drmModeSetCrtc(fd, iter->crtc, buf->fb, 0, 0,
-					&iter->conn, 1, &iter->mode);
+					&iter->connector_id, 1, &iter->mode);
 		if (ret)
 			fprintf(stderr, "cannot set CRTC for connector %u (%d): %m\n",
-				iter->conn, errno);
+				iter->connector_id, errno);
 	}
 	return ret;
 
@@ -206,8 +202,8 @@ int Card::set_modes() {
  * modeset_setup_dev() stays the same.
  */
 
-int Card::setup_dev( drmModeRes *res, drmModeConnector *conn,
-			     std::shared_ptr<Display> dev)
+int Card::setup_display( drmModeRes *res, drmModeConnector *conn,
+			     std::shared_ptr<Display> display)
 {
 	int ret;
 
@@ -227,16 +223,16 @@ int Card::setup_dev( drmModeRes *res, drmModeConnector *conn,
 
 	/* copy the mode information into our device structure and into both
 	 * buffers */
-	memcpy(&dev->mode, &conn->modes[0], sizeof(dev->mode));
-	dev->bufs[0].width = conn->modes[0].hdisplay;
-	dev->bufs[0].height = conn->modes[0].vdisplay;
-	dev->bufs[1].width = conn->modes[0].hdisplay;
-	dev->bufs[1].height = conn->modes[0].vdisplay;
+	memcpy(&display->mode, &conn->modes[0], sizeof(display->mode));
+	display->bufs[0].width = conn->modes[0].hdisplay;
+	display->bufs[0].height = conn->modes[0].vdisplay;
+	display->bufs[1].width = conn->modes[0].hdisplay;
+	display->bufs[1].height = conn->modes[0].vdisplay;
 	fprintf(stderr, "mode for connector %u is %ux%u\n",
-		conn->connector_id, dev->bufs[0].width, dev->bufs[0].height);
+		conn->connector_id, display->bufs[0].width, display->bufs[0].height);
 
 	/* find a crtc for this connector */
-	ret = find_crtc(res, conn, dev);
+	ret = find_crtc(res, conn, display);
 	if (ret) {
 		fprintf(stderr, "no valid crtc for connector %u\n",
 			conn->connector_id);
@@ -244,7 +240,7 @@ int Card::setup_dev( drmModeRes *res, drmModeConnector *conn,
 	}
 
 	/* create framebuffer #1 for this CRTC */
-	ret = create_fb(&dev->bufs[0]);
+	ret = create_fb(&display->bufs[0]);
 	if (ret) {
 		fprintf(stderr, "cannot create framebuffer for connector %u\n",
 			conn->connector_id);
@@ -252,11 +248,11 @@ int Card::setup_dev( drmModeRes *res, drmModeConnector *conn,
 	}
 
 	/* create framebuffer #2 for this CRTC */
-	ret = create_fb(&dev->bufs[1]);
+	ret = create_fb(&display->bufs[1]);
 	if (ret) {
 		fprintf(stderr, "cannot create framebuffer for connector %u\n",
 			conn->connector_id);
-		destroy_fb(&dev->bufs[0]);
+		destroy_fb(&display->bufs[0]);
 		return ret;
 	}
 
@@ -273,7 +269,6 @@ int Card::find_crtc( drmModeRes *res, drmModeConnector *conn,
 	drmModeEncoder *enc;
 	unsigned int i, j;
 	int32_t crtc;
-	//struct modeset_dev *iter;
 
 	/* first try the currently conected encoder+crtc */
 	if (conn->encoder_id)
@@ -284,7 +279,7 @@ int Card::find_crtc( drmModeRes *res, drmModeConnector *conn,
 	if (enc) {
 		if (enc->crtc_id) {
 			crtc = enc->crtc_id;
-			for (auto& iter : modeset_list) {
+			for (auto& iter : displays_list) {
 				if (iter->crtc == crtc) {
 					crtc = -1;
 					break;
@@ -321,7 +316,7 @@ int Card::find_crtc( drmModeRes *res, drmModeConnector *conn,
 
 			/* check that no other device already uses this CRTC */
 			crtc = res->crtcs[j];
-			for (auto& iter : modeset_list) {
+			for (auto& iter : displays_list) {
 				if (iter->crtc == crtc) {
 					crtc = -1;
 					break;
@@ -348,7 +343,7 @@ int Card::find_crtc( drmModeRes *res, drmModeConnector *conn,
  * modeset_create_fb() stays the same.
  */
 
-int Card::create_fb( struct modeset_buf *buf)
+int Card::create_fb( struct VideoBuffer *buf)
 {
 	struct drm_mode_create_dumb creq;
 	struct drm_mode_destroy_dumb dreq;
@@ -419,7 +414,7 @@ err_destroy:
  * modeset_destroy_fb() stays the same.
  */
 
-void Card::destroy_fb( struct modeset_buf *buf)
+void Card::destroy_fb( struct VideoBuffer *buf)
 {
 	struct drm_mode_destroy_dumb dreq;
 
@@ -454,6 +449,16 @@ void Card::modeset_page_flip_event(int fd, unsigned int frame,
 	if (!dev->cleanup)
 		user_data->ms->draw_dev(dev);
 }
+
+std::shared_ptr<DisplayContents> Card::createDisplayContents() {
+	auto contents = std::make_shared<DisplayContents>();
+	contents->r = rand() % 0xff;
+	contents->g = rand() % 0xff;
+	contents->b = rand() % 0xff;
+	contents->r_up = contents->g_up = contents->b_up = true;
+	return contents;
+}
+
 
 /*
  * modeset_draw() changes heavily from all previous examples. The rendering has
@@ -528,13 +533,8 @@ void Card::draw()
 	ev.page_flip_handler = Card::modeset_page_flip_event; //  unsigned int frame, unsigned int sec, unsigned int usec, void *data
 
 	/* redraw all outputs */
-	for (auto& iter : modeset_list) {
-        iter->contents = std::make_shared<DisplayContents>();
-		iter->contents->r = rand() % 0xff;
-		iter->contents->g = rand() % 0xff;
-		iter->contents->b = rand() % 0xff;
-		iter->contents->r_up = iter->contents->g_up = iter->contents->b_up = true;
-
+	for (auto& iter : displays_list) {
+        iter->contents = createDisplayContents();
 		draw_dev(iter.get());
 	}
 
@@ -597,15 +597,13 @@ void Card::draw()
 
 void Card::draw_dev( Display* dev)
 {
-	struct modeset_buf *buf;
+	struct VideoBuffer *buf;
 	unsigned int j, k, off;
 	int ret;
 
 	buf = &dev->bufs[dev->front_buf ^ 1];
 
-	dev->contents->r = DisplayContents::next_color(&dev->contents->r_up, dev->contents->r, 20);
-	dev->contents->g = DisplayContents::next_color(&dev->contents->g_up, dev->contents->g, 10);
-	dev->contents->b = DisplayContents::next_color(&dev->contents->b_up, dev->contents->b, 5);
+	dev->contents->update();
 	for (j = 0; j < buf->height; ++j) {
 		for (k = 0; k < buf->width; ++k) {
 			off = buf->stride * j + k * 4;
@@ -621,7 +619,7 @@ void Card::draw_dev( Display* dev)
 			      DRM_MODE_PAGE_FLIP_EVENT, user_data.get());
 	if (ret) {
 		fprintf(stderr, "cannot flip CRTC for connector %u (%d): %m\n",
-			dev->conn, errno);
+			dev->connector_id, errno);
 	} else {
 		dev->front_buf ^= 1;
 		dev->pflip_pending = true;

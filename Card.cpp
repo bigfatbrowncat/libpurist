@@ -38,6 +38,8 @@
 #include <memory>
 #include <cstddef>
 
+#include <cassert>
+
 
 // The static fields for class modeset
 std::list<std::shared_ptr<Display>> Card::displays_list;
@@ -360,21 +362,23 @@ void DumbBuffer::create(int width, int height) {
 }
 
 void DumbBuffer::destroy() {
-	if (created) {
-		struct drm_mode_destroy_dumb dreq;
-		memset(&dreq, 0, sizeof(dreq));
-		dreq.handle = handle;
+	assert(created);
 
-		int ret = drmIoctl(card.fd, DRM_IOCTL_MODE_DESTROY_DUMB, &dreq);
-		if (ret < 0) {
-			throw errcode_exception(-errno, std::string("cannot destroy dumb buffer. ") + strerror(errno));
-		}
-		created = false;
+	struct drm_mode_destroy_dumb dreq;
+	memset(&dreq, 0, sizeof(dreq));
+	dreq.handle = handle;
+
+	int ret = drmIoctl(card.fd, DRM_IOCTL_MODE_DESTROY_DUMB, &dreq);
+	if (ret < 0) {
+		throw errcode_exception(-errno, std::string("cannot destroy dumb buffer. ") + strerror(errno));
 	}
+	created = false;
 }
 
 DumbBuffer::~DumbBuffer() {
-	destroy();
+	if (created) {
+		destroy();
+	}
 }
 
 DumbBufferMapping::DumbBufferMapping(const Card& card, const FrameBuffer& buf, const DumbBuffer& dumb)
@@ -442,23 +446,27 @@ void FrameBuffer::createAndAdd(int width, int height) {
 }
 
 void FrameBuffer::removeAndDestroy() {
-	if (added) {
-		added = false;
-		// Removing the FB
-		int ret = drmModeRmFB(card.fd, framebuffer_id);
-		if (ret) {
-			throw errcode_exception(-errno, std::string("cannot destroy framebuffer. ") + strerror(errno));
-		}
+	assert(added);
+
+	// Removing the FB
+	int ret = drmModeRmFB(card.fd, framebuffer_id);
+	if (ret) {
+		throw errcode_exception(-errno, std::string("cannot destroy framebuffer. ") + strerror(errno));
 	}
 
+	// Unmapping the dumb
 	mapping->doUnmapping();
 
 	// Destroying the dumb
-	this->dumb->destroy();
+	dumb->destroy();
+
+	added = false;
 }
 
 FrameBuffer::~FrameBuffer() {
-	removeAndDestroy();
+	if (added) {
+		removeAndDestroy();
+	}
 	*const_cast<std::shared_ptr<DumbBufferMapping>*>(&this->mapping) = nullptr;
 	*const_cast<std::shared_ptr<DumbBuffer>*>(&this->dumb) = nullptr;
 }

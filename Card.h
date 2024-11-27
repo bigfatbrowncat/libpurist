@@ -58,7 +58,6 @@ public:
 
 	const uint32_t framebuffer_id = 0;
 
-
     FrameBuffer(const Card& card);
     void createAndAdd(int width, int height);
     void removeAndDestroy();

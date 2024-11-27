@@ -160,7 +160,7 @@ int Card::prepare()
 		display->connector_id = conn->connector_id;
 
 		/* call helper function to prepare this connector */
-		ret = setup_display(res, conn, display);
+		ret = display->setup(res, conn);
 		if (ret) {
 			if (ret != -ENOENT) {
 				errno = -ret;
@@ -186,9 +186,9 @@ bool Card::setAllDisplaysModes() {
 	bool some_modeset_failed = false;
 	/* perform actual modesetting on each found connector+CRTC */
 	for (auto& iter : displays_list) {
-		iter->saved_crtc = drmModeGetCrtc(fd, iter->crtc);
+		iter->saved_crtc = drmModeGetCrtc(fd, iter->crtc_id);
 		FrameBuffer *buf = &iter->bufs[iter->front_buf];
-		int ret = drmModeSetCrtc(fd, iter->crtc, buf->framebuffer_id, 0, 0,
+		int ret = drmModeSetCrtc(fd, iter->crtc_id, buf->framebuffer_id, 0, 0,
 					&iter->connector_id, 1, &iter->mode);
 		if (ret == 0) {
 			iter->mode_set_successfully = true;
@@ -207,9 +207,7 @@ bool Card::setAllDisplaysModes() {
  * modeset_setup_dev() stays the same.
  */
 
-int Card::setup_display( drmModeRes *res, drmModeConnector *conn,
-			     std::shared_ptr<Display> display)
-{
+int Display::setup(drmModeRes *res, drmModeConnector *conn) {
 	int ret;
 
 	/* check if a monitor is connected */
@@ -228,11 +226,7 @@ int Card::setup_display( drmModeRes *res, drmModeConnector *conn,
 
 	/* copy the mode information into our device structure and into both
 	 * buffers */
-	memcpy(&display->mode, &conn->modes[0], sizeof(display->mode));
-	/*display->bufs[0].width = conn->modes[0].hdisplay;
-	display->bufs[0].height = conn->modes[0].vdisplay;
-	display->bufs[1].width = conn->modes[0].hdisplay;
-	display->bufs[1].height = conn->modes[0].vdisplay;*/
+	memcpy(&mode, &conn->modes[0], sizeof(mode));
 	
 	auto width = conn->modes[0].hdisplay;
 	auto height = conn->modes[0].vdisplay;
@@ -241,7 +235,7 @@ int Card::setup_display( drmModeRes *res, drmModeConnector *conn,
 		conn->connector_id, width, height);
 
 	/* find a crtc for this connector */
-	ret = find_crtc(res, conn, display);
+	ret = find_crtc(res, conn);
 	if (ret) {
 		fprintf(stderr, "no valid crtc for connector %u\n",
 			conn->connector_id);
@@ -249,8 +243,8 @@ int Card::setup_display( drmModeRes *res, drmModeConnector *conn,
 	}
 
 	/* create framebuffer #1 for this CRTC */
-	display->bufs[0].createAndAdd(width, height);
-	display->bufs[1].createAndAdd(width, height);
+	bufs[0].createAndAdd(width, height);
+	bufs[1].createAndAdd(width, height);
 
 	return 0;
 }
@@ -259,32 +253,30 @@ int Card::setup_display( drmModeRes *res, drmModeConnector *conn,
  * modeset_find_crtc() stays the same.
  */
 
-int Card::find_crtc( drmModeRes *res, drmModeConnector *conn,
-			     std::shared_ptr<Display> dev)
-{
+int Display::find_crtc(drmModeRes *res, drmModeConnector *conn) {
 	drmModeEncoder *enc;
 	unsigned int i, j;
-	int32_t crtc;
+	int32_t enc_crtc_id;
 
 	/* first try the currently conected encoder+crtc */
 	if (conn->encoder_id)
-		enc = drmModeGetEncoder(fd, conn->encoder_id);
+		enc = drmModeGetEncoder(card.fd, conn->encoder_id);
 	else
 		enc = NULL;
 
 	if (enc) {
 		if (enc->crtc_id) {
-			crtc = enc->crtc_id;
-			for (auto& iter : displays_list) {
-				if (iter->crtc == crtc) {
-					crtc = -1;
+			enc_crtc_id = enc->crtc_id;
+			for (auto& iter : Card::displays_list) {
+				if (iter->crtc_id == enc_crtc_id) {
+					enc_crtc_id = -1;
 					break;
 				}
 			}
 
-			if (crtc >= 0) {
+			if (enc_crtc_id >= 0) {
 				drmModeFreeEncoder(enc);
-				dev->crtc = crtc;
+				this->crtc_id = enc_crtc_id;
 				return 0;
 			}
 		}
@@ -297,7 +289,7 @@ int Card::find_crtc( drmModeRes *res, drmModeConnector *conn,
 	 * but lets be safe), iterate all other available encoders to find a
 	 * matching CRTC. */
 	for (i = 0; i < conn->count_encoders; ++i) {
-		enc = drmModeGetEncoder(fd, conn->encoders[i]);
+		enc = drmModeGetEncoder(card.fd, conn->encoders[i]);
 		if (!enc) {
 			fprintf(stderr, "cannot retrieve encoder %u:%u (%d): %m\n",
 				i, conn->encoders[i], errno);
@@ -311,18 +303,18 @@ int Card::find_crtc( drmModeRes *res, drmModeConnector *conn,
 				continue;
 
 			/* check that no other device already uses this CRTC */
-			crtc = res->crtcs[j];
-			for (auto& iter : displays_list) {
-				if (iter->crtc == crtc) {
-					crtc = -1;
+			enc_crtc_id = res->crtcs[j];
+			for (auto& iter : Card::displays_list) {
+				if (iter->crtc_id == enc_crtc_id) {
+					enc_crtc_id = -1;
 					break;
 				}
 			}
 
 			/* we have found a CRTC, so save it and return */
-			if (crtc >= 0) {
+			if (enc_crtc_id >= 0) {
 				drmModeFreeEncoder(enc);
-				dev->crtc = crtc;
+				this->crtc_id = enc_crtc_id;
 				return 0;
 			}
 		}
@@ -666,7 +658,7 @@ void Card::drawOneDisplayContents(Display* display)
 	auto user_data = std::make_shared<page_flip_callback_data>(this, display);
 	page_flip_callback_data_cache.insert(user_data);
 
-	int ret = drmModePageFlip(fd, display->crtc, buf->framebuffer_id,
+	int ret = drmModePageFlip(fd, display->crtc_id, buf->framebuffer_id,
 			      DRM_MODE_PAGE_FLIP_EVENT, user_data.get());
 	if (ret) {
 		fprintf(stderr, "cannot flip CRTC for connector %u (%d): %m\n",

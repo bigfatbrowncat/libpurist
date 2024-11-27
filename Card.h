@@ -119,13 +119,16 @@ struct DisplayContents {
     }
 };
 
-struct Display {
+class Display {
+public:
+    const Card& card;
+
 	unsigned int front_buf = 0;
 	FrameBuffer bufs[2];
 
 	drmModeModeInfo mode;
 	uint32_t connector_id;
-	uint32_t crtc;
+	uint32_t crtc_id;
 	drmModeCrtc *saved_crtc;
 
 	bool pflip_pending;
@@ -135,7 +138,11 @@ struct Display {
 
     bool mode_set_successfully = false;
 
-    Display(const Card& card) : bufs { FrameBuffer(card), FrameBuffer(card) } {}
+    Display(const Card& card) : card(card), bufs { FrameBuffer(card), FrameBuffer(card) } {}
+
+    int setup(drmModeRes *res, drmModeConnector *conn);
+    int find_crtc(drmModeRes *res, drmModeConnector *conn);
+
 };
 
 
@@ -162,10 +169,7 @@ private:
     static void modeset_page_flip_event(int fd, unsigned int frame, unsigned int sec, unsigned int usec, void *data);
 
     static std::set<std::shared_ptr<page_flip_callback_data>> page_flip_callback_data_cache;
-    static std::list<std::shared_ptr<Display>> displays_list;
 
-    int find_crtc(drmModeRes *res, drmModeConnector *conn, std::shared_ptr<Display> dev);
-    int setup_display(drmModeRes *res, drmModeConnector *conn, std::shared_ptr<Display> dev);
     void drawOneDisplayContents(Display* dev);
 
 public:
@@ -180,4 +184,6 @@ public:
     std::shared_ptr<DisplayContents> createDisplayContents();
     
     virtual ~Card();
+
+    static std::list<std::shared_ptr<Display>> displays_list;
 };

@@ -27,14 +27,15 @@ class Card;
 class DumbBuffer {
 private:
     bool created = false;
+
 public:
+	const Card& card;
+
 	const uint32_t stride;
 	const uint32_t size;
 	const uint32_t handle;
 
     const int width, height;
-
-	const Card& card;
 
 	DumbBuffer(const Card& card);
     void create(int width, int height);
@@ -50,12 +51,12 @@ private:
     bool added = false;
 
 public:
+    const Card& card;
+
     const std::shared_ptr<DumbBuffer> dumb;
     const std::shared_ptr<DumbBufferMapping> mapping;
 
 	const uint32_t framebuffer_id = 0;
-
-    const Card& card;
 
 
     FrameBuffer(const Card& card);
@@ -121,7 +122,7 @@ struct DisplayContents {
 
 struct Display {
 	unsigned int front_buf = 0;
-	struct FrameBuffer bufs[2];
+	FrameBuffer bufs[2];
 
 	drmModeModeInfo mode;
 	uint32_t connector_id;
@@ -145,8 +146,9 @@ public:
     std::string message;
 
     errcode_exception(int errcode, const std::string& message) : 
-        errcode(errcode), message(message),
-        std::runtime_error("System error " + std::to_string(errcode) + ": " + message) { }
+        std::runtime_error("System error " + std::to_string(errcode) + ": " + message), 
+        errcode(errcode), 
+        message(message) { }
 };
 
 

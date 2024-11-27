@@ -334,7 +334,7 @@ int Card::find_crtc( drmModeRes *res, drmModeConnector *conn,
 }
 
 DumbBuffer::DumbBuffer(const Card& card) 
-		: stride(0), size(0), handle(0), card(card), width(0), height(0) {
+		:  card(card), stride(0), size(0), handle(0), width(0), height(0) {
 }
 
 void DumbBuffer::create(int width, int height) {
@@ -459,6 +459,8 @@ void FrameBuffer::removeAndDestroy() {
 
 FrameBuffer::~FrameBuffer() {
 	removeAndDestroy();
+	*const_cast<std::shared_ptr<DumbBufferMapping>*>(&this->mapping) = nullptr;
+	*const_cast<std::shared_ptr<DumbBuffer>*>(&this->dumb) = nullptr;
 }
 
 /*
@@ -570,7 +572,6 @@ void Card::runDrawingLoop()
 	time_t start, cur;
 	struct timeval v;
 	drmEventContext ev;
-	struct Display *iter;
 
 	/* init variables */
 	srand(time(&start));

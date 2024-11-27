@@ -44,12 +44,12 @@ std::list<std::shared_ptr<Display>> Card::displays_list;
 std::set<std::shared_ptr<Card::page_flip_callback_data>> Card::page_flip_callback_data_cache;
 
 
-Card::Card(const char *node)
+Card::Card(const char *node) : fd(-1)
 {
 	int ret;
 	uint64_t has_dumb;
 
-	fd = open(node, O_RDWR | O_CLOEXEC);
+	int fd = open(node, O_RDWR | O_CLOEXEC);
 	if (fd < 0) {
 		ret = -errno;
 		throw errcode_exception(ret, "cannot open '" + std::string(node) + "'");
@@ -59,6 +59,8 @@ Card::Card(const char *node)
 		close(fd);
 		throw errcode_exception(-EOPNOTSUPP, "drm device '" + std::string(node) + "' does not support dumb buffers");
 	}
+
+	*const_cast<int*>(&this->fd) = fd;
 }
 
 
@@ -110,8 +112,8 @@ Card::~Card() {
 		drmModeFreeCrtc(iter->saved_crtc);
 
 		/* destroy framebuffers */
-		destroy_fb(&iter->bufs[1]);
-		destroy_fb(&iter->bufs[0]);
+		iter->bufs[1].removeAndDestroy();
+		iter->bufs[0].removeAndDestroy();
 
 		/* free allocated memory */
 		iter = nullptr;
@@ -152,7 +154,7 @@ int Card::prepare()
 		}
 
 		/* create a device structure */
-		display = std::make_shared<Display>();
+		display = std::make_shared<Display>(*this);
 		display->connector_id = conn->connector_id;
 
 		/* call helper function to prepare this connector */
@@ -183,8 +185,8 @@ bool Card::setAllDisplaysModes() {
 	/* perform actual modesetting on each found connector+CRTC */
 	for (auto& iter : displays_list) {
 		iter->saved_crtc = drmModeGetCrtc(fd, iter->crtc);
-		VideoBuffer *buf = &iter->bufs[iter->front_buf];
-		int ret = drmModeSetCrtc(fd, iter->crtc, buf->fb, 0, 0,
+		FrameBuffer *buf = &iter->bufs[iter->front_buf];
+		int ret = drmModeSetCrtc(fd, iter->crtc, buf->framebuffer_id, 0, 0,
 					&iter->connector_id, 1, &iter->mode);
 		if (ret == 0) {
 			iter->mode_set_successfully = true;
@@ -225,12 +227,16 @@ int Card::setup_display( drmModeRes *res, drmModeConnector *conn,
 	/* copy the mode information into our device structure and into both
 	 * buffers */
 	memcpy(&display->mode, &conn->modes[0], sizeof(display->mode));
-	display->bufs[0].width = conn->modes[0].hdisplay;
+	/*display->bufs[0].width = conn->modes[0].hdisplay;
 	display->bufs[0].height = conn->modes[0].vdisplay;
 	display->bufs[1].width = conn->modes[0].hdisplay;
-	display->bufs[1].height = conn->modes[0].vdisplay;
+	display->bufs[1].height = conn->modes[0].vdisplay;*/
+	
+	auto width = conn->modes[0].hdisplay;
+	auto height = conn->modes[0].vdisplay;
+
 	fprintf(stderr, "mode for connector %u is %ux%u\n",
-		conn->connector_id, display->bufs[0].width, display->bufs[0].height);
+		conn->connector_id, width, height);
 
 	/* find a crtc for this connector */
 	ret = find_crtc(res, conn, display);
@@ -241,21 +247,8 @@ int Card::setup_display( drmModeRes *res, drmModeConnector *conn,
 	}
 
 	/* create framebuffer #1 for this CRTC */
-	ret = create_fb(&display->bufs[0]);
-	if (ret) {
-		fprintf(stderr, "cannot create framebuffer for connector %u\n",
-			conn->connector_id);
-		return ret;
-	}
-
-	/* create framebuffer #2 for this CRTC */
-	ret = create_fb(&display->bufs[1]);
-	if (ret) {
-		fprintf(stderr, "cannot create framebuffer for connector %u\n",
-			conn->connector_id);
-		destroy_fb(&display->bufs[0]);
-		return ret;
-	}
+	display->bufs[0].createAndAdd(width, height);
+	display->bufs[1].createAndAdd(width, height);
 
 	return 0;
 }
@@ -340,96 +333,153 @@ int Card::find_crtc( drmModeRes *res, drmModeConnector *conn,
 	return -ENOENT;
 }
 
+DumbBuffer::DumbBuffer(const Card& card) 
+		: stride(0), size(0), handle(0), card(card), width(0), height(0) {
+}
+
+void DumbBuffer::create(int width, int height) {
+	struct drm_mode_create_dumb creq;
+	/* create dumb buffer */
+	memset(&creq, 0, sizeof(creq));
+	creq.width = width;
+	creq.height = height;
+	creq.bpp = 32;
+	int ret = drmIoctl(card.fd, DRM_IOCTL_MODE_CREATE_DUMB, &creq);
+	if (ret < 0) {
+		throw errcode_exception(-errno, std::string("cannot create dumb buffer. ") + strerror(errno));
+	}
+
+	*const_cast<uint32_t*>(&this->stride) = creq.pitch;
+	*const_cast<uint32_t*>(&this->size) = creq.size;
+	*const_cast<uint32_t*>(&this->handle) = creq.handle;
+
+	*const_cast<int*>(&this->width) = width;
+	*const_cast<int*>(&this->height) = height;
+
+	created = true;
+}
+
+void DumbBuffer::destroy() {
+	if (created) {
+		struct drm_mode_destroy_dumb dreq;
+		memset(&dreq, 0, sizeof(dreq));
+		dreq.handle = handle;
+
+		int ret = drmIoctl(card.fd, DRM_IOCTL_MODE_DESTROY_DUMB, &dreq);
+		if (ret < 0) {
+			throw errcode_exception(-errno, std::string("cannot destroy dumb buffer. ") + strerror(errno));
+		}
+		created = false;
+	}
+}
+
+DumbBuffer::~DumbBuffer() {
+	destroy();
+}
+
+DumbBufferMapping::DumbBufferMapping(const Card& card, const FrameBuffer& buf, const DumbBuffer& dumb)
+		: map((uint8_t*)MAP_FAILED), card(card), buf(buf), dumb(dumb) { }
+
+void DumbBufferMapping::doMapping() {
+	struct drm_mode_map_dumb mreq;
+
+	/* prepare buffer for memory mapping */
+	memset(&mreq, 0, sizeof(mreq));
+	mreq.handle = dumb.handle;
+	int ret = drmIoctl(this->card.fd, DRM_IOCTL_MODE_MAP_DUMB, &mreq);
+	if (ret) {
+		throw errcode_exception(-errno, std::string("cannot map dumb buffer. ") + strerror(errno));
+	}
+
+	/* perform actual memory mapping */
+	this->map = (uint8_t *)mmap(0, dumb.size, PROT_READ | PROT_WRITE, MAP_SHARED, card.fd, mreq.offset);
+	if (this->map == MAP_FAILED) {
+		throw errcode_exception(-errno, std::string("cannot call mmap on a dumb buffer. ") + strerror(errno));
+	}
+
+}
+
+void DumbBufferMapping::doUnmapping() {
+	if (this->map != MAP_FAILED) {
+		/* unmap buffer */
+		munmap((void*)this->map, dumb.size);
+	}
+}
+
+DumbBufferMapping::~DumbBufferMapping() {
+	doUnmapping();
+}
+
 /*
  * modeset_create_fb() stays the same.
  */
 
-int Card::create_fb( struct VideoBuffer *buf)
+FrameBuffer::FrameBuffer(const Card& card)
+	: card(card), dumb(nullptr), mapping(nullptr)
 {
-	struct drm_mode_create_dumb creq;
-	struct drm_mode_destroy_dumb dreq;
-	struct drm_mode_map_dumb mreq;
-	int ret;
+	*const_cast<std::shared_ptr<DumbBuffer>*>(&this->dumb) = std::make_shared<DumbBuffer>(card);
+	*const_cast<std::shared_ptr<DumbBufferMapping>*>(&this->mapping) = std::make_shared<DumbBufferMapping>(card, *this, *dumb);
+}
 
-	/* create dumb buffer */
-	memset(&creq, 0, sizeof(creq));
-	creq.width = buf->width;
-	creq.height = buf->height;
-	creq.bpp = 32;
-	ret = drmIoctl(fd, DRM_IOCTL_MODE_CREATE_DUMB, &creq);
-	if (ret < 0) {
-		fprintf(stderr, "cannot create dumb buffer (%d): %m\n",
-			errno);
-		return -errno;
-	}
-	buf->stride = creq.pitch;
-	buf->size = creq.size;
-	buf->handle = creq.handle;
+void FrameBuffer::createAndAdd(int width, int height) {
+	dumb->create(width, height);
+	mapping->doMapping();
 
 	/* create framebuffer object for the dumb-buffer */
-	ret = drmModeAddFB(fd, buf->width, buf->height, 24, 32, buf->stride,
-			   buf->handle, &buf->fb);
+	int ret = drmModeAddFB(this->card.fd, 
+	                       this->dumb->width, this->dumb->height, 
+						   24, 32, 
+						   dumb->stride, dumb->handle, 
+						   const_cast<uint32_t*>(&this->framebuffer_id));
 	if (ret) {
-		fprintf(stderr, "cannot create framebuffer (%d): %m\n",
-			errno);
-		ret = -errno;
-		goto err_destroy;
+		throw errcode_exception(-errno, std::string("cannot create framebuffer. ") + strerror(errno));
 	}
-
-	/* prepare buffer for memory mapping */
-	memset(&mreq, 0, sizeof(mreq));
-	mreq.handle = buf->handle;
-	ret = drmIoctl(fd, DRM_IOCTL_MODE_MAP_DUMB, &mreq);
-	if (ret) {
-		fprintf(stderr, "cannot map dumb buffer (%d): %m\n",
-			errno);
-		ret = -errno;
-		goto err_fb;
-	}
-
-	/* perform actual memory mapping */
-	buf->map = (uint8_t *)mmap(0, buf->size, PROT_READ | PROT_WRITE, MAP_SHARED, fd,
-		        mreq.offset);
-	if (buf->map == MAP_FAILED) {
-		fprintf(stderr, "cannot mmap dumb buffer (%d): %m\n",
-			errno);
-		ret = -errno;
-		goto err_fb;
-	}
+	added = true;
 
 	/* clear the framebuffer to 0 */
-	memset(buf->map, 0, buf->size);
+	memset((void*)this->mapping->map, 0, dumb->size);
 
-	return 0;
+}
 
-err_fb:
-	drmModeRmFB(fd, buf->fb);
-err_destroy:
-	memset(&dreq, 0, sizeof(dreq));
-	dreq.handle = buf->handle;
-	drmIoctl(fd, DRM_IOCTL_MODE_DESTROY_DUMB, &dreq);
-	return ret;
+void FrameBuffer::removeAndDestroy() {
+	if (added) {
+		added = false;
+		// Removing the FB
+		int ret = drmModeRmFB(card.fd, framebuffer_id);
+		if (ret) {
+			throw errcode_exception(-errno, std::string("cannot destroy framebuffer. ") + strerror(errno));
+		}
+	}
+
+	mapping->doUnmapping();
+
+	// Destroying the dumb
+	this->dumb->destroy();
+}
+
+FrameBuffer::~FrameBuffer() {
+	removeAndDestroy();
 }
 
 /*
  * modeset_destroy_fb() stays the same.
  */
 
-void Card::destroy_fb( struct VideoBuffer *buf)
-{
-	struct drm_mode_destroy_dumb dreq;
+// void Card::destroy_fb( struct FrameBuffer *buf)
+// {
+// 	struct drm_mode_destroy_dumb dreq;
 
-	/* unmap buffer */
-	munmap(buf->map, buf->size);
+// 	/* unmap buffer */
+// 	munmap(buf->map, buf->size);
 
-	/* delete framebuffer */
-	drmModeRmFB(fd, buf->fb);
+// 	/* delete framebuffer */
+// 	drmModeRmFB(fd, buf->framebuffer_id);
 
-	/* delete dumb buffer */
-	memset(&dreq, 0, sizeof(dreq));
-	dreq.handle = buf->handle;
-	drmIoctl(fd, DRM_IOCTL_MODE_DESTROY_DUMB, &dreq);
-}
+// 	/* delete dumb buffer */
+// 	memset(&dreq, 0, sizeof(dreq));
+// 	dreq.handle = buf->handle;
+// 	drmIoctl(fd, DRM_IOCTL_MODE_DESTROY_DUMB, &dreq);
+// }
 
 
 /*
@@ -600,14 +650,14 @@ void Card::runDrawingLoop()
 
 void Card::drawOneDisplayContents(Display* display)
 {
-	VideoBuffer *buf = &display->bufs[display->front_buf ^ 1];
+	FrameBuffer *buf = &display->bufs[display->front_buf ^ 1];
 
 	display->contents->drawIntoBuffer(buf);
 
 	auto user_data = std::make_shared<page_flip_callback_data>(this, display);
 	page_flip_callback_data_cache.insert(user_data);
 
-	int ret = drmModePageFlip(fd, display->crtc, buf->fb,
+	int ret = drmModePageFlip(fd, display->crtc, buf->framebuffer_id,
 			      DRM_MODE_PAGE_FLIP_EVENT, user_data.get());
 	if (ret) {
 		fprintf(stderr, "cannot flip CRTC for connector %u (%d): %m\n",

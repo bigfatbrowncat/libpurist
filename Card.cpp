@@ -42,11 +42,151 @@
 
 
 // The static fields for class modeset
-std::list<std::shared_ptr<Display>> Card::displays_list;
-std::set<std::shared_ptr<Card::page_flip_callback_data>> Card::page_flip_callback_data_cache;
+//std::list<std::shared_ptr<Display>> Card::displays_list;
+std::set<std::shared_ptr<Card::page_flip_callback_data>> Display::page_flip_callback_data_cache;
+
+bool Displays::setAllDisplaysModes() {
+	bool some_modeset_failed = false;
+	/* perform actual modesetting on each found connector+CRTC */
+	for (auto& iter : *this) {
+		iter->saved_crtc = drmModeGetCrtc(card.fd, iter->crtc_id);
+		FrameBuffer *buf = &iter->bufs[iter->front_buf];
+		int ret = drmModeSetCrtc(card.fd, iter->crtc_id, buf->framebuffer_id, 0, 0,
+					&iter->connector_id, 1, &iter->mode);
+		if (ret == 0) {
+			iter->mode_set_successfully = true;
+		} else {
+			iter->mode_set_successfully = false;
+			some_modeset_failed = true;
+			fprintf(stderr, "cannot set CRTC for connector %u (%d): %m\n",
+				iter->connector_id, errno);
+		}
+	}
+	return !some_modeset_failed;
+}
+
+int Displays::find_crtc(drmModeRes *res, drmModeConnector *conn, Display& display) const {
+	drmModeEncoder *enc;
+	unsigned int i, j;
+	int32_t enc_crtc_id;
+
+	/* first try the currently conected encoder+crtc */
+	if (conn->encoder_id)
+		enc = drmModeGetEncoder(card.fd, conn->encoder_id);
+	else
+		enc = NULL;
+
+	if (enc) {
+		if (enc->crtc_id) {
+			enc_crtc_id = enc->crtc_id;
+			for (auto& iter : *this) {
+				if (iter->crtc_id == enc_crtc_id) {
+					enc_crtc_id = -1;
+					break;
+				}
+			}
+
+			if (enc_crtc_id >= 0) {
+				drmModeFreeEncoder(enc);
+				display.crtc_id = enc_crtc_id;
+				return 0;
+			}
+		}
+
+		drmModeFreeEncoder(enc);
+	}
+
+	/* If the connector is not currently bound to an encoder or if the
+	 * encoder+crtc is already used by another connector (actually unlikely
+	 * but lets be safe), iterate all other available encoders to find a
+	 * matching CRTC. */
+	for (i = 0; i < conn->count_encoders; ++i) {
+		enc = drmModeGetEncoder(card.fd, conn->encoders[i]);
+		if (!enc) {
+			fprintf(stderr, "cannot retrieve encoder %u:%u (%d): %m\n",
+				i, conn->encoders[i], errno);
+			continue;
+		}
+
+		/* iterate all global CRTCs */
+		for (j = 0; j < res->count_crtcs; ++j) {
+			/* check whether this CRTC works with the encoder */
+			if (!(enc->possible_crtcs & (1 << j)))
+				continue;
+
+			/* check that no other device already uses this CRTC */
+			enc_crtc_id = res->crtcs[j];
+			for (auto& iter : *this) {
+				if (iter->crtc_id == enc_crtc_id) {
+					enc_crtc_id = -1;
+					break;
+				}
+			}
+
+			/* we have found a CRTC, so save it and return */
+			if (enc_crtc_id >= 0) {
+				drmModeFreeEncoder(enc);
+				display.crtc_id = enc_crtc_id;
+				return 0;
+			}
+		}
+
+		drmModeFreeEncoder(enc);
+	}
+
+	fprintf(stderr, "cannot find suitable CRTC for connector %u\n",
+		conn->connector_id);
+	return -ENOENT;
+}
 
 
-Card::Card(const char *node) : fd(-1)
+Displays::~Displays() {
+	// Cleanup
+    drmEventContext ev;
+	int ret;
+
+	/* init variables */
+	memset(&ev, 0, sizeof(ev));
+	ev.version = DRM_EVENT_CONTEXT_VERSION;
+	ev.page_flip_handler = Card::modeset_page_flip_event;
+
+	while (!empty()) {
+		/* remove from global list */
+		auto& iter = *(this->begin());
+
+		/* if a pageflip is pending, wait for it to complete */
+		iter->cleanup = true;
+		fprintf(stderr, "wait for pending page-flip to complete...\n");
+		while (iter->pflip_pending) {
+			ret = drmHandleEvent(card.fd, &ev);
+			if (ret)
+				break;
+		}
+
+		/* restore saved CRTC configuration */
+		if (!iter->pflip_pending)
+			drmModeSetCrtc(card.fd,
+				       iter->saved_crtc->crtc_id,
+				       iter->saved_crtc->buffer_id,
+				       iter->saved_crtc->x,
+				       iter->saved_crtc->y,
+				       &iter->connector_id,
+				       1,
+				       &iter->saved_crtc->mode);
+		drmModeFreeCrtc(iter->saved_crtc);
+
+		/* destroy framebuffers */
+		iter->bufs[1].removeAndDestroy();
+		iter->bufs[0].removeAndDestroy();
+
+		/* free allocated memory */
+		iter = nullptr;
+		this->pop_front();
+	}
+}
+
+
+Card::Card(const char *node) : fd(-1), displays(std::make_shared<Displays>(*this))
 {
 	int ret;
 	uint64_t has_dumb;
@@ -63,6 +203,8 @@ Card::Card(const char *node) : fd(-1)
 	}
 
 	*const_cast<int*>(&this->fd) = fd;
+
+
 }
 
 
@@ -79,48 +221,7 @@ Card::Card(const char *node) : fd(-1)
  * a blocking operation, but it's mostly just <16ms so we can ignore that.
  */
 Card::~Card() {
-    // Cleanup
-    drmEventContext ev;
-	int ret;
-
-	/* init variables */
-	memset(&ev, 0, sizeof(ev));
-	ev.version = DRM_EVENT_CONTEXT_VERSION;
-	ev.page_flip_handler = Card::modeset_page_flip_event;
-
-	while (!displays_list.empty()) {
-		/* remove from global list */
-		auto& iter = *(displays_list.begin());
-
-		/* if a pageflip is pending, wait for it to complete */
-		iter->cleanup = true;
-		fprintf(stderr, "wait for pending page-flip to complete...\n");
-		while (iter->pflip_pending) {
-			ret = drmHandleEvent(fd, &ev);
-			if (ret)
-				break;
-		}
-
-		/* restore saved CRTC configuration */
-		if (!iter->pflip_pending)
-			drmModeSetCrtc(fd,
-				       iter->saved_crtc->crtc_id,
-				       iter->saved_crtc->buffer_id,
-				       iter->saved_crtc->x,
-				       iter->saved_crtc->y,
-				       &iter->connector_id,
-				       1,
-				       &iter->saved_crtc->mode);
-		drmModeFreeCrtc(iter->saved_crtc);
-
-		/* destroy framebuffers */
-		iter->bufs[1].removeAndDestroy();
-		iter->bufs[0].removeAndDestroy();
-
-		/* free allocated memory */
-		iter = nullptr;
-		displays_list.pop_front();
-	}
+	displays = nullptr;
 
     // Closing the video card file
 	close(fd);
@@ -156,7 +257,7 @@ int Card::prepare()
 		}
 
 		/* create a device structure */
-		display = std::make_shared<Display>(*this);
+		display = std::make_shared<Display>(*this, *displays);
 		display->connector_id = conn->connector_id;
 
 		/* call helper function to prepare this connector */
@@ -174,7 +275,7 @@ int Card::prepare()
 
 		/* free connector data and link device into global list */
 		drmModeFreeConnector(conn);
-		displays_list.push_front(display);
+		displays->add(display);
 	}
 
 	/* free resources again */
@@ -182,25 +283,6 @@ int Card::prepare()
 	return 0;
 }
 
-bool Card::setAllDisplaysModes() {
-	bool some_modeset_failed = false;
-	/* perform actual modesetting on each found connector+CRTC */
-	for (auto& iter : displays_list) {
-		iter->saved_crtc = drmModeGetCrtc(fd, iter->crtc_id);
-		FrameBuffer *buf = &iter->bufs[iter->front_buf];
-		int ret = drmModeSetCrtc(fd, iter->crtc_id, buf->framebuffer_id, 0, 0,
-					&iter->connector_id, 1, &iter->mode);
-		if (ret == 0) {
-			iter->mode_set_successfully = true;
-		} else {
-			iter->mode_set_successfully = false;
-			some_modeset_failed = true;
-			fprintf(stderr, "cannot set CRTC for connector %u (%d): %m\n",
-				iter->connector_id, errno);
-		}
-	}
-	return !some_modeset_failed;
-}
 
 
 /*
@@ -235,7 +317,7 @@ int Display::setup(drmModeRes *res, drmModeConnector *conn) {
 		conn->connector_id, width, height);
 
 	/* find a crtc for this connector */
-	ret = find_crtc(res, conn);
+	ret = displays.find_crtc(res, conn, *this);
 	if (ret) {
 		fprintf(stderr, "no valid crtc for connector %u\n",
 			conn->connector_id);
@@ -252,80 +334,6 @@ int Display::setup(drmModeRes *res, drmModeConnector *conn) {
 /*
  * modeset_find_crtc() stays the same.
  */
-
-int Display::find_crtc(drmModeRes *res, drmModeConnector *conn) {
-	drmModeEncoder *enc;
-	unsigned int i, j;
-	int32_t enc_crtc_id;
-
-	/* first try the currently conected encoder+crtc */
-	if (conn->encoder_id)
-		enc = drmModeGetEncoder(card.fd, conn->encoder_id);
-	else
-		enc = NULL;
-
-	if (enc) {
-		if (enc->crtc_id) {
-			enc_crtc_id = enc->crtc_id;
-			for (auto& iter : Card::displays_list) {
-				if (iter->crtc_id == enc_crtc_id) {
-					enc_crtc_id = -1;
-					break;
-				}
-			}
-
-			if (enc_crtc_id >= 0) {
-				drmModeFreeEncoder(enc);
-				this->crtc_id = enc_crtc_id;
-				return 0;
-			}
-		}
-
-		drmModeFreeEncoder(enc);
-	}
-
-	/* If the connector is not currently bound to an encoder or if the
-	 * encoder+crtc is already used by another connector (actually unlikely
-	 * but lets be safe), iterate all other available encoders to find a
-	 * matching CRTC. */
-	for (i = 0; i < conn->count_encoders; ++i) {
-		enc = drmModeGetEncoder(card.fd, conn->encoders[i]);
-		if (!enc) {
-			fprintf(stderr, "cannot retrieve encoder %u:%u (%d): %m\n",
-				i, conn->encoders[i], errno);
-			continue;
-		}
-
-		/* iterate all global CRTCs */
-		for (j = 0; j < res->count_crtcs; ++j) {
-			/* check whether this CRTC works with the encoder */
-			if (!(enc->possible_crtcs & (1 << j)))
-				continue;
-
-			/* check that no other device already uses this CRTC */
-			enc_crtc_id = res->crtcs[j];
-			for (auto& iter : Card::displays_list) {
-				if (iter->crtc_id == enc_crtc_id) {
-					enc_crtc_id = -1;
-					break;
-				}
-			}
-
-			/* we have found a CRTC, so save it and return */
-			if (enc_crtc_id >= 0) {
-				drmModeFreeEncoder(enc);
-				this->crtc_id = enc_crtc_id;
-				return 0;
-			}
-		}
-
-		drmModeFreeEncoder(enc);
-	}
-
-	fprintf(stderr, "cannot find suitable CRTC for connector %u\n",
-		conn->connector_id);
-	return -ENOENT;
-}
 
 DumbBuffer::DumbBuffer(const Card& card) 
 		:  card(card), stride(0), size(0), handle(0), width(0), height(0) {
@@ -500,10 +508,11 @@ void Card::modeset_page_flip_event(int fd, unsigned int frame,
 
 	dev->pflip_pending = false;
 	if (!dev->cleanup)
-		user_data->ms->drawOneDisplayContents(dev);
+		dev->draw();
+		//user_data->ms->drawOneDisplayContents(dev);
 }
 
-std::shared_ptr<DisplayContents> Card::createDisplayContents() {
+std::shared_ptr<DisplayContents> Displays::createDisplayContents() {
 	auto contents = std::make_shared<DisplayContents>();
 	contents->r = rand() % 0xff;
 	contents->g = rand() % 0xff;
@@ -584,13 +593,7 @@ void Card::runDrawingLoop()
 	
 	ev.page_flip_handler = Card::modeset_page_flip_event; //  unsigned int frame, unsigned int sec, unsigned int usec, void *data
 
-	/* redraw all outputs */
-	for (auto& iter : displays_list) {
-		if (iter->mode_set_successfully) {
-			iter->contents = createDisplayContents();
-			drawOneDisplayContents(iter.get());
-		}
-	}
+	displays->draw();
 
 	/* wait 5s for VBLANK or input events */
 	while (time(&cur) < start + 5) {
@@ -649,23 +652,21 @@ void Card::runDrawingLoop()
  * did, too.
  */
 
-void Card::drawOneDisplayContents(Display* display)
+void Display::draw()
 {
-	FrameBuffer *buf = &display->bufs[display->front_buf ^ 1];
+	FrameBuffer *buf = &bufs[front_buf ^ 1];
 
-	display->contents->drawIntoBuffer(buf);
+	contents->drawIntoBuffer(buf);
 
-	auto user_data = std::make_shared<page_flip_callback_data>(this, display);
-	page_flip_callback_data_cache.insert(user_data);
+	auto user_data = std::make_shared<Card::page_flip_callback_data>(&card, this);
+	Display::page_flip_callback_data_cache.insert(user_data);
 
-	int ret = drmModePageFlip(fd, display->crtc_id, buf->framebuffer_id,
-			      DRM_MODE_PAGE_FLIP_EVENT, user_data.get());
+	int ret = drmModePageFlip(card.fd, crtc_id, buf->framebuffer_id, DRM_MODE_PAGE_FLIP_EVENT, user_data.get());
 	if (ret) {
-		fprintf(stderr, "cannot flip CRTC for connector %u (%d): %m\n",
-			display->connector_id, errno);
+		fprintf(stderr, "cannot flip CRTC for connector %u (%d): %m\n", connector_id, errno);
 	} else {
-		display->front_buf ^= 1;
-		display->pflip_pending = true;
+		front_buf ^= 1;
+		pflip_pending = true;
 	}
 }
 

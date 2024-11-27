@@ -29,7 +29,7 @@ int main(int argc, char **argv)
 		if (ret)
 			throw errcode_exception(ret, "modeset::prepare failed");
 
-		bool modeset_success = ms->setAllDisplaysModes();
+		bool modeset_success = ms->displays->setAllDisplaysModes();
 		if (!modeset_success)
 			throw errcode_exception(ret, "mode setting failed for some displays");
 		

@@ -119,9 +119,54 @@ struct DisplayContents {
     }
 };
 
+class Display;
+class Displays;
+
+
+class errcode_exception : public std::runtime_error {
+public:
+    int errcode;
+    std::string message;
+
+    errcode_exception(int errcode, const std::string& message) : 
+        std::runtime_error("System error " + std::to_string(errcode) + ": " + message), 
+        errcode(errcode), 
+        message(message) { }
+};
+
+
+class Card {
+    friend class Displays;
+    friend class Display;
+private:
+    struct page_flip_callback_data {
+        const Card* ms;
+        Display* dev;
+        page_flip_callback_data(const Card* ms, Display* dev) : ms(ms), dev(dev) { }
+    };
+
+    static void modeset_page_flip_event(int fd, unsigned int frame, unsigned int sec, unsigned int usec, void *data);
+
+public:
+    const int fd;
+
+    Card(const char *node);
+
+    int prepare();
+    bool setAllDisplaysModes();
+    void runDrawingLoop();
+
+    
+    virtual ~Card();
+
+    std::shared_ptr<Displays> displays;
+};
+
 class Display {
+    static std::set<std::shared_ptr<Card::page_flip_callback_data>> page_flip_callback_data_cache;
 public:
     const Card& card;
+    const Displays& displays;
 
 	unsigned int front_buf = 0;
 	FrameBuffer bufs[2];
@@ -138,52 +183,40 @@ public:
 
     bool mode_set_successfully = false;
 
-    Display(const Card& card) : card(card), bufs { FrameBuffer(card), FrameBuffer(card) } {}
-
+    Display(const Card& card, const Displays& displays) : card(card), displays(displays), bufs { FrameBuffer(card), FrameBuffer(card) } {}
+    void draw();
     int setup(drmModeRes *res, drmModeConnector *conn);
-    int find_crtc(drmModeRes *res, drmModeConnector *conn);
 
 };
 
 
-class errcode_exception : public std::runtime_error {
-public:
-    int errcode;
-    std::string message;
-
-    errcode_exception(int errcode, const std::string& message) : 
-        std::runtime_error("System error " + std::to_string(errcode) + ": " + message), 
-        errcode(errcode), 
-        message(message) { }
-};
-
-
-class Card {
+class Displays : protected std::list<std::shared_ptr<Display>> {
 private:
-    struct page_flip_callback_data {
-        Card* ms;
-        Display* dev;
-        page_flip_callback_data(Card* ms, Display* dev) : ms(ms), dev(dev) { }
-    };
-
-    static void modeset_page_flip_event(int fd, unsigned int frame, unsigned int sec, unsigned int usec, void *data);
-
-    static std::set<std::shared_ptr<page_flip_callback_data>> page_flip_callback_data_cache;
-
+    const Card& card;
     void drawOneDisplayContents(Display* dev);
 
 public:
-    const int fd;
+    bool empty() const {
+        return std::list<std::shared_ptr<Display>>::empty();
+    }
 
-    Card(const char *node);
+    void add(std::shared_ptr<Display> display) {
+        this->push_front(display);
+    }
 
-    int prepare();
-    bool setAllDisplaysModes();
-    void runDrawingLoop();
-
+    Displays(const Card& card) : card(card) { }
     std::shared_ptr<DisplayContents> createDisplayContents();
-    
-    virtual ~Card();
+    bool setAllDisplaysModes();
+    void draw() {
+       	/* redraw all outputs */
+        for (auto& iter : *this) {
+            if (iter->mode_set_successfully) {
+                iter->contents = createDisplayContents();
+                iter->draw();
+            }
+        }
 
-    static std::list<std::shared_ptr<Display>> displays_list;
+    }
+    int find_crtc(drmModeRes *res, drmModeConnector *conn, Display& display) const;
+    virtual ~Displays();
 };

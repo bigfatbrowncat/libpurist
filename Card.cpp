@@ -23,6 +23,7 @@
 
 #include "Card.h"
 
+#include <cstdint>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdbool.h>
@@ -47,21 +48,27 @@ bool Displays::setAllDisplaysModes() {
 	bool some_modeset_failed = false;
 	/* perform actual modesetting on each found connector+CRTC */
 	for (auto& iter : *this) {
-		bool set_successfully = iter->setDisplayMode();
-		if (!set_successfully) {
-			some_modeset_failed = true;
-			fprintf(stderr, "cannot set CRTC for connector %u (%d): %m\n",
-				iter->connector_id, errno);
+		if (!iter->mode_set_successfully) {
+			auto set_successfully = iter->setDisplayMode();
+			if (!set_successfully) {
+				some_modeset_failed = true;
+				fprintf(stderr, "iter->is_in_drawing_loop=%d\n", iter->is_in_drawing_loop);
+				fprintf(stderr, "cannot set CRTC for connector %u (%d): %m\n",
+					iter->connector_id, errno);
+			}
 		}
 	}
 	return !some_modeset_failed;
 }
 
-void Displays::draw() {
+void Displays::updateDisplaysInDrawingLoop() {
 	/* redraw all outputs */
 	for (auto& iter : *this) {
-		if (iter->mode_set_successfully) {
-			iter->contents = this->displayContentsFactory->createDisplayContents();
+		if (iter->mode_set_successfully && !iter->is_in_drawing_loop) {
+			iter->is_in_drawing_loop = true;
+			if (iter->contents == nullptr) {
+				iter->contents = this->displayContentsFactory->createDisplayContents();
+			}
 			iter->draw();
 		}
 	}
@@ -70,36 +77,48 @@ void Displays::draw() {
 
 int Displays::update()
 {
-	drmModeRes *resources;
-	drmModeConnector *conn;
-	unsigned int i;
-	std::shared_ptr<Display> display;
-	int ret;
-
 	/* retrieve resources */
-	resources = drmModeGetResources(card.fd);
+	drmModeRes *resources = drmModeGetResources(card.fd);
 	if (!resources) {
 		throw errcode_exception(-errno, "cannot retrieve DRM resources");
 	}
 
+
+	//std::set<std::shared_ptr<Display>> remaining_displays(this->begin(), this->end());
+
 	/* iterate all connectors */
-	for (i = 0; i < resources->count_connectors; ++i) {
+	for (unsigned int i = 0; i < resources->count_connectors; ++i) {
 		/* get information for each connector */
-		conn = drmModeGetConnector(card.fd, resources->connectors[i]);
+		drmModeConnector *conn = drmModeGetConnector(card.fd, resources->connectors[i]);
 		if (!conn) {
 			fprintf(stderr, "cannot retrieve DRM connector %u:%u (%d): %m\n",
 				i, resources->connectors[i], errno);
 			continue;
 		}
 
-		/* create a device structure */
-		display = std::make_shared<Display>(card, *this);
-		display->connector_id = conn->connector_id;
+		std::shared_ptr<Display> display = nullptr;
+
+		// Looking for the display on this connector
+		for (auto& disp : *this) {
+			if (disp->connector_id == conn->connector_id) {
+				display = disp;
+			}
+		}
+
+		bool new_display_connected = false;
+		if (display == nullptr) {
+			/* create a device structure */
+			display = std::make_shared<Display>(card, *this);
+			new_display_connected = true;
+			display->connector_id = conn->connector_id;
+		}
 
 		/* call helper function to prepare this connector */
-		ret = display->setup(resources, conn);
+		int ret = display->setup(resources, conn);
 		if (ret) {
-			if (ret != -ENOENT) {
+			if (ret == -ENXIO) {
+				this->remove(display);
+			} else if (ret != -ENOENT) {
 				errno = -ret;
 				fprintf(stderr, "cannot setup device for connector %u:%u (%d): %m\n",
 					i, resources->connectors[i], errno);
@@ -112,8 +131,20 @@ int Displays::update()
 		/* free connector data and link device into global list */
 		drmModeFreeConnector(conn);
 		
-		this->push_front(display);
+		if (new_display_connected) {
+			this->push_front(display);
+		}
 	}
+
+	// if (!remaining_displays.empty()) {
+	// 	fprintf(stderr, "%lu displays disconnected\n", remaining_displays.size());
+
+	// 	for (auto& disp : remaining_displays) {
+	// 		this->remove(disp);
+	// 	}
+
+	// 	remaining_displays.clear();
+	// }
 
 	/* free resources again */
 	drmModeFreeResources(resources);
@@ -194,50 +225,89 @@ int Displays::findCrtcForDisplay(drmModeRes *res, drmModeConnector *conn, Displa
 	return -ENOENT;
 }
 
-
-Displays::~Displays() {
-	// Cleanup
+Display::~Display() {
     drmEventContext ev;
-	int ret;
 
 	/* init variables */
 	memset(&ev, 0, sizeof(ev));
 	ev.version = DRM_EVENT_CONTEXT_VERSION;
 	ev.page_flip_handler = Card::modeset_page_flip_event;
 
-	while (!empty()) {
+
+	cleanup = true;
+	if (pflip_pending) { fprintf(stderr, "wait for pending page-flip to complete...\n"); }
+	while (pflip_pending) {
+		int ret = drmHandleEvent(card.fd, &ev);
+		if (ret) {
+			break;
+		}
+	}
+
+	/* restore saved CRTC configuration */
+	if (!pflip_pending && mode_set_successfully)
+		drmModeSetCrtc(card.fd,
+					saved_crtc->crtc_id,
+					saved_crtc->buffer_id,
+					saved_crtc->x,
+					saved_crtc->y,
+					&connector_id,
+					1,
+					&saved_crtc->mode);
+	drmModeFreeCrtc(saved_crtc);
+
+	if (is_in_drawing_loop) {
+		/* destroy framebuffers */
+		bufs[1].removeAndDestroy();
+		bufs[0].removeAndDestroy();
+	}
+}
+
+
+Displays::~Displays() {
+	// Cleanup
+    // drmEventContext ev;
+	// int ret;
+
+	// /* init variables */
+	// memset(&ev, 0, sizeof(ev));
+	// ev.version = DRM_EVENT_CONTEXT_VERSION;
+	// ev.page_flip_handler = Card::modeset_page_flip_event;
+
+	//while (!empty()) {
 		/* remove from global list */
-		auto& iter = *(this->begin());
+		//auto& iter = *(this->begin());
 
 		/* if a pageflip is pending, wait for it to complete */
-		iter->cleanup = true;
-		fprintf(stderr, "wait for pending page-flip to complete...\n");
-		while (iter->pflip_pending) {
-			ret = drmHandleEvent(card.fd, &ev);
-			if (ret)
-				break;
-		}
+		// iter->cleanup = true;
+		// fprintf(stderr, "wait for pending page-flip to complete...\n");
+		// while (iter->pflip_pending) {
+		// 	ret = drmHandleEvent(card.fd, &ev);
+		// 	if (ret)
+		// 		break;
+		// }
 
-		/* restore saved CRTC configuration */
-		if (!iter->pflip_pending)
-			drmModeSetCrtc(card.fd,
-				       iter->saved_crtc->crtc_id,
-				       iter->saved_crtc->buffer_id,
-				       iter->saved_crtc->x,
-				       iter->saved_crtc->y,
-				       &iter->connector_id,
-				       1,
-				       &iter->saved_crtc->mode);
-		drmModeFreeCrtc(iter->saved_crtc);
+		// /* restore saved CRTC configuration */
+		// if (!iter->pflip_pending)
+		// 	drmModeSetCrtc(card.fd,
+		// 		       iter->saved_crtc->crtc_id,
+		// 		       iter->saved_crtc->buffer_id,
+		// 		       iter->saved_crtc->x,
+		// 		       iter->saved_crtc->y,
+		// 		       &iter->connector_id,
+		// 		       1,
+		// 		       &iter->saved_crtc->mode);
+		// drmModeFreeCrtc(iter->saved_crtc);
 
-		/* destroy framebuffers */
-		iter->bufs[1].removeAndDestroy();
-		iter->bufs[0].removeAndDestroy();
+		// /* destroy framebuffers */
+		// iter->bufs[1].removeAndDestroy();
+		// iter->bufs[0].removeAndDestroy();
 
 		/* free allocated memory */
-		iter = nullptr;
-		this->pop_front();
-	}
+		//iter = nullptr;
+		//this->pop_front();
+	//}
+
+	clear();
 }
 
 
@@ -284,10 +354,13 @@ Card::~Card() {
 
 
 bool Display::setDisplayMode() {
-	saved_crtc = drmModeGetCrtc(card.fd, crtc_id);
+	if (saved_crtc == nullptr) {
+		saved_crtc = drmModeGetCrtc(card.fd, crtc_id);
+	}
+
 	FrameBuffer *buf = &bufs[front_buf];
 	int ret = drmModeSetCrtc(card.fd, crtc_id, buf->framebuffer_id, 0, 0,
-				&connector_id, 1, &mode);
+				&connector_id, 1, mode.get());
 	
 	if (ret == 0) {
 		mode_set_successfully = true;
@@ -308,9 +381,19 @@ int Display::setup(drmModeRes *res, drmModeConnector *conn) {
 
 	/* check if a monitor is connected */
 	if (conn->connection != DRM_MODE_CONNECTED) {
-		fprintf(stderr, "ignoring unused connector %u\n",
-			conn->connector_id);
-		return -ENOENT;
+		if (is_in_drawing_loop) {
+			fprintf(stderr, "display disconnected from connector %u\n", conn->connector_id);
+
+			/*is_in_drawing_loop = false;
+			mode_set_successfully = false;
+			contents = nullptr;
+			bufs[0].removeAndDestroy();
+			bufs[1].removeAndDestroy();*/
+			return -ENXIO;
+		} else {
+			//fprintf(stderr, "ignoring unused connector %u\n", conn->connector_id);
+			return -ENOENT;
+		}
 	}
 
 	/* check if there is at least one valid mode */
@@ -320,27 +403,57 @@ int Display::setup(drmModeRes *res, drmModeConnector *conn) {
 		return -EFAULT;
 	}
 
+	bool updating_mode = false;
+
+	auto new_width = conn->modes[0].hdisplay;
+	auto new_height = conn->modes[0].vdisplay;
+
+	if (mode != nullptr) {
+		if (mode->vdisplay == conn->modes[0].vdisplay &&
+			mode->hdisplay == conn->modes[0].hdisplay &&
+			mode->clock == conn->modes[0].clock) {
+
+			// No mode change here
+			return 0;
+
+		} else {
+			uint32_t freq1 = mode->clock * 1000.0f / (mode->htotal * mode->vtotal);
+			freq1 = (uint32_t)(freq1 * 1000.0f) / 1000.0f;
+			uint32_t freq2 = conn->modes[0].clock * 1000.0f / (conn->modes[0].htotal * conn->modes[0].vtotal);
+			freq2 = (uint32_t)(freq2 * 1000.0f) / 1000.0f;
+
+			fprintf(stderr, "Changing the mode from %ux%u @ %uHz to %ux%u @ %uHz\n", mode->hdisplay, mode->vdisplay, freq1, 
+			                                                                          new_width, new_height, freq2);
+			bufs[0].removeAndDestroy();
+			bufs[1].removeAndDestroy();
+			updating_mode = true;
+			mode_set_successfully = false;
+			mode = nullptr;
+		}
+	} else {
+		fprintf(stderr, "mode for connector %u is %ux%u\n",
+			conn->connector_id, new_width, new_height);
+
+	}
+
 	/* copy the mode information into our device structure and into both
-	 * buffers */
-	memcpy(&mode, &conn->modes[0], sizeof(mode));
+	* buffers */
+	//memcpy(&mode, &conn->modes[0], sizeof(mode));
+	mode = std::make_shared<drmModeModeInfo>(conn->modes[0]);
 	
-	auto width = conn->modes[0].hdisplay;
-	auto height = conn->modes[0].vdisplay;
-
-	fprintf(stderr, "mode for connector %u is %ux%u\n",
-		conn->connector_id, width, height);
-
-	/* find a crtc for this connector */
-	ret = displays.findCrtcForDisplay(res, conn, *this);
-	if (ret) {
-		fprintf(stderr, "no valid crtc for connector %u\n",
-			conn->connector_id);
-		return ret;
+	if (!updating_mode) {
+		/* find a crtc for this connector */
+		ret = displays.findCrtcForDisplay(res, conn, *this);
+		if (ret) {
+			fprintf(stderr, "no valid crtc for connector %u: \n",
+				conn->connector_id);
+			return ret;
+		}
 	}
 
 	/* create framebuffer #1 for this CRTC */
-	bufs[0].createAndAdd(width, height);
-	bufs[1].createAndAdd(width, height);
+	bufs[0].createAndAdd(new_width, new_height);
+	bufs[1].createAndAdd(new_width, new_height);
 
 	return 0;
 }
@@ -521,9 +634,9 @@ void Card::modeset_page_flip_event(int fd, unsigned int frame,
 	Display *dev = user_data->dev;
 
 	dev->pflip_pending = false;
-	if (!dev->cleanup)
+	if (!dev->cleanup) {
 		dev->draw();
-		//user_data->ms->drawOneDisplayContents(dev);
+	}
 }
 
 void Displays::setDisplayContentsFactory(std::shared_ptr<DisplayContentsFactory> factory) {
@@ -612,9 +725,9 @@ void Card::runDrawingLoop()
 	if (!modeset_success)
 		throw std::runtime_error("mode setting failed for some displays");
 
-	displays->draw();
+	displays->updateDisplaysInDrawingLoop();
 
-	int seconds = 60;
+	int seconds = 600;
 	/* wait 5s for VBLANK or input events */
 	while (time(&cur) < start + seconds) {
 		FD_SET(0, &fds);
@@ -630,6 +743,16 @@ void Card::runDrawingLoop()
 			break;
 		} else if (FD_ISSET(fd, &fds)) {
 			drmHandleEvent(fd, &ev);
+
+			ret = displays->update();
+			if (ret)
+				throw errcode_exception(ret, "modeset::prepare failed");
+			bool modeset_success = displays->setAllDisplaysModes();
+			if (!modeset_success)
+				throw std::runtime_error("mode setting failed for some displays");
+
+			displays->updateDisplaysInDrawingLoop();
+
 		}
 	}
 }

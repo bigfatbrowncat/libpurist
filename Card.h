@@ -96,7 +96,7 @@ public:
 
 class DumbBufferMapping {
 public:
-    uint8_t const* map;
+    uint8_t const* map = nullptr;
 
     const Card& card;
     const FrameBuffer& buf;
@@ -144,20 +144,23 @@ public:
 	unsigned int front_buf = 0;
 	FrameBuffer bufs[2];
 
-	drmModeModeInfo mode;
-	uint32_t connector_id;
-	uint32_t crtc_id;
-	drmModeCrtc *saved_crtc;
+	std::shared_ptr<drmModeModeInfo> mode = nullptr;
+	uint32_t connector_id = 0;
+	uint32_t crtc_id = 0;
+	drmModeCrtc *saved_crtc = nullptr;
 
-	bool pflip_pending;
-	bool cleanup;
+	bool pflip_pending = false;
+	bool cleanup = false;
 
-    std::shared_ptr<DisplayContents> contents;
+    std::shared_ptr<DisplayContents> contents = nullptr;
 
     bool mode_set_successfully = false;
+    bool is_in_drawing_loop = false;
 
     Display(const Card& card, const Displays& displays)
             : card(card), displays(displays), bufs { FrameBuffer(card), FrameBuffer(card) } {}
+    
+    virtual ~Display();
 
     int setup(drmModeRes *res, drmModeConnector *conn);
     void draw();
@@ -176,7 +179,7 @@ public:
 
     Displays(const Card& card) : card(card) { }
     void setDisplayContentsFactory(std::shared_ptr<DisplayContentsFactory> factory);
-    void draw();
+    void updateDisplaysInDrawingLoop();
     int findCrtcForDisplay(drmModeRes *res, drmModeConnector *conn, Display& display) const;
 
     int update();

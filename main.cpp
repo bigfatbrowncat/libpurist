@@ -63,7 +63,6 @@ public:
 int main(int argc, char **argv)
 {
 	try {
-		int ret;
 		const char *card;
 
 		/* check which DRM device to open */
@@ -75,18 +74,9 @@ int main(int argc, char **argv)
 		fprintf(stderr, "using card '%s'\n", card);
 
 		auto ms = std::make_unique<Card>(card);
-
-		/* prepare all connectors and CRTCs */
-		ret = ms->prepare();
-		if (ret)
-			throw errcode_exception(ret, "modeset::prepare failed");
-
+		
 		ms->displays->setDisplayContentsFactory(std::make_shared<ColoredScreenDisplayContentsFactory>());
 
-		bool modeset_success = ms->displays->setAllDisplaysModes();
-		if (!modeset_success)
-			throw errcode_exception(ret, "mode setting failed for some displays");
-		
 		/* draw some colors for 5seconds */
 		ms->runDrawingLoop();
 

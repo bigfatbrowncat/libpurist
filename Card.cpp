@@ -67,6 +67,59 @@ void Displays::draw() {
 	}
 }
 
+
+int Displays::update()
+{
+	drmModeRes *resources;
+	drmModeConnector *conn;
+	unsigned int i;
+	std::shared_ptr<Display> display;
+	int ret;
+
+	/* retrieve resources */
+	resources = drmModeGetResources(card.fd);
+	if (!resources) {
+		throw errcode_exception(-errno, "cannot retrieve DRM resources");
+	}
+
+	/* iterate all connectors */
+	for (i = 0; i < resources->count_connectors; ++i) {
+		/* get information for each connector */
+		conn = drmModeGetConnector(card.fd, resources->connectors[i]);
+		if (!conn) {
+			fprintf(stderr, "cannot retrieve DRM connector %u:%u (%d): %m\n",
+				i, resources->connectors[i], errno);
+			continue;
+		}
+
+		/* create a device structure */
+		display = std::make_shared<Display>(card, *this);
+		display->connector_id = conn->connector_id;
+
+		/* call helper function to prepare this connector */
+		ret = display->setup(resources, conn);
+		if (ret) {
+			if (ret != -ENOENT) {
+				errno = -ret;
+				fprintf(stderr, "cannot setup device for connector %u:%u (%d): %m\n",
+					i, resources->connectors[i], errno);
+			}
+			display = nullptr;
+			drmModeFreeConnector(conn);
+			continue;
+		}
+
+		/* free connector data and link device into global list */
+		drmModeFreeConnector(conn);
+		
+		this->push_front(display);
+	}
+
+	/* free resources again */
+	drmModeFreeResources(resources);
+	return 0;
+}
+
 int Displays::findCrtcForDisplay(drmModeRes *res, drmModeConnector *conn, Display& display) const {
 	unsigned int i, j;
 	int32_t enc_crtc_id;
@@ -228,63 +281,6 @@ Card::~Card() {
     // Closing the video card file
 	close(fd);
 }
-
-
-/*
- * modeset_prepare() stays the same.
- */
-
-int Card::prepare()
-{
-	drmModeRes *resources;
-	drmModeConnector *conn;
-	unsigned int i;
-	std::shared_ptr<Display> display;
-	int ret;
-
-	/* retrieve resources */
-	resources = drmModeGetResources(fd);
-	if (!resources) {
-		throw errcode_exception(-errno, "cannot retrieve DRM resources");
-	}
-
-	/* iterate all connectors */
-	for (i = 0; i < resources->count_connectors; ++i) {
-		/* get information for each connector */
-		conn = drmModeGetConnector(fd, resources->connectors[i]);
-		if (!conn) {
-			fprintf(stderr, "cannot retrieve DRM connector %u:%u (%d): %m\n",
-				i, resources->connectors[i], errno);
-			continue;
-		}
-
-		/* create a device structure */
-		display = std::make_shared<Display>(*this, *displays);
-		display->connector_id = conn->connector_id;
-
-		/* call helper function to prepare this connector */
-		ret = display->setup(resources, conn);
-		if (ret) {
-			if (ret != -ENOENT) {
-				errno = -ret;
-				fprintf(stderr, "cannot setup device for connector %u:%u (%d): %m\n",
-					i, resources->connectors[i], errno);
-			}
-			display = nullptr;
-			drmModeFreeConnector(conn);
-			continue;
-		}
-
-		/* free connector data and link device into global list */
-		drmModeFreeConnector(conn);
-		displays->add(display);
-	}
-
-	/* free resources again */
-	drmModeFreeResources(resources);
-	return 0;
-}
-
 
 
 bool Display::setDisplayMode() {
@@ -606,13 +602,24 @@ void Card::runDrawingLoop()
 	
 	ev.page_flip_handler = Card::modeset_page_flip_event; //  unsigned int frame, unsigned int sec, unsigned int usec, void *data
 
+
+	/* prepare all connectors and CRTCs */
+	ret = displays->update();
+	if (ret)
+		throw errcode_exception(ret, "modeset::prepare failed");
+
+	bool modeset_success = displays->setAllDisplaysModes();
+	if (!modeset_success)
+		throw std::runtime_error("mode setting failed for some displays");
+
 	displays->draw();
 
+	int seconds = 60;
 	/* wait 5s for VBLANK or input events */
-	while (time(&cur) < start + 5) {
+	while (time(&cur) < start + seconds) {
 		FD_SET(0, &fds);
 		FD_SET(fd, &fds);
-		v.tv_sec = start + 5 - cur;
+		v.tv_sec = start + seconds - cur;
 
 		ret = select(fd + 1, &fds, NULL, NULL, &v);
 		if (ret < 0) {

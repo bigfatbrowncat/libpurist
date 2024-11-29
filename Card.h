@@ -126,8 +126,6 @@ public:
 
     Card(const char *node);
 
-    int prepare();
-    bool setAllDisplaysModes();
     void runDrawingLoop();
     
     virtual ~Card();
@@ -176,14 +174,13 @@ public:
         return std::list<std::shared_ptr<Display>>::empty();
     }
 
-    void add(std::shared_ptr<Display> display) {
-        this->push_front(display);
-    }
-
     Displays(const Card& card) : card(card) { }
     void setDisplayContentsFactory(std::shared_ptr<DisplayContentsFactory> factory);
-    bool setAllDisplaysModes();
     void draw();
     int findCrtcForDisplay(drmModeRes *res, drmModeConnector *conn, Display& display) const;
+
+    int update();
+    bool setAllDisplaysModes();
+
     virtual ~Displays();
 };

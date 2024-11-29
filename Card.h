@@ -24,6 +24,21 @@ class Card;
 class Display;
 class Displays;
 class DumbBufferMapping;
+class FrameBuffer;
+
+class DisplayContents {
+public:
+    virtual ~DisplayContents() = default;
+
+    virtual void drawIntoBuffer(FrameBuffer* buf) = 0;
+};
+
+class DisplayContentsFactory {
+public:
+    virtual ~DisplayContentsFactory() = default;
+
+    virtual std::shared_ptr<DisplayContents> createDisplayContents() = 0;
+};
 
 /*
  * modeset_buf and modeset_dev stay mostly the same. But 6 new fields are added
@@ -94,46 +109,6 @@ public:
 };
 
 
-struct DisplayContents {
-	uint8_t r, g, b;
-	bool r_up, g_up, b_up;
-
-   /*
-    * A short helper function to compute a changing color value. No need to
-    * understand it.
-    */
-
-    static uint8_t next_color(bool *up, uint8_t cur, unsigned int mod)
-    {
-        uint8_t next;
-
-        next = cur + (*up ? 1 : -1) * (rand() % mod);
-        if ((*up && next < cur) || (!*up && next > cur)) {
-            *up = !*up;
-            next = cur;
-        }
-
-        return next;
-    }
-
-    void drawIntoBuffer(FrameBuffer* buf) {
-       	r = DisplayContents::next_color(&r_up, r, 20);
-        g = DisplayContents::next_color(&g_up, g, 10);
-        b = DisplayContents::next_color(&b_up, b, 5);
-
-    	unsigned int j, k, off;
-
-       	for (j = 0; j < buf->dumb->height; ++j) {
-            for (k = 0; k < buf->dumb->width; ++k) {
-                off = buf->dumb->stride * j + k * 4;
-                *(uint32_t*)&buf->mapping->map[off] =
-                        (r << 16) | (g << 8) | b;
-            }
-        }
-    }
-};
-
-
 class Card {
     friend class Displays;
     friend class Display;
@@ -195,7 +170,7 @@ public:
 class Displays : protected std::list<std::shared_ptr<Display>> {
 private:
     const Card& card;
-
+    std::shared_ptr<DisplayContentsFactory> displayContentsFactory;
 public:
     bool empty() const {
         return std::list<std::shared_ptr<Display>>::empty();
@@ -206,18 +181,9 @@ public:
     }
 
     Displays(const Card& card) : card(card) { }
-    std::shared_ptr<DisplayContents> createDisplayContents();
+    void setDisplayContentsFactory(std::shared_ptr<DisplayContentsFactory> factory);
     bool setAllDisplaysModes();
-    void draw() {
-       	/* redraw all outputs */
-        for (auto& iter : *this) {
-            if (iter->mode_set_successfully) {
-                iter->contents = createDisplayContents();
-                iter->draw();
-            }
-        }
-
-    }
+    void draw();
     int findCrtcForDisplay(drmModeRes *res, drmModeConnector *conn, Display& display) const;
     virtual ~Displays();
 };

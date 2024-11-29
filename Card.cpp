@@ -57,6 +57,16 @@ bool Displays::setAllDisplaysModes() {
 	return !some_modeset_failed;
 }
 
+void Displays::draw() {
+	/* redraw all outputs */
+	for (auto& iter : *this) {
+		if (iter->mode_set_successfully) {
+			iter->contents = this->displayContentsFactory->createDisplayContents();
+			iter->draw();
+		}
+	}
+}
+
 int Displays::findCrtcForDisplay(drmModeRes *res, drmModeConnector *conn, Display& display) const {
 	unsigned int i, j;
 	int32_t enc_crtc_id;
@@ -226,25 +236,25 @@ Card::~Card() {
 
 int Card::prepare()
 {
-	drmModeRes *res;
+	drmModeRes *resources;
 	drmModeConnector *conn;
 	unsigned int i;
 	std::shared_ptr<Display> display;
 	int ret;
 
 	/* retrieve resources */
-	res = drmModeGetResources(fd);
-	if (!res) {
+	resources = drmModeGetResources(fd);
+	if (!resources) {
 		throw errcode_exception(-errno, "cannot retrieve DRM resources");
 	}
 
 	/* iterate all connectors */
-	for (i = 0; i < res->count_connectors; ++i) {
+	for (i = 0; i < resources->count_connectors; ++i) {
 		/* get information for each connector */
-		conn = drmModeGetConnector(fd, res->connectors[i]);
+		conn = drmModeGetConnector(fd, resources->connectors[i]);
 		if (!conn) {
 			fprintf(stderr, "cannot retrieve DRM connector %u:%u (%d): %m\n",
-				i, res->connectors[i], errno);
+				i, resources->connectors[i], errno);
 			continue;
 		}
 
@@ -253,12 +263,12 @@ int Card::prepare()
 		display->connector_id = conn->connector_id;
 
 		/* call helper function to prepare this connector */
-		ret = display->setup(res, conn);
+		ret = display->setup(resources, conn);
 		if (ret) {
 			if (ret != -ENOENT) {
 				errno = -ret;
 				fprintf(stderr, "cannot setup device for connector %u:%u (%d): %m\n",
-					i, res->connectors[i], errno);
+					i, resources->connectors[i], errno);
 			}
 			display = nullptr;
 			drmModeFreeConnector(conn);
@@ -271,7 +281,7 @@ int Card::prepare()
 	}
 
 	/* free resources again */
-	drmModeFreeResources(res);
+	drmModeFreeResources(resources);
 	return 0;
 }
 
@@ -520,13 +530,8 @@ void Card::modeset_page_flip_event(int fd, unsigned int frame,
 		//user_data->ms->drawOneDisplayContents(dev);
 }
 
-std::shared_ptr<DisplayContents> Displays::createDisplayContents() {
-	auto contents = std::make_shared<DisplayContents>();
-	contents->r = rand() % 0xff;
-	contents->g = rand() % 0xff;
-	contents->b = rand() % 0xff;
-	contents->r_up = contents->g_up = contents->b_up = true;
-	return contents;
+void Displays::setDisplayContentsFactory(std::shared_ptr<DisplayContentsFactory> factory) {
+	this->displayContentsFactory = factory;
 }
 
 

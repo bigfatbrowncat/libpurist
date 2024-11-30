@@ -154,7 +154,7 @@ public:
 
     std::shared_ptr<DisplayContents> contents = nullptr;
 
-    bool mode_set_successfully = false;
+    bool crtc_set_successfully = false;
     bool is_in_drawing_loop = false;
 
     Display(const Card& card, const Displays& displays)
@@ -163,7 +163,7 @@ public:
 
     int setup(drmModeRes *res, drmModeConnector *conn);
     void draw();
-    bool setDisplayMode();
+    bool setCrtc();
 };
 
 
@@ -182,7 +182,7 @@ public:
     int findCrtcForDisplay(drmModeRes *res, drmModeConnector *conn, Display& display) const;
 
     int update();
-    bool setAllDisplaysModes();
+    bool setAllCrtcs();
 
     virtual ~Displays();
 };

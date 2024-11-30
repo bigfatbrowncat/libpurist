@@ -44,12 +44,12 @@
 // The static fields
 //std::set<std::shared_ptr<Card::page_flip_callback_data>> Display::page_flip_callback_data_cache;
 
-bool Displays::setAllDisplaysModes() {
+bool Displays::setAllCrtcs() {
 	bool some_modeset_failed = false;
 	/* perform actual modesetting on each found connector+CRTC */
 	for (auto& iter : *this) {
-		if (!iter->mode_set_successfully) {
-			auto set_successfully = iter->setDisplayMode();
+		if (!iter->crtc_set_successfully) {
+			auto set_successfully = iter->setCrtc();
 			if (!set_successfully) {
 				some_modeset_failed = true;
 				fprintf(stderr, "cannot set CRTC for connector %u (%d): %m\n",
@@ -63,7 +63,7 @@ bool Displays::setAllDisplaysModes() {
 void Displays::updateDisplaysInDrawingLoop() {
 	/* redraw all outputs */
 	for (auto& iter : *this) {
-		if (iter->mode_set_successfully && !iter->is_in_drawing_loop) {
+		if (iter->crtc_set_successfully && !iter->is_in_drawing_loop) {
 			iter->is_in_drawing_loop = true;
 			if (iter->contents == nullptr) {
 				iter->contents = this->displayContentsFactory->createDisplayContents();
@@ -243,7 +243,7 @@ Display::~Display() {
 	}
 
 	/* restore saved CRTC configuration */
-	if (!pflip_pending && mode_set_successfully)
+	if (!pflip_pending && crtc_set_successfully)
 		drmModeSetCrtc(card.fd,
 					saved_crtc->crtc_id,
 					saved_crtc->buffer_id,
@@ -309,7 +309,7 @@ Card::~Card() {
 }
 
 
-bool Display::setDisplayMode() {
+bool Display::setCrtc() {
 	if (saved_crtc == nullptr) {
 		saved_crtc = drmModeGetCrtc(card.fd, crtc_id);
 	}
@@ -319,16 +319,22 @@ bool Display::setDisplayMode() {
 				&connector_id, 1, mode.get());
 	
 	if (ret == 0) {
-		mode_set_successfully = true;
+		crtc_set_successfully = true;
 		is_in_drawing_loop = false;
 	} else {
-		mode_set_successfully = false;
+		crtc_set_successfully = false;
 		is_in_drawing_loop = false;
 	}
 
-	return mode_set_successfully;
+	return crtc_set_successfully;
 }
 
+static bool modes_equal(const drmModeModeInfo& mode1, const drmModeModeInfo& mode2) {
+	return 
+		mode1.vdisplay == mode2.vdisplay &&
+		mode1.hdisplay == mode2.hdisplay &&
+		mode1.clock == mode2.clock;
+}
 
 /*
  * modeset_setup_dev() stays the same.
@@ -359,9 +365,9 @@ int Display::setup(drmModeRes *res, drmModeConnector *conn) {
 	auto new_height = conn->modes[0].vdisplay;
 
 	if (mode != nullptr) {
-		if (mode->vdisplay == conn->modes[0].vdisplay &&
-			mode->hdisplay == conn->modes[0].hdisplay &&
-			mode->clock == conn->modes[0].clock) {
+		// This display already has a mode
+
+		if (modes_equal(*mode, conn->modes[0])) {
 
 			// No mode change here
 			return 0;
@@ -377,7 +383,7 @@ int Display::setup(drmModeRes *res, drmModeConnector *conn) {
 			bufs[0].removeAndDestroy();
 			bufs[1].removeAndDestroy();
 			updating_mode = true;
-			mode_set_successfully = false;
+			crtc_set_successfully = false;
 			is_in_drawing_loop = false;
 			mode = nullptr;
 		}
@@ -669,7 +675,7 @@ void Card::runDrawingLoop()
 	if (ret)
 		throw errcode_exception(ret, "modeset::prepare failed");
 
-	bool modeset_success = displays->setAllDisplaysModes();
+	bool modeset_success = displays->setAllCrtcs();
 	if (!modeset_success)
 		throw std::runtime_error("mode setting failed for some displays");
 
@@ -695,7 +701,7 @@ void Card::runDrawingLoop()
 			ret = displays->update();
 			if (ret)
 				throw errcode_exception(ret, "modeset::prepare failed");
-			bool modeset_success = displays->setAllDisplaysModes();
+			bool modeset_success = displays->setAllCrtcs();
 			if (!modeset_success)
 				throw std::runtime_error("mode setting failed for some displays");
 

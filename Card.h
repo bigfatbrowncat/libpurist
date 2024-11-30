@@ -161,6 +161,8 @@ public:
             : card(card), displays(displays), bufs { FrameBuffer(card), FrameBuffer(card) } {}
     virtual ~Display();
 
+    int connectDisplayToNotOccupiedCrtc(drmModeRes *res, drmModeConnector *conn);
+
     int setup(drmModeRes *res, drmModeConnector *conn);
     void draw();
     bool setCrtc();
@@ -168,6 +170,7 @@ public:
 
 
 class Displays : protected std::list<std::shared_ptr<Display>> {
+    friend class Display;
 private:
     const Card& card;
     std::shared_ptr<DisplayContentsFactory> displayContentsFactory;
@@ -179,7 +182,6 @@ public:
     Displays(const Card& card) : card(card) { }
     void setDisplayContentsFactory(std::shared_ptr<DisplayContentsFactory> factory);
     void updateDisplaysInDrawingLoop();
-    int findCrtcForDisplay(drmModeRes *res, drmModeConnector *conn, Display& display) const;
 
     int update();
     bool setAllCrtcs();

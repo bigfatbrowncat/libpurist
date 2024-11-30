@@ -150,7 +150,7 @@ int Displays::update()
 	return 0;
 }
 
-int Displays::findCrtcForDisplay(drmModeRes *res, drmModeConnector *conn, Display& display) const {
+int Display::connectDisplayToNotOccupiedCrtc(drmModeRes *res, drmModeConnector *conn) {
 	unsigned int i, j;
 	int32_t enc_crtc_id;
 
@@ -161,19 +161,23 @@ int Displays::findCrtcForDisplay(drmModeRes *res, drmModeConnector *conn, Displa
 	else
 		enc = nullptr;
 
+	// If we got an encoder...
 	if (enc) {
+		// ...and the encoder has a CRTC
 		if (enc->crtc_id) {
+			// Check if there is a display that is already connected th this CRTC
 			enc_crtc_id = enc->crtc_id;
-			for (auto& iter : *this) {
+			for (auto& iter : displays) {
 				if (iter->crtc_id == enc_crtc_id) {
 					enc_crtc_id = -1;
 					break;
 				}
 			}
 
+			// If the display is not found, connecting it to the CRTC
 			if (enc_crtc_id >= 0) {
 				drmModeFreeEncoder(enc);
-				display.crtc_id = enc_crtc_id;
+				this->crtc_id = enc_crtc_id;
 				return 0;
 			}
 		}
@@ -201,7 +205,7 @@ int Displays::findCrtcForDisplay(drmModeRes *res, drmModeConnector *conn, Displa
 
 			/* check that no other device already uses this CRTC */
 			enc_crtc_id = res->crtcs[j];
-			for (auto& iter : *this) {
+			for (auto& iter : displays) {
 				if (iter->crtc_id == enc_crtc_id) {
 					enc_crtc_id = -1;
 					break;
@@ -211,7 +215,7 @@ int Displays::findCrtcForDisplay(drmModeRes *res, drmModeConnector *conn, Displa
 			/* we have found a CRTC, so save it and return */
 			if (enc_crtc_id >= 0) {
 				drmModeFreeEncoder(enc);
-				display.crtc_id = enc_crtc_id;
+				this->crtc_id = enc_crtc_id;
 				return 0;
 			}
 		}
@@ -397,7 +401,7 @@ int Display::setup(drmModeRes *res, drmModeConnector *conn) {
 
 	if (!updating_mode) {
 		/* find a crtc for this connector */
-		ret = displays.findCrtcForDisplay(res, conn, *this);
+		ret = this->connectDisplayToNotOccupiedCrtc(res, conn);
 		if (ret) {
 			fprintf(stderr, "no valid crtc for connector %u: \n",
 				conn->connector_id);

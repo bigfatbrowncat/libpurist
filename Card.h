@@ -135,7 +135,7 @@ public:
 
 class Display {
 private:
-    static std::set<std::shared_ptr<Card::page_flip_callback_data>> page_flip_callback_data_cache;
+    /*static*/ std::set<std::shared_ptr<Card::page_flip_callback_data>> page_flip_callback_data_cache;
 
 public:
     const Card& card;
@@ -159,7 +159,6 @@ public:
 
     Display(const Card& card, const Displays& displays)
             : card(card), displays(displays), bufs { FrameBuffer(card), FrameBuffer(card) } {}
-    
     virtual ~Display();
 
     int setup(drmModeRes *res, drmModeConnector *conn);

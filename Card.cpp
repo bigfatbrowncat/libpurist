@@ -31,6 +31,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <string>
 #include <sys/mman.h>
 #include <time.h>
 #include <unistd.h>
@@ -91,42 +92,45 @@ int Displays::update()
 	/* iterate all connectors */
 	for (unsigned int i = 0; i < resources->count_connectors; ++i) {
 		/* get information for each connector */
-		drmModeConnector *connector = drmModeGetConnector(card.fd, resources->connectors[i]);
-		if (!connector) {
-			fprintf(stderr, "cannot retrieve DRM connector %u:%u (%d): %m\n",
-				i, resources->connectors[i], errno);
-			continue;
-		}
+		try {
+			ModeConnector modeConnector(card, modeRes, i);
+			auto connector = modeConnector.getConnector();
 
-		std::shared_ptr<Display> display = findDisplayOnConnector(connector);
+			std::shared_ptr<Display> display = findDisplayOnConnector(connector);
 
-		bool new_display_connected = false;
-		if (display == nullptr) {
-			// create a new display
-			display = std::make_shared<Display>(card, *this, connector->connector_id);
-			new_display_connected = true;
-		}
-
-		/* call helper function to prepare this connector */
-		int ret = display->setup(resources, connector);
-		if (ret) {
-			if (ret == -ENXIO) {
-				this->remove(display);
-			} else if (ret != -ENOENT) {
-				errno = -ret;
-				fprintf(stderr, "cannot setup device for connector %u:%u (%d): %m\n",
-					i, resources->connectors[i], errno);
+			bool new_display_connected = false;
+			if (display == nullptr) {
+				// create a new display
+				auto cid = connector->connector_id;
+				display = std::make_shared<Display>(card, *this, cid);
+				new_display_connected = true;
 			}
-			display = nullptr;
-			drmModeFreeConnector(connector);
-			continue;
-		}
 
-		/* free connector data and link device into global list */
-		drmModeFreeConnector(connector);
-		
-		if (new_display_connected) {
-			this->push_front(display);
+			/* call helper function to prepare this connector */
+			int ret = display->setup(resources, connector);
+			if (ret) {
+				if (ret == -ENXIO) {
+					this->remove(display);
+				} else if (ret != -ENOENT) {
+					errno = -ret;
+					fprintf(stderr, "cannot setup device for connector %u:%u (%d): %m\n",
+						i, resources->connectors[i], errno);
+				}
+				display = nullptr;
+				//drmModeFreeConnector(connector);
+				continue;
+			}
+
+			/* free connector data and link device into global list */
+			//drmModeFreeConnector(connector);
+			
+			if (new_display_connected) {
+				this->push_front(display);
+			}
+
+		} catch (const cant_get_connector_exception& e) {
+			printf("%s\n", e.what());
+			continue;
 		}
 	}
 
@@ -761,10 +765,23 @@ ModeResources::ModeResources(const Card& card) /*: card(card)*/ {
 }
 
 ModeResources::~ModeResources() {
-	/* free resources again */
 	drmModeFreeResources(resources);
 }
 
+ModeConnector::ModeConnector(const Card& card, uint32_t connector_id) /*: card(card), connector_id(connector_id)*/ {
+	connector = drmModeGetConnector(card.fd, connector_id);
+	if (!connector) {
+		throw cant_get_connector_exception(-errno, "cannot retrieve DRM connector " 
+								+ std::to_string(connector_id));
+	}
+}
+
+ModeConnector::ModeConnector(const Card& card, const ModeResources& resources, size_t index) 
+	: ModeConnector(card, resources.getResources()->connectors[index]) { }
+
+ModeConnector::~ModeConnector() {
+	drmModeFreeConnector(connector);
+}
 
 
 /*

@@ -10,14 +10,20 @@
 
 class errcode_exception : public std::runtime_error {
 public:
-    int errcode;
-    std::string message;
+    const int errcode;
+    const std::string message;
 
     errcode_exception(int errcode, const std::string& message) : 
         std::runtime_error("System error " + std::to_string(errcode) + ": " + message), 
         errcode(errcode), 
         message(message) { }
 };
+
+class cant_get_connector_exception : public errcode_exception {
+public:
+    cant_get_connector_exception(int errcode, const std::string& message) : errcode_exception(errcode, message) { }
+};
+
 
 
 class Card;
@@ -200,4 +206,18 @@ public:
 	ModeResources(const Card& card);
     drmModeRes *getResources() const { return resources; }
 	virtual ~ModeResources();
+};
+
+class ModeConnector {
+private:
+    //const Card& card;
+    drmModeConnector *connector;
+    //uint32_t connector_id;
+public:
+	ModeConnector(const Card& card, uint32_t connector_id);
+    ModeConnector(const Card& card, const ModeResources& resources, size_t index);
+
+    drmModeConnector *getConnector() const { return connector; }
+	virtual ~ModeConnector();
+
 };

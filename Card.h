@@ -157,8 +157,8 @@ public:
     bool crtc_set_successfully = false;
     bool is_in_drawing_loop = false;
 
-    Display(const Card& card, const Displays& displays)
-            : card(card), displays(displays), bufs { FrameBuffer(card), FrameBuffer(card) } {}
+    Display(const Card& card, const Displays& displays, uint32_t connector_id)
+            : card(card), displays(displays), bufs { FrameBuffer(card), FrameBuffer(card) }, connector_id(connector_id) {}
     virtual ~Display();
 
     int connectDisplayToNotOccupiedCrtc(drmModeRes *res, drmModeConnector *conn);
@@ -190,4 +190,14 @@ public:
     bool setAllCrtcs();
 
     virtual ~Displays();
+};
+
+class ModeResources {
+private:
+	//const Card& card;
+	drmModeRes *resources;
+public:
+	ModeResources(const Card& card);
+    drmModeRes *getResources() const { return resources; }
+	virtual ~ModeResources();
 };

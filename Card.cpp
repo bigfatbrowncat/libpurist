@@ -85,34 +85,30 @@ std::shared_ptr<Display> Displays::findDisplayOnConnector(drmModeConnector *conn
 
 int Displays::update()
 {
-	/* retrieve resources */
-	drmModeRes *resources = drmModeGetResources(card.fd);
-	if (!resources) {
-		throw errcode_exception(-errno, "cannot retrieve DRM resources");
-	}
+	ModeResources modeRes(card);
+	auto resources = modeRes.getResources();
 
 	/* iterate all connectors */
 	for (unsigned int i = 0; i < resources->count_connectors; ++i) {
 		/* get information for each connector */
-		drmModeConnector *conn = drmModeGetConnector(card.fd, resources->connectors[i]);
-		if (!conn) {
+		drmModeConnector *connector = drmModeGetConnector(card.fd, resources->connectors[i]);
+		if (!connector) {
 			fprintf(stderr, "cannot retrieve DRM connector %u:%u (%d): %m\n",
 				i, resources->connectors[i], errno);
 			continue;
 		}
 
-		std::shared_ptr<Display> display = findDisplayOnConnector(conn);
+		std::shared_ptr<Display> display = findDisplayOnConnector(connector);
 
 		bool new_display_connected = false;
 		if (display == nullptr) {
 			// create a new display
-			display = std::make_shared<Display>(card, *this);
+			display = std::make_shared<Display>(card, *this, connector->connector_id);
 			new_display_connected = true;
-			display->connector_id = conn->connector_id;
 		}
 
 		/* call helper function to prepare this connector */
-		int ret = display->setup(resources, conn);
+		int ret = display->setup(resources, connector);
 		if (ret) {
 			if (ret == -ENXIO) {
 				this->remove(display);
@@ -122,30 +118,18 @@ int Displays::update()
 					i, resources->connectors[i], errno);
 			}
 			display = nullptr;
-			drmModeFreeConnector(conn);
+			drmModeFreeConnector(connector);
 			continue;
 		}
 
 		/* free connector data and link device into global list */
-		drmModeFreeConnector(conn);
+		drmModeFreeConnector(connector);
 		
 		if (new_display_connected) {
 			this->push_front(display);
 		}
 	}
 
-	// if (!remaining_displays.empty()) {
-	// 	fprintf(stderr, "%lu displays disconnected\n", remaining_displays.size());
-
-	// 	for (auto& disp : remaining_displays) {
-	// 		this->remove(disp);
-	// 	}
-
-	// 	remaining_displays.clear();
-	// }
-
-	/* free resources again */
-	drmModeFreeResources(resources);
 	return 0;
 }
 
@@ -768,6 +752,19 @@ void Display::draw()
 		page_flip_pending = true;
 	}
 }
+
+ModeResources::ModeResources(const Card& card) /*: card(card)*/ {
+	resources = drmModeGetResources(card.fd);
+	if (!resources) {
+		throw errcode_exception(-errno, "cannot retrieve DRM resources");
+	}
+}
+
+ModeResources::~ModeResources() {
+	/* free resources again */
+	drmModeFreeResources(resources);
+}
+
 
 
 /*

@@ -84,10 +84,9 @@ public:
 class FrameBuffer {
 private:
     bool added = false;
-
-public:
     const Card& card;
 
+public:
     const std::shared_ptr<DumbBuffer> dumb;
     const std::shared_ptr<DumbBufferMapping> mapping;
 
@@ -101,14 +100,15 @@ public:
 
 
 class DumbBufferMapping {
+private:
+    const Card& card;
+    /*const FrameBuffer& buf;*/
+    const DumbBuffer& dumb;
+
 public:
     uint8_t const* map = nullptr;
 
-    const Card& card;
-    const FrameBuffer& buf;
-    const DumbBuffer& dumb;
-
-    DumbBufferMapping(const Card& card, const FrameBuffer& buf, const DumbBuffer& dumb);
+    DumbBufferMapping(const Card& card, const DumbBuffer& dumb);
     void doMapping();
     void doUnmapping();
     virtual ~DumbBufferMapping();

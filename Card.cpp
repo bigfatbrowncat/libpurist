@@ -452,8 +452,8 @@ DumbBuffer::~DumbBuffer() {
 	}
 }
 
-DumbBufferMapping::DumbBufferMapping(const Card& card, const FrameBuffer& buf, const DumbBuffer& dumb)
-		: map((uint8_t*)MAP_FAILED), card(card), buf(buf), dumb(dumb) { }
+DumbBufferMapping::DumbBufferMapping(const Card& card, const DumbBuffer& dumb)
+		: card(card), /*buf(buf),*/ dumb(dumb), map((uint8_t*)MAP_FAILED) { }
 
 void DumbBufferMapping::doMapping() {
 	struct drm_mode_map_dumb mreq;
@@ -490,11 +490,8 @@ DumbBufferMapping::~DumbBufferMapping() {
  */
 
 FrameBuffer::FrameBuffer(const Card& card)
-	: card(card), dumb(nullptr), mapping(nullptr)
-{
-	*const_cast<std::shared_ptr<DumbBuffer>*>(&this->dumb) = std::make_shared<DumbBuffer>(card);
-	*const_cast<std::shared_ptr<DumbBufferMapping>*>(&this->mapping) = std::make_shared<DumbBufferMapping>(card, *this, *dumb);
-}
+	: card(card), dumb(std::make_shared<DumbBuffer>(card)), mapping(std::make_shared<DumbBufferMapping>(card, /**this,*/ *dumb))
+{}
 
 void FrameBuffer::createAndAdd(int width, int height) {
 	dumb->create(width, height);
@@ -538,29 +535,9 @@ FrameBuffer::~FrameBuffer() {
 	if (added) {
 		removeAndDestroy();
 	}
-	*const_cast<std::shared_ptr<DumbBufferMapping>*>(&this->mapping) = nullptr;
-	*const_cast<std::shared_ptr<DumbBuffer>*>(&this->dumb) = nullptr;
+	//*const_cast<std::shared_ptr<DumbBufferMapping>*>(&this->mapping) = nullptr;
+	//*const_cast<std::shared_ptr<DumbBuffer>*>(&this->dumb) = nullptr;
 }
-
-/*
- * modeset_destroy_fb() stays the same.
- */
-
-// void Card::destroy_fb( struct FrameBuffer *buf)
-// {
-// 	struct drm_mode_destroy_dumb dreq;
-
-// 	/* unmap buffer */
-// 	munmap(buf->map, buf->size);
-
-// 	/* delete framebuffer */
-// 	drmModeRmFB(fd, buf->framebuffer_id);
-
-// 	/* delete dumb buffer */
-// 	memset(&dreq, 0, sizeof(dreq));
-// 	dreq.handle = buf->handle;
-// 	drmIoctl(fd, DRM_IOCTL_MODE_DESTROY_DUMB, &dreq);
-// }
 
 
 /*

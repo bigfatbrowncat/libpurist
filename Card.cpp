@@ -73,6 +73,15 @@ void Displays::updateDisplaysInDrawingLoop() {
 	}
 }
 
+std::shared_ptr<Display> Displays::findDisplayOnConnector(drmModeConnector *conn) const {
+	// Looking for the display on this connector
+	for (auto& disp : *this) {
+		if (disp->connector_id == conn->connector_id) {
+			return disp;
+		}
+	}
+	return nullptr;
+}
 
 int Displays::update()
 {
@@ -81,9 +90,6 @@ int Displays::update()
 	if (!resources) {
 		throw errcode_exception(-errno, "cannot retrieve DRM resources");
 	}
-
-
-	//std::set<std::shared_ptr<Display>> remaining_displays(this->begin(), this->end());
 
 	/* iterate all connectors */
 	for (unsigned int i = 0; i < resources->count_connectors; ++i) {
@@ -95,18 +101,11 @@ int Displays::update()
 			continue;
 		}
 
-		std::shared_ptr<Display> display = nullptr;
-
-		// Looking for the display on this connector
-		for (auto& disp : *this) {
-			if (disp->connector_id == conn->connector_id) {
-				display = disp;
-			}
-		}
+		std::shared_ptr<Display> display = findDisplayOnConnector(conn);
 
 		bool new_display_connected = false;
 		if (display == nullptr) {
-			/* create a device structure */
+			// create a new display
 			display = std::make_shared<Display>(card, *this);
 			new_display_connected = true;
 			display->connector_id = conn->connector_id;
@@ -236,10 +235,9 @@ Display::~Display() {
 	ev.version = DRM_EVENT_CONTEXT_VERSION;
 	ev.page_flip_handler = Card::modeset_page_flip_event;
 
-
-	cleanup = true;
-	if (pflip_pending) { fprintf(stderr, "wait for pending page-flip to complete...\n"); }
-	while (pflip_pending) {
+	destroying_in_progress = true;
+	if (page_flip_pending) { fprintf(stderr, "wait for pending page-flip to complete...\n"); }
+	while (page_flip_pending) {
 		int ret = drmHandleEvent(card.fd, &ev);
 		if (ret) {
 			break;
@@ -247,7 +245,7 @@ Display::~Display() {
 	}
 
 	/* restore saved CRTC configuration */
-	if (!pflip_pending && crtc_set_successfully)
+	if (!page_flip_pending && crtc_set_successfully)
 		drmModeSetCrtc(card.fd,
 					saved_crtc->crtc_id,
 					saved_crtc->buffer_id,
@@ -590,9 +588,9 @@ void Card::modeset_page_flip_event(int fd, unsigned int frame,
 {
 	page_flip_callback_data* user_data = reinterpret_cast<page_flip_callback_data*>(data);
 	Display *dev = user_data->dev;
+	dev->page_flip_pending = false;
 
-	dev->pflip_pending = false;
-	if (!dev->cleanup) {
+	if (!dev->destroying_in_progress) {
 		dev->draw();
 	}
 }
@@ -767,7 +765,7 @@ void Display::draw()
 		fprintf(stderr, "cannot flip CRTC for connector %u (%d): %m\n", connector_id, errno);
 	} else {
 		front_buf ^= 1;
-		pflip_pending = true;
+		page_flip_pending = true;
 	}
 }
 

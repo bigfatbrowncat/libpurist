@@ -149,8 +149,8 @@ public:
 	uint32_t crtc_id = 0;
 	drmModeCrtc *saved_crtc = nullptr;
 
-	bool pflip_pending = false;
-	bool cleanup = false;
+	bool page_flip_pending = false;
+	bool destroying_in_progress = false;
 
     std::shared_ptr<DisplayContents> contents = nullptr;
 
@@ -163,6 +163,7 @@ public:
 
     int connectDisplayToNotOccupiedCrtc(drmModeRes *res, drmModeConnector *conn);
 
+
     int setup(drmModeRes *res, drmModeConnector *conn);
     void draw();
     bool setCrtc();
@@ -174,6 +175,8 @@ class Displays : protected std::list<std::shared_ptr<Display>> {
 private:
     const Card& card;
     std::shared_ptr<DisplayContentsFactory> displayContentsFactory;
+    std::shared_ptr<Display> findDisplayOnConnector(drmModeConnector *conn) const;
+
 public:
     bool empty() const {
         return std::list<std::shared_ptr<Display>>::empty();

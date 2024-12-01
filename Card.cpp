@@ -41,6 +41,7 @@
 #include <cstddef>
 
 #include <cassert>
+#include <xf86drmMode.h>
 
 // The static fields
 //std::set<std::shared_ptr<Card::page_flip_callback_data>> Display::page_flip_callback_data_cache;
@@ -74,7 +75,7 @@ void Displays::updateDisplaysInDrawingLoop() {
 	}
 }
 
-std::shared_ptr<Display> Displays::findDisplayOnConnector(drmModeConnector *conn) const {
+std::shared_ptr<Display> Displays::findDisplayOnConnector(const drmModeConnector *conn) const {
 	// Looking for the display on this connector
 	for (auto& disp : *this) {
 		if (disp->connector_id == conn->connector_id) {
@@ -87,14 +88,14 @@ std::shared_ptr<Display> Displays::findDisplayOnConnector(drmModeConnector *conn
 int Displays::update()
 {
 	ModeResources modeRes(card);
-	auto resources = modeRes.getResources();
+	auto resources = modeRes.resources;
 
 	/* iterate all connectors */
 	for (unsigned int i = 0; i < resources->count_connectors; ++i) {
 		/* get information for each connector */
 		try {
 			ModeConnector modeConnector(card, modeRes, i);
-			auto connector = modeConnector.getConnector();
+			auto connector = modeConnector.connector;
 
 			std::shared_ptr<Display> display = findDisplayOnConnector(connector);
 
@@ -137,7 +138,7 @@ int Displays::update()
 	return 0;
 }
 
-int Display::connectDisplayToNotOccupiedCrtc(drmModeRes *res, drmModeConnector *conn) {
+int Display::connectDisplayToNotOccupiedCrtc(const drmModeRes *res, const drmModeConnector *conn) {
 	unsigned int i, j;
 	int32_t enc_crtc_id;
 
@@ -292,7 +293,7 @@ Card::Card(const char *node) : fd(-1), displays(std::make_shared<Displays>(*this
  * a blocking operation, but it's mostly just <16ms so we can ignore that.
  */
 Card::~Card() {
-	displays = nullptr;
+	displays->clear();
 
     // Closing the video card file
 	close(fd);
@@ -330,7 +331,7 @@ static bool modes_equal(const drmModeModeInfo& mode1, const drmModeModeInfo& mod
  * modeset_setup_dev() stays the same.
  */
 
-int Display::setup(drmModeRes *res, drmModeConnector *conn) {
+int Display::setup(const drmModeRes *res, const drmModeConnector *conn) {
 	int ret;
 
 	/* check if a monitor is connected */
@@ -490,7 +491,7 @@ DumbBufferMapping::~DumbBufferMapping() {
  */
 
 FrameBuffer::FrameBuffer(const Card& card)
-	: card(card), dumb(std::make_shared<DumbBuffer>(card)), mapping(std::make_shared<DumbBufferMapping>(card, /**this,*/ *dumb))
+	: card(card), dumb(std::make_shared<DumbBuffer>(card)), mapping(std::make_shared<DumbBufferMapping>(card, *dumb))
 {}
 
 void FrameBuffer::createAndAdd(int width, int height) {
@@ -535,8 +536,6 @@ FrameBuffer::~FrameBuffer() {
 	if (added) {
 		removeAndDestroy();
 	}
-	//*const_cast<std::shared_ptr<DumbBufferMapping>*>(&this->mapping) = nullptr;
-	//*const_cast<std::shared_ptr<DumbBuffer>*>(&this->dumb) = nullptr;
 }
 
 
@@ -742,7 +741,7 @@ ModeResources::ModeResources(const Card& card) /*: card(card)*/ {
 }
 
 ModeResources::~ModeResources() {
-	drmModeFreeResources(resources);
+	drmModeFreeResources(const_cast<drmModeResPtr>(resources));
 }
 
 ModeConnector::ModeConnector(const Card& card, uint32_t connector_id) /*: card(card), connector_id(connector_id)*/ {
@@ -754,10 +753,10 @@ ModeConnector::ModeConnector(const Card& card, uint32_t connector_id) /*: card(c
 }
 
 ModeConnector::ModeConnector(const Card& card, const ModeResources& resources, size_t index) 
-	: ModeConnector(card, resources.getResources()->connectors[index]) { }
+	: ModeConnector(card, resources.resources->connectors[index]) { }
 
 ModeConnector::~ModeConnector() {
-	drmModeFreeConnector(connector);
+	drmModeFreeConnector(const_cast<drmModeConnectorPtr>(connector));
 }
 
 

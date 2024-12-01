@@ -118,6 +118,7 @@ public:
 class Card {
     friend class Displays;
     friend class Display;
+
 private:
     struct page_flip_callback_data {
         const Card* ms;
@@ -129,24 +130,22 @@ private:
 
 public:
     const int fd;
+    const std::shared_ptr<Displays> displays;
 
     Card(const char *node);
-
-    void runDrawingLoop();
-    
     virtual ~Card();
 
-    std::shared_ptr<Displays> displays;
+    void runDrawingLoop();
 };
 
 class Display {
 private:
-    /*static*/ std::set<std::shared_ptr<Card::page_flip_callback_data>> page_flip_callback_data_cache;
+    std::set<std::shared_ptr<Card::page_flip_callback_data>> page_flip_callback_data_cache;
 
-public:
     const Card& card;
     const Displays& displays;
 
+public:
 	unsigned int front_buf = 0;
 	FrameBuffer bufs[2];
 
@@ -167,21 +166,20 @@ public:
             : card(card), displays(displays), bufs { FrameBuffer(card), FrameBuffer(card) }, connector_id(connector_id) {}
     virtual ~Display();
 
-    int connectDisplayToNotOccupiedCrtc(drmModeRes *res, drmModeConnector *conn);
-
-
-    int setup(drmModeRes *res, drmModeConnector *conn);
+    int connectDisplayToNotOccupiedCrtc(const drmModeRes *res, const drmModeConnector *conn);
+    int setup(const drmModeRes *res, const drmModeConnector *conn);
     void draw();
     bool setCrtc();
 };
 
 
 class Displays : protected std::list<std::shared_ptr<Display>> {
+    friend class Card;
     friend class Display;
 private:
     const Card& card;
     std::shared_ptr<DisplayContentsFactory> displayContentsFactory;
-    std::shared_ptr<Display> findDisplayOnConnector(drmModeConnector *conn) const;
+    std::shared_ptr<Display> findDisplayOnConnector(const drmModeConnector *conn) const;
 
 public:
     bool empty() const {
@@ -199,25 +197,20 @@ public:
 };
 
 class ModeResources {
-private:
-	//const Card& card;
-	drmModeRes *resources;
 public:
+	const drmModeRes *resources;
+
 	ModeResources(const Card& card);
-    drmModeRes *getResources() const { return resources; }
 	virtual ~ModeResources();
 };
 
 class ModeConnector {
-private:
-    //const Card& card;
-    drmModeConnector *connector;
-    //uint32_t connector_id;
 public:
+    const drmModeConnector *connector;
+
 	ModeConnector(const Card& card, uint32_t connector_id);
     ModeConnector(const Card& card, const ModeResources& resources, size_t index);
 
-    drmModeConnector *getConnector() const { return connector; }
 	virtual ~ModeConnector();
 
 };

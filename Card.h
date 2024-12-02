@@ -1,50 +1,20 @@
 #pragma once
 
+#include "exceptions.h"
+#include "interfaces.h"
+
 #include <xf86drmMode.h>
 
 #include <memory>
 #include <list>
 #include <set>
-#include <stdexcept>
-
-
-class errcode_exception : public std::runtime_error {
-public:
-    const int errcode;
-    const std::string message;
-
-    errcode_exception(int errcode, const std::string& message) : 
-        std::runtime_error("System error " + std::to_string(errcode) + ": " + message), 
-        errcode(errcode), 
-        message(message) { }
-};
-
-class cant_get_connector_exception : public errcode_exception {
-public:
-    cant_get_connector_exception(int errcode, const std::string& message) : errcode_exception(errcode, message) { }
-};
-
 
 
 class Card;
 class Display;
 class Displays;
 class DumbBufferMapping;
-class FrameBuffer;
 
-class DisplayContents {
-public:
-    virtual ~DisplayContents() = default;
-
-    virtual void drawIntoBuffer(FrameBuffer* buf) = 0;
-};
-
-class DisplayContentsFactory {
-public:
-    virtual ~DisplayContentsFactory() = default;
-
-    virtual std::shared_ptr<DisplayContents> createDisplayContents() = 0;
-};
 
 /*
  * modeset_buf and modeset_dev stay mostly the same. But 6 new fields are added
@@ -102,7 +72,6 @@ public:
 class DumbBufferMapping {
 private:
     const Card& card;
-    /*const FrameBuffer& buf;*/
     const DumbBuffer& dumb;
 
 public:
@@ -119,15 +88,6 @@ class Card {
     friend class Displays;
     friend class Display;
 
-private:
-    struct page_flip_callback_data {
-        const Card* ms;
-        Display* dev;
-        page_flip_callback_data(const Card* ms, Display* dev) : ms(ms), dev(dev) { }
-    };
-
-    static void modeset_page_flip_event(int fd, unsigned int frame, unsigned int sec, unsigned int usec, void *data);
-
 public:
     const int fd;
     const std::shared_ptr<Displays> displays;
@@ -139,18 +99,24 @@ public:
 };
 
 class Display {
+    friend Card;
+
 private:
-    std::set<std::shared_ptr<Card::page_flip_callback_data>> page_flip_callback_data_cache;
+    struct page_flip_callback_data {
+        const Card* ms;
+        Display* dev;
+        page_flip_callback_data(const Card* ms, Display* dev) : ms(ms), dev(dev) { }
+    };
+
+    static std::set<std::shared_ptr<page_flip_callback_data>> page_flip_callback_data_cache;
 
     const Card& card;
     const Displays& displays;
 
-public:
 	unsigned int front_buf = 0;
 	FrameBuffer bufs[2];
 
 	std::shared_ptr<drmModeModeInfo> mode = nullptr;
-	uint32_t connector_id = 0;
 	uint32_t crtc_id = 0;
 	drmModeCrtc *saved_crtc = nullptr;
 
@@ -162,6 +128,10 @@ public:
     bool crtc_set_successfully = false;
     bool is_in_drawing_loop = false;
 
+	uint32_t connector_id = 0;
+
+public:
+
     Display(const Card& card, const Displays& displays, uint32_t connector_id)
             : card(card), displays(displays), bufs { FrameBuffer(card), FrameBuffer(card) }, connector_id(connector_id) {}
     virtual ~Display();
@@ -170,6 +140,14 @@ public:
     int setup(const drmModeRes *res, const drmModeConnector *conn);
     void draw();
     bool setCrtc();
+    bool isCrtcSet() const { return crtc_set_successfully; }
+    bool isInDrawingLoop() const { return is_in_drawing_loop; }
+    void updateInDrawingLoop(DisplayContentsFactory& factory);
+    uint32_t getConnectorId() const { return connector_id; }
+    bool isPageFlipPending() const { return page_flip_pending; }
+	bool isDestroyingInProgress() const { return destroying_in_progress; }
+
+    static void modeset_page_flip_event(int fd, unsigned int frame, unsigned int sec, unsigned int usec, void *data);
 };
 
 

@@ -43,42 +43,45 @@
 #include <cassert>
 #include <xf86drmMode.h>
 
-// The static fields
-//std::set<std::shared_ptr<Card::page_flip_callback_data>> Display::page_flip_callback_data_cache;
+std::set<std::shared_ptr<Display::page_flip_callback_data>> Display::page_flip_callback_data_cache;
 
 bool Displays::setAllCrtcs() {
 	bool some_modeset_failed = false;
 	/* perform actual modesetting on each found connector+CRTC */
 	for (auto& iter : *this) {
-		if (!iter->crtc_set_successfully) {
+		if (!iter->isCrtcSet()) {
 			auto set_successfully = iter->setCrtc();
 			if (!set_successfully) {
 				some_modeset_failed = true;
 				fprintf(stderr, "cannot set CRTC for connector %u (%d): %m\n",
-					iter->connector_id, errno);
+					iter->getConnectorId(), errno);
 			}
 		}
 	}
 	return !some_modeset_failed;
 }
 
+void Display::updateInDrawingLoop(DisplayContentsFactory& factory) {
+	if (crtc_set_successfully && !is_in_drawing_loop) {
+		is_in_drawing_loop = true;
+		if (contents == nullptr) {
+			contents = factory.createDisplayContents();
+		}
+		draw();
+	}
+}
+
 void Displays::updateDisplaysInDrawingLoop() {
 	/* redraw all outputs */
 	for (auto& iter : *this) {
-		if (iter->crtc_set_successfully && !iter->is_in_drawing_loop) {
-			iter->is_in_drawing_loop = true;
-			if (iter->contents == nullptr) {
-				iter->contents = this->displayContentsFactory->createDisplayContents();
-			}
-			iter->draw();
-		}
+		iter->updateInDrawingLoop(*this->displayContentsFactory);
 	}
 }
 
 std::shared_ptr<Display> Displays::findDisplayOnConnector(const drmModeConnector *conn) const {
 	// Looking for the display on this connector
 	for (auto& disp : *this) {
-		if (disp->connector_id == conn->connector_id) {
+		if (disp->getConnectorId() == conn->connector_id) {
 			return disp;
 		}
 	}
@@ -222,7 +225,7 @@ Display::~Display() {
 	/* init variables */
 	memset(&ev, 0, sizeof(ev));
 	ev.version = DRM_EVENT_CONTEXT_VERSION;
-	ev.page_flip_handler = Card::modeset_page_flip_event;
+	ev.page_flip_handler = Display::modeset_page_flip_event;
 
 	destroying_in_progress = true;
 	if (page_flip_pending) { fprintf(stderr, "wait for pending page-flip to complete...\n"); }
@@ -249,6 +252,11 @@ Display::~Display() {
 		/* destroy framebuffers */
 		bufs[1].removeAndDestroy();
 		bufs[0].removeAndDestroy();
+	}
+
+	// Removing self from the callbacks
+	for (auto& cb : page_flip_callback_data_cache) {
+		if (cb->dev == this) { cb->dev = nullptr; }
 	}
 }
 
@@ -547,15 +555,17 @@ FrameBuffer::~FrameBuffer() {
  * allows to wait for outstanding page-flips during cleanup.
  */
 
-void Card::modeset_page_flip_event(int fd, unsigned int frame,
+void Display::modeset_page_flip_event(int fd, unsigned int frame,
 				    unsigned int sec, unsigned int usec, void *data)
 {
-	page_flip_callback_data* user_data = reinterpret_cast<page_flip_callback_data*>(data);
-	Display *dev = user_data->dev;
-	dev->page_flip_pending = false;
+	//page_flip_callback_data* user_data = reinterpret_cast<page_flip_callback_data*>(data);
+	Display *dev = (Display*)data;//user_data->dev;
+	if (dev != nullptr) {
+		dev->page_flip_pending = false;
 
-	if (!dev->destroying_in_progress) {
-		dev->draw();
+		if (!dev->destroying_in_progress) {
+			dev->draw();
+		}
 	}
 }
 
@@ -633,7 +643,7 @@ void Card::runDrawingLoop()
 	 * introduced the page_flip_handler, so we use that. */
 	ev.version = 2;
 	
-	ev.page_flip_handler = Card::modeset_page_flip_event; //  unsigned int frame, unsigned int sec, unsigned int usec, void *data
+	ev.page_flip_handler = Display::modeset_page_flip_event; //  unsigned int frame, unsigned int sec, unsigned int usec, void *data
 
 
 	/* prepare all connectors and CRTCs */
@@ -721,10 +731,11 @@ void Display::draw()
 
 	contents->drawIntoBuffer(buf);
 
-	auto user_data = std::make_shared<Card::page_flip_callback_data>(&card, this);
-	page_flip_callback_data_cache.insert(user_data);
+	auto user_data = this; //std::make_shared<Display::page_flip_callback_data>(&card, this);
+	//page_flip_callback_data_cache.insert(user_data);
+	//printf("cache size %lu\n", page_flip_callback_data_cache.size());
 
-	int ret = drmModePageFlip(card.fd, crtc_id, buf->framebuffer_id, DRM_MODE_PAGE_FLIP_EVENT, user_data.get());
+	int ret = drmModePageFlip(card.fd, crtc_id, buf->framebuffer_id, DRM_MODE_PAGE_FLIP_EVENT, user_data);//.get());
 	if (ret) {
 		fprintf(stderr, "cannot flip CRTC for connector %u (%d): %m\n", connector_id, errno);
 	} else {

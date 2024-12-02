@@ -1,4 +1,11 @@
 #include "Card.h"
+#include "FrameBuffer.h"
+#include "DumbBuffer.h"
+#include "DumbBufferMapping.h"
+#include "Displays.h"
+
+#include "exceptions.h"
+#include "interfaces.h"
 
 #include <cstdio>
 #include <memory>

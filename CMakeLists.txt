@@ -30,4 +30,4 @@ add_executable(purist
 )
 
 target_include_directories(purist PRIVATE /usr/include/libdrm)
-target_link_libraries(purist drm)
+target_link_libraries(purist drm gbm EGL GL)

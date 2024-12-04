@@ -47,6 +47,8 @@ public:
     bool isPageFlipPending() const { return page_flip_pending; }
 	bool isDestroyingInProgress() const { return destroying_in_progress; }
 
+    void swap_buffers();
+
     static void modeset_page_flip_event(int fd, unsigned int frame, unsigned int sec, unsigned int usec, void *data);
 };
 

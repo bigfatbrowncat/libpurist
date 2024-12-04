@@ -130,6 +130,7 @@ void Display::modeset_page_flip_event(int fd, unsigned int frame,
 
 		if (!dev->destroying_in_progress) {
 			dev->draw();
+			dev->swap_buffers();
 		}
 	}
 }
@@ -258,4 +259,27 @@ Display::~Display() {
 		bufs[0].removeAndDestroy();
 	}
 
+}
+
+void Display::swap_buffers() {
+	Card& card = const_cast<Card&>(this->card);
+
+	if (card.gl.display != nullptr) {
+		eglSwapBuffers(card.gl.display, card.gl.surface);
+		
+		
+	//	card.gbm.bo = gbm_surface_lock_front_buffer(card.gbm.surface);
+	//	card.gbm.handle = gbm_bo_get_handle(card.gbm.bo).u32;
+	//	card.gbm.pitch = gbm_bo_get_stride(card.gbm.bo);
+	}
+
+	//drmModeAddFB(card.fd, mode->hdisplay, mode->vdisplay, 24, 32, card.gbm.pitch,
+//	 			card.gbm.handle, &card.fb);
+	// drmModeSetCrtc(device, crtc->crtc_id, fb, 0, 0, &connector_id, 1, &mode_info);
+//	if (card.gbm.previous_bo) {
+//	 	drmModeRmFB(card.fd, card.gbm.previous_fb);
+//	 	gbm_surface_release_buffer(card.gbm.surface, card.gbm.previous_bo);
+//	}
+//	card.gbm.previous_bo = card.gbm.bo;
+//	card.gbm.previous_fb = card.gbm.fb;
 }

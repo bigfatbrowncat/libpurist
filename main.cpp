@@ -7,8 +7,12 @@
 #include "exceptions.h"
 #include "interfaces.h"
 
+#include <cassert>
 #include <cstdio>
 #include <memory>
+
+#define GL_GLEXT_PROTOTYPES 1
+#include <GLES2/gl2.h>
 
 class ColoredScreenDisplayContents : public DisplayContents {
 public:
@@ -33,8 +37,12 @@ public:
         return next;
     }
 
+
     void drawIntoBuffer(FrameBuffer* buf) override {
-       	r = next_color(&r_up, r, 20);
+		glClear(GL_COLOR_BUFFER_BIT);
+		glClearColor(0.2f, 0.3f, 0.5f, 1.0f);
+
+       	/*r = next_color(&r_up, r, 20);
         g = next_color(&g_up, g, 10);
         b = next_color(&b_up, b, 5);
 
@@ -46,7 +54,7 @@ public:
                 *(uint32_t*)&buf->mapping->map[off] =
                         (r << 16) | (g << 8) | b;
             }
-        }
+        }*/
     }
 };
 
@@ -63,9 +71,6 @@ public:
 
 };
 
-/*
- * main() also stays the same.
- */
 
 int main(int argc, char **argv)
 {

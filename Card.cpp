@@ -37,11 +37,8 @@
 
 int Card::init_gbm(int fd, uint32_t width, uint32_t height)
 {
-	if (gbm.dev == nullptr) {
-		gbm.dev = gbm_create_device(fd);
-	}
 
-	gbm.surface = gbm_surface_create(gbm.dev,
+	gbm.surface = gbm_surface_create(gbmDevice,
 			width, height, //drm.mode->hdisplay, drm.mode->vdisplay,
 			GBM_FORMAT_XRGB8888,
 			GBM_BO_USE_SCANOUT | GBM_BO_USE_RENDERING);
@@ -66,15 +63,27 @@ Card::Card(const char *node) : fd(-1), displays(std::make_shared<Displays>(*this
 	int ret;
 	uint64_t has_dumb;
 
+	// Opening the GPU file
 	int fd = open(node, O_RDWR | O_CLOEXEC);
 	if (fd < 0) {
 		ret = -errno;
 		throw errcode_exception(ret, "cannot open '" + std::string(node) + "'");
 	}
+	
+	// Configuring dumb buffers ability
+	if (enableDumbBuffers) {
+		if (drmGetCap(fd, DRM_CAP_DUMB_BUFFER, &has_dumb) < 0 || !has_dumb) {
+			close(fd);
+			throw errcode_exception(-EOPNOTSUPP, "drm device '" + std::string(node) + "' does not support dumb buffers");
+		}
+	}
 
-	if (drmGetCap(fd, DRM_CAP_DUMB_BUFFER, &has_dumb) < 0 || !has_dumb) {
-		close(fd);
-		throw errcode_exception(-EOPNOTSUPP, "drm device '" + std::string(node) + "' does not support dumb buffers");
+	// Initializing GBM
+	if (enableOpenGL) {
+		gbmDevice = gbm_create_device(fd);
+		if (gbmDevice == nullptr) {
+			throw errcode_exception(-errno, "drm device '" + std::string(node) + "' does not support libgbm");
+		}
 	}
 
 	*const_cast<int*>(&this->fd) = fd;
@@ -121,7 +130,7 @@ int Card::init_gl(void)
 	assert(create_platform_window_surface != NULL);
 
 
-	gl.display = get_platform_display(EGL_PLATFORM_GBM_KHR, gbm.dev, NULL);
+	gl.display = get_platform_display(EGL_PLATFORM_GBM_KHR, gbmDevice, NULL);
 	//gl.display = eglGetDisplay( (EGLNativeDisplayType)gbm.dev );
 
 	if (!eglInitialize(gl.display, &major, &minor)) {

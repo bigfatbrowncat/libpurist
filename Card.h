@@ -21,10 +21,12 @@ class Card {
     friend class Display;
     friend class Displays;
 
+private:
+    gbm_device *gbmDevice = nullptr;
+
 public:
     struct _gbm {
-        struct gbm_device *dev = nullptr;
-        struct gbm_surface *surface;
+        struct gbm_surface *surface = nullptr;
 
         struct gbm_bo *bo;
         struct gbm_bo *previous_bo = NULL;
@@ -48,6 +50,10 @@ public:
 
     const int fd;
     const std::shared_ptr<Displays> displays;
+    
+    const bool enableDumbBuffers = false;
+    const bool enableOpenGL = true;
+
 
     Card(const char *node);
     virtual ~Card();

@@ -28,20 +28,20 @@ public:
     struct _gbm {
         struct gbm_surface *surface = nullptr;
 
-        struct gbm_bo *bo;
+        //struct gbm_bo *bo;
         struct gbm_bo *previous_bo = NULL;
 
         uint32_t previous_fb;
         
-        uint32_t handle;
-        uint32_t pitch;
+        //uint32_t handle;
+        //uint32_t pitch;
     } gbm;
 
     struct _gl {
         EGLDisplay display;
         EGLConfig config;
         EGLContext context;
-        EGLSurface surface;
+        //EGLSurface surface;
         GLuint program;
         GLint modelviewmatrix, modelviewprojectionmatrix, normalmatrix;
         GLuint vbo;
@@ -61,4 +61,6 @@ public:
     int init_gbm(int fd, uint32_t width, uint32_t height);
     int init_gl(void);
     void runDrawingLoop();
+
+    gbm_device* getGBMDevice() const { return gbmDevice; }
 };

@@ -1,6 +1,8 @@
 #pragma once
 
 #include "Card.h"
+#include "DumbBuffer.h"
+
 
 class DumbBuffer;
 class DumbBufferMapping;
@@ -11,7 +13,8 @@ private:
     const Card& card;
 
 public:
-    const std::shared_ptr<DumbBuffer> dumb;
+    //const std::shared_ptr<DumbBuffer> dumb;
+    const std::shared_ptr<TargetSurface> target;
     const std::shared_ptr<DumbBufferMapping> mapping;
 
 	const uint32_t framebuffer_id = 0;

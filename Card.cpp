@@ -35,20 +35,6 @@
 #include <xf86drm.h>
 
 
-int Card::init_gbm(int fd, uint32_t width, uint32_t height)
-{
-
-	gbm.surface = gbm_surface_create(gbmDevice,
-			width, height, //drm.mode->hdisplay, drm.mode->vdisplay,
-			GBM_FORMAT_XRGB8888,
-			GBM_BO_USE_SCANOUT | GBM_BO_USE_RENDERING);
-	if (!gbm.surface) {
-		printf("failed to create gbm surface\n");
-		return -1;
-	}
-
-	return 0;
-}
 
 /* Draw code here */
 // static void draw_color(uint32_t i)
@@ -175,14 +161,12 @@ int Card::init_gl(void)
 
 
 	//gl.surface = create_platform_window_surface(gl.display, gl.config, gbm.surface, NULL);
-	gl.surface = eglCreateWindowSurface(gl.display, gl.config, gbm.surface, NULL);
-	if (gl.surface == EGL_NO_SURFACE) {
-		printf("failed to create egl surface: %d\n", eglGetError());
-		return -1;
-	}
+	// gl.surface = eglCreateWindowSurface(gl.display, gl.config, gbm.surface, NULL);
+	// if (gl.surface == EGL_NO_SURFACE) {
+	// 	printf("failed to create egl surface: %d\n", eglGetError());
+	// 	return -1;
+	// }
 
-	/* connect the context to the surface */
-	eglMakeCurrent(gl.display, gl.surface, gl.surface, gl.context);
 
 	printf("GL Extensions: \"%s\"\n", glGetString(GL_EXTENSIONS));
 
@@ -272,6 +256,8 @@ void Card::runDrawingLoop()
 	struct timeval v;
 	drmEventContext ev;
 
+	init_gl();
+
 	/* init variables */
 	srand(time(&start));
 	FD_ZERO(&fds);
@@ -292,8 +278,7 @@ void Card::runDrawingLoop()
 	if (!modeset_success)
 		throw std::runtime_error("mode setting failed for some displays");
 
-
-
+	
 	displays->updateDisplaysInDrawingLoop();
 
 	int seconds = 600;

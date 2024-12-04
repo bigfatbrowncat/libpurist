@@ -1,6 +1,8 @@
 #include "DumbBuffer.h"
 #include "exceptions.h"
 
+#include <EGL/egl.h>
+#include <gbm.h>
 #include <xf86drm.h>
 
 #include <cassert>
@@ -9,7 +11,7 @@
 #include <string>
 
 DumbBuffer::DumbBuffer(const Card& card) 
-		:  card(card), stride(0), size(0), handle(0), width(0), height(0) {
+	: TargetSurface(card), stride(0), size(0), handle(0), width(0), height(0) {
 }
 
 void DumbBuffer::create(int width, int height) {
@@ -24,12 +26,12 @@ void DumbBuffer::create(int width, int height) {
 		throw errcode_exception(-errno, std::string("cannot create dumb buffer. ") + strerror(errno));
 	}
 
-	*const_cast<uint32_t*>(&this->stride) = creq.pitch;
-	*const_cast<uint32_t*>(&this->size) = creq.size;
-	*const_cast<uint32_t*>(&this->handle) = creq.handle;
+	this->stride = creq.pitch;
+	this->size = creq.size;
+	this->handle = creq.handle;
 
-	*const_cast<int*>(&this->width) = width;
-	*const_cast<int*>(&this->height) = height;
+	this->width = width;
+	this->height = height;
 
 	created = true;
 }
@@ -49,6 +51,66 @@ void DumbBuffer::destroy() {
 }
 
 DumbBuffer::~DumbBuffer() {
+	if (created) {
+		destroy();
+	}
+}
+
+
+GBMSurface::GBMSurface(const Card& card) 
+	: TargetSurface(card), width(0), height(0) {
+}
+
+void GBMSurface::create(int width, int height) {
+	this->width = width;
+	this->height = height;
+
+	gbmSurface = gbm_surface_create(card.getGBMDevice(),
+			width, height,
+			GBM_FORMAT_XRGB8888,
+			GBM_BO_USE_SCANOUT | GBM_BO_USE_RENDERING);
+	if (!gbmSurface) {
+		throw errcode_exception(-errno, std::string("failed to create the GBM surface. ") + strerror(errno));
+	}
+
+	glSurface = eglCreateWindowSurface(card.gl.display, card.gl.config, gbmSurface, NULL);
+	if (glSurface == EGL_NO_SURFACE) {
+		throw errcode_exception(eglGetError(), std::string("failed to create EGL surface. "));
+	}
+
+	created = true;
+}
+
+uint32_t GBMSurface::getWidth() const {
+	return width;
+}
+
+uint32_t GBMSurface::getHeight() const {
+	return height;
+}
+
+uint32_t GBMSurface::getStride() const {
+	assert (gbmBO != nullptr);
+	return gbm_bo_get_stride(gbmBO);
+	
+}
+
+uint32_t GBMSurface::getHandle() const {
+	assert (gbmBO != nullptr);
+	return gbm_bo_get_handle(gbmBO).u32;
+	
+}
+
+
+void GBMSurface::destroy() {
+	assert(gbmSurface != nullptr);
+	assert(glSurface != EGL_NO_SURFACE);
+
+	eglDestroySurface(card.gl.display, glSurface);
+	gbm_surface_destroy(gbmSurface);
+}
+
+GBMSurface::~GBMSurface() {
 	if (created) {
 		destroy();
 	}

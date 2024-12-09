@@ -297,7 +297,7 @@ void Card::runDrawingLoop()
 			fprintf(stderr, "exit due to user-input\n");
 			break;
 		} else if (FD_ISSET(fd, &fds)) {
-			printf("drmHandleEvent in Card\n"); fflush(stdout);
+			//printf("drmHandleEvent in Card\n"); fflush(stdout);
 			drmHandleEvent(fd, &ev);
 
 			ret = displays->update();

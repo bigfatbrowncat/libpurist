@@ -69,7 +69,7 @@ int Displays::update()
 			/* call helper function to prepare this connector */
 			int ret = display->setup(resources, connector);
 			if (ret) {
-				if (ret == -ENXIO) {
+				if (ret == -ENXIO || display_iter != end()) {
 					this->remove(display);
 				} else if (ret != -ENOENT) {
 					errno = -ret;
@@ -77,9 +77,9 @@ int Displays::update()
 						i, resources->connectors[i], errno);
 				}
 				
-				if (display_iter != end()) {
-					this->erase(display_iter);
-				}
+				// if (display_iter != end()) {
+				// 	this->erase(display_iter);
+				// }
 				
 				display = nullptr;
 				

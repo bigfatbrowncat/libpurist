@@ -16,25 +16,30 @@ FrameBuffer::FrameBuffer(const Card& card, Display& display)
 {}
 
 void FrameBuffer::activate() {
-	assert(!active);
-	target->activate();
-	int ret = drmModeAddFB(card.fd, target->getWidth(), target->getHeight(), 24, 32, target->getStride(),
-			target->getHandle(), const_cast<uint32_t*>(&this->framebuffer_id));
-	if (ret) {
-		throw errcode_exception(-errno, std::string("cannot create framebuffer. ") + strerror(errno));
-	}
-	display.setCrtc(this);
-	active = true;
+	// assert(!active);
+	// if (!added) {
+	// 	target->activate();
+	// 	int ret = drmModeAddFB(card.fd, target->getWidth(), target->getHeight(), 24, 32, target->getStride(),
+	// 			target->getHandle(), const_cast<uint32_t*>(&this->framebuffer_id));
+	// 	if (ret) {
+	// 		throw errcode_exception(-errno, std::string("cannot create framebuffer. ") + strerror(errno));
+	// 	}
+	// 	target->deactivate();
+	// 	added = true;
+	// 	display.setCrtc(this);
+	// }
+	// active = true;
 }
 
 void FrameBuffer::deactivate() {
-	assert(active);
-   	int ret = drmModeRmFB(card.fd, framebuffer_id);
-	if (ret) {
-	 	throw errcode_exception(-errno, std::string("cannot destroy framebuffer. ") + strerror(errno));
-	}
-	target->deactivate();
-	active = false;
+	// assert(active);
+
+   	// int ret = drmModeRmFB(card.fd, framebuffer_id);
+	// if (ret) {
+	//  	throw errcode_exception(-errno, std::string("cannot destroy framebuffer. ") + strerror(errno));
+	// }
+	// target->deactivate();
+	// active = false;
 }
 
 
@@ -42,6 +47,27 @@ void FrameBuffer::createAndAdd(int width, int height) {
 	//dumb->create(width, height);
 	//mapping->doMapping();
 	target->create(width, height);
+
+	target->makeCurrent();
+	target->swap();
+
+		assert(!active);
+		if (!added) {
+			target->activate();
+			int ret = drmModeAddFB(card.fd, target->getWidth(), target->getHeight(), 24, 32, target->getStride(),
+					target->getHandle(), const_cast<uint32_t*>(&this->framebuffer_id));
+			if (ret) {
+				throw errcode_exception(-errno, std::string("cannot create framebuffer. ") + strerror(errno));
+			}
+			target->deactivate();
+			added = true;
+			display.setCrtc(this);
+		}
+		active = true;
+
+
+
+
 
 	//Card& card = const_cast<Card&>(this->card);
 	
@@ -71,7 +97,7 @@ void FrameBuffer::createAndAdd(int width, int height) {
 	// if (ret) {
 	// 	throw errcode_exception(-errno, std::string("cannot create framebuffer. ") + strerror(errno));
 	// }
-	added = true;
+	//added = true;
 
 	/* clear the framebuffer to 0 */
 	//memset((void*)this->mapping->map, 0, dumb->size);
@@ -81,9 +107,20 @@ void FrameBuffer::createAndAdd(int width, int height) {
 void FrameBuffer::removeAndDestroy() {
 	assert(added);
 
-	if (active) { 
-		deactivate(); 
-	}
+	// if (active) { 
+	// 	deactivate(); 
+	// }
+
+		assert(active);
+
+		int ret = drmModeRmFB(card.fd, framebuffer_id);
+		if (ret) {
+			throw errcode_exception(-errno, std::string("cannot destroy framebuffer. ") + strerror(errno));
+		}
+		target->deactivate();
+		active = false;
+
+
 
 	// Unmapping the dumb
 	if (0) mapping->doUnmapping();

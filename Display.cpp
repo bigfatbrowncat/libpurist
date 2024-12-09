@@ -154,16 +154,16 @@ int Display::setup(const drmModeRes *res, const drmModeConnector *conn) {
 
 void Display::draw()
 {
-	FrameBuffer *fbuf = &bufs[front_buf];
+	//FrameBuffer *fbuf = &bufs[front_buf];
 	FrameBuffer *buf = &bufs[front_buf ^ 1];
 
 	buf->target->makeCurrent();
 	contents->drawIntoBuffer(buf);
 	buf->target->swap();
-	buf->activate();
-	if (fbuf->isActive()) { 
-		fbuf->deactivate();
-	}
+	// buf->activate();
+	// if (fbuf->isActive()) { 
+	// 	fbuf->deactivate();
+	// }
 
 	auto user_data = this;
 
@@ -309,7 +309,7 @@ Display::~Display() {
 	destroying_in_progress = true;
 	if (page_flips_pending > 0) { fprintf(stderr, "wait for pending page-flip to complete...\n"); }
 	while (page_flips_pending > 0) {
-		printf("drmHandleEvent in ~Display\n"); fflush(stdout);
+		//printf("drmHandleEvent in ~Display\n"); fflush(stdout);
 		int ret = drmHandleEvent(card.fd, &ev);
 		if (ret) {
 			printf("Oopsie!!! %d\n", ret); fflush(stdout);

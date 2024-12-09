@@ -14,9 +14,9 @@ public:
 
 	TargetSurface(const Card& card) : card(card) { }
 	virtual void makeCurrent() = 0;
-	virtual void activate() = 0;
+	virtual void lock() = 0;
 	virtual void swap() = 0;
-	virtual void deactivate() = 0;
+	virtual void unlock() = 0;
     virtual void create(int width, int height) = 0;
     virtual void destroy() = 0;
 	virtual ~TargetSurface() = default;
@@ -41,8 +41,8 @@ public:
 
 	DumbBuffer(const Card& card);
 	void makeCurrent() override { }
-	void activate() override { }
-	void deactivate() override { }
+	void lock() override { }
+	void unlock() override { }
     void create(int width, int height) override;
     void destroy() override;
 	virtual ~DumbBuffer();
@@ -78,7 +78,7 @@ public:
 		eglMakeCurrent(card.gl.display, glSurface, glSurface, card.gl.context);
 	}
     void destroy() override;
-	void activate() override {
+	void lock() override {
 		gbmBO = gbm_surface_lock_front_buffer(gbmSurface);
 	}
 
@@ -86,7 +86,7 @@ public:
 		eglSwapBuffers(card.gl.display, glSurface);	
 	}
 
-	void deactivate() override {
+	void unlock() override {
 		gbm_surface_release_buffer(gbmSurface, gbmBO);
 	}
 

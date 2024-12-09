@@ -10,7 +10,6 @@ class DumbBufferMapping;
 class FrameBuffer {
 private:
     bool added = false;
-    bool active = false;
     const Card& card;
     Display& display;
 public:
@@ -22,9 +21,6 @@ public:
 
     FrameBuffer(const Card& card, Display& display);
     void createAndAdd(int width, int height);
-    void activate();
-    void deactivate();
-    bool isActive() const { return active; }
     void removeAndDestroy();
     virtual ~FrameBuffer();
 };

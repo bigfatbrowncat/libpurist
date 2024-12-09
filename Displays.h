@@ -14,7 +14,7 @@ class Displays : protected std::list<std::shared_ptr<Display>> {
 private:
     const Card& card;
     std::shared_ptr<DisplayContentsFactory> displayContentsFactory;
-    std::shared_ptr<Display> findDisplayOnConnector(const drmModeConnector *conn) const;
+    Displays::iterator findDisplayOnConnector(const drmModeConnector *conn);
 
 public:
     bool empty() const {

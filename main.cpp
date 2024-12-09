@@ -39,14 +39,15 @@ public:
 
 
     void drawIntoBuffer(FrameBuffer* buf) override {
-		glClear(GL_COLOR_BUFFER_BIT);
-		glClearColor(0.2f, 0.3f, 0.5f, 1.0f);
-
-       	/*r = next_color(&r_up, r, 20);
+       	r = next_color(&r_up, r, 20);
         g = next_color(&g_up, g, 10);
         b = next_color(&b_up, b, 5);
 
-    	unsigned int j, k, off;
+		glClearColor(1.0f/256*r, 1.0f/256*g, 1.0f/256*b, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
+
+
+    	/*unsigned int j, k, off;
 
        	for (j = 0; j < buf->dumb->height; ++j) {
             for (k = 0; k < buf->dumb->width; ++k) {

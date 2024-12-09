@@ -155,8 +155,14 @@ int main() {
   free(configs);
   eglMakeCurrent(display, egl_surface, egl_surface, context);
 
+
+  //drmModeAddFB(device, mode_info.hdisplay, mode_info.vdisplay, 24, 32, pitch, handle, &fb);
+  //drmModeAddFB(device, mode_info.hdisplay, mode_info.vdisplay, 24, 32, pitch, handle, &previous_fb);
   for (i = 0; i < 600; i++)
     draw(i / 600.0f);
+  //drmModeRmFB(device, fb);
+  //drmModeRmFB(device, previous_fb);
+
 
   drmModeSetCrtc(device, crtc->crtc_id, crtc->buffer_id, crtc->x, crtc->y,
                  &connector_id, 1, &crtc->mode);

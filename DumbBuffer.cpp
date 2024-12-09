@@ -103,11 +103,13 @@ uint32_t GBMSurface::getHandle() const {
 
 
 void GBMSurface::destroy() {
+	assert(created);
 	assert(gbmSurface != nullptr);
 	assert(glSurface != EGL_NO_SURFACE);
 
 	eglDestroySurface(card.gl.display, glSurface);
 	gbm_surface_destroy(gbmSurface);
+	created = false;
 }
 
 GBMSurface::~GBMSurface() {

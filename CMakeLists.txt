@@ -1,10 +1,13 @@
 cmake_minimum_required(VERSION 3.25)
 
 # Globally adding libasan for debug build
-add_compile_options($<$<CONFIG:DEBUG>:-fsanitize=address>)
+add_compile_options($<$<CONFIG:DEBUG>:-fsanitize=address,undefined>)
+add_compile_options($<$<CONFIG:DEBUG>:-fsanitize-recover=all>)
 add_compile_options(-Wall -Werror)
 
-add_link_options($<$<CONFIG:DEBUG>:-fsanitize=address>)
+add_link_options($<$<CONFIG:DEBUG>:-fsanitize=address,undefined>)
+add_link_options($<$<CONFIG:DEBUG>:-fsanitize-recover=all>)
+
 
 project(purist)
 

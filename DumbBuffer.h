@@ -13,6 +13,7 @@ public:
 	virtual uint32_t getHandle() const = 0;
 
 	TargetSurface(const Card& card) : card(card) { }
+	virtual void makeCurrent() = 0;
 	virtual void activate() = 0;
 	virtual void swap() = 0;
 	virtual void deactivate() = 0;
@@ -39,6 +40,7 @@ public:
 	uint32_t getSize() const { return size; }
 
 	DumbBuffer(const Card& card);
+	void makeCurrent() override { }
 	void activate() override { }
 	void deactivate() override { }
     void create(int width, int height) override;
@@ -72,14 +74,16 @@ public:
 
 	GBMSurface(const Card& card);
     void create(int width, int height) override;
+	void makeCurrent() override {
+		eglMakeCurrent(card.gl.display, glSurface, glSurface, card.gl.context);
+	}
     void destroy() override;
 	void activate() override {
-		eglMakeCurrent(card.gl.display, glSurface, glSurface, card.gl.context);
+		gbmBO = gbm_surface_lock_front_buffer(gbmSurface);
 	}
 
 	virtual void swap() override {
 		eglSwapBuffers(card.gl.display, glSurface);	
-		gbmBO = gbm_surface_lock_front_buffer(gbmSurface);
 	}
 
 	void deactivate() override {

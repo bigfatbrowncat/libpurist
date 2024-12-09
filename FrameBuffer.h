@@ -10,8 +10,9 @@ class DumbBufferMapping;
 class FrameBuffer {
 private:
     bool added = false;
+    bool active = false;
     const Card& card;
-
+    Display& display;
 public:
     //const std::shared_ptr<DumbBuffer> dumb;
     const std::shared_ptr<TargetSurface> target;
@@ -19,8 +20,11 @@ public:
 
 	const uint32_t framebuffer_id = 0;
 
-    FrameBuffer(const Card& card);
+    FrameBuffer(const Card& card, Display& display);
     void createAndAdd(int width, int height);
+    void activate();
+    void deactivate();
+    bool isActive() const { return active; }
     void removeAndDestroy();
     virtual ~FrameBuffer();
 };

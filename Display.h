@@ -20,12 +20,12 @@ private:
 	uint32_t crtc_id = 0;
 	drmModeCrtc *saved_crtc = nullptr;
 
-	bool page_flip_pending = false;
+	int page_flips_pending = 0;
 	bool destroying_in_progress = false;
 
     std::shared_ptr<DisplayContents> contents = nullptr;
 
-    bool crtc_set_successfully = false;
+    bool crtc_set_successfully = true;//false;
     bool is_in_drawing_loop = false;
 
 	uint32_t connector_id = 0;
@@ -33,18 +33,18 @@ private:
 public:
 
     Display(const Card& card, const Displays& displays, uint32_t connector_id)
-            : card(card), displays(displays), bufs { FrameBuffer(card), FrameBuffer(card) }, connector_id(connector_id) {}
+            : card(card), displays(displays), bufs { FrameBuffer(card, *this), FrameBuffer(card, *this) }, connector_id(connector_id) {}
     virtual ~Display();
 
     int connectDisplayToNotOccupiedCrtc(const drmModeRes *res, const drmModeConnector *conn);
     int setup(const drmModeRes *res, const drmModeConnector *conn);
     void draw();
-    bool setCrtc();
+    bool setCrtc(FrameBuffer *buf);
     bool isCrtcSet() const { return crtc_set_successfully; }
     bool isInDrawingLoop() const { return is_in_drawing_loop; }
     void updateInDrawingLoop(DisplayContentsFactory& factory);
     uint32_t getConnectorId() const { return connector_id; }
-    bool isPageFlipPending() const { return page_flip_pending; }
+    //bool isPageFlipPending() const { return page_flip_pending; }
 	bool isDestroyingInProgress() const { return destroying_in_progress; }
 
     void swap_buffers();

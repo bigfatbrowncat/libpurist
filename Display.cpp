@@ -3,9 +3,11 @@
 #include "exceptions.h"
 #include "interfaces.h"
 
+#include <cstdint>
 #include <xf86drm.h>
 
 #include <cstring>
+#include <cassert>
 
 
 static bool modes_equal(const drmModeModeInfo& mode1, const drmModeModeInfo& mode2) {
@@ -15,12 +17,12 @@ static bool modes_equal(const drmModeModeInfo& mode1, const drmModeModeInfo& mod
 		mode1.clock == mode2.clock;
 }
 
-bool Display::setCrtc() {
+bool Display::setCrtc(FrameBuffer *buf) {
 	if (saved_crtc == nullptr) {
 		saved_crtc = drmModeGetCrtc(card.fd, crtc_id);
 	}
 
-	FrameBuffer *buf = &bufs[front_buf];
+	//FrameBuffer *buf = &bufs[front_buf];
 	int ret = drmModeSetCrtc(card.fd, crtc_id, buf->framebuffer_id, 0, 0,
 				&connector_id, 1, mode.get());
 	
@@ -79,7 +81,7 @@ int Display::setup(const drmModeRes *res, const drmModeConnector *conn) {
 			freq2 = (uint32_t)(freq2 * 1000.0f) / 1000.0f;
 
 			fprintf(stderr, "Changing the mode from %ux%u @ %uHz to %ux%u @ %uHz\n", mode->hdisplay, mode->vdisplay, freq1, 
-			                                                                          new_width, new_height, freq2);
+			                                                                                        new_width, new_height, freq2);
 			bufs[0].removeAndDestroy();
 			bufs[1].removeAndDestroy();
 			updating_mode = true;
@@ -114,6 +116,77 @@ int Display::setup(const drmModeRes *res, const drmModeConnector *conn) {
 
 
 /*
+ * modeset_draw_dev() is a new function that redraws the screen of a single
+ * output. It takes the DRM-fd and the output devices as arguments, redraws a
+ * new frame and schedules the page-flip for the next vsync.
+ *
+ * This function does the same as modeset_draw() did in the previous examples
+ * but only for a single output device now.
+ * After we are done rendering a frame, we have to swap the buffers. Instead of
+ * calling drmModeSetCrtc() as we did previously, we now want to schedule this
+ * page-flip for the next vertical-blank (vblank). We use drmModePageFlip() for
+ * this. It takes the CRTC-id and FB-id and will asynchronously swap the buffers
+ * when the next vblank occurs. Note that this is done by the kernel, so neither
+ * a thread is started nor any other magic is done in libdrm.
+ * The DRM_MODE_PAGE_FLIP_EVENT flag tells drmModePageFlip() to send us a
+ * page-flip event on the DRM-fd when the page-flip happened. The last argument
+ * is a data-pointer that is returned with this event.
+ * If we wouldn't pass this flag, we would not get notified when the page-flip
+ * happened.
+ *
+ * Note: If you called drmModePageFlip() and directly call it again, it will
+ * return EBUSY if the page-flip hasn't happened in between. So you almost
+ * always want to pass DRM_MODE_PAGE_FLIP_EVENT to get notified when the
+ * page-flip happens so you know when to render the next frame.
+ * If you scheduled a page-flip but call drmModeSetCrtc() before the next
+ * vblank, then the scheduled page-flip will become a no-op. However, you will
+ * still get notified when it happens and you still cannot call
+ * drmModePageFlip() again until it finished. So to sum it up: there is no way
+ * to effectively cancel a page-flip.
+ *
+ * If you wonder why drmModePageFlip() takes fewer arguments than
+ * drmModeSetCrtc(), then you should take into account, that drmModePageFlip()
+ * reuses the arguments from drmModeSetCrtc(). So things like connector-ids,
+ * x/y-offsets and so on have to be set via drmModeSetCrtc() first before you
+ * can use drmModePageFlip()! We do this in main() as all the previous examples
+ * did, too.
+ */
+
+void Display::draw()
+{
+	FrameBuffer *fbuf = &bufs[front_buf];
+	FrameBuffer *buf = &bufs[front_buf ^ 1];
+
+	buf->target->makeCurrent();
+	contents->drawIntoBuffer(buf);
+	buf->target->swap();
+	buf->activate();
+	if (fbuf->isActive()) { 
+		fbuf->deactivate();
+	}
+
+	auto user_data = this;
+
+	int ret = 0;
+	if (page_flips_pending < 2) {
+		// For some reason the page flip events accumulating themselves exceedingly.
+		// So here we are adding a new one only if there are less than 2 left in the queue.
+		ret = drmModePageFlip(card.fd, crtc_id, buf->framebuffer_id, DRM_MODE_PAGE_FLIP_EVENT, user_data);
+		if (ret) {
+			fprintf(stderr, "cannot flip CRTC for connector %u (%d): %m\n", connector_id, errno);
+		} else {
+			page_flips_pending += 1;
+			// printf("[%lx] page_flip_pending = %d;\n", (uintptr_t)this, page_flips_pending); fflush(stdout);
+		}
+	}
+
+	if (ret == 0) {
+		// Switching the buffer
+		front_buf ^= 1;
+	}
+}
+
+/*
  * modeset_page_flip_event() is a callback-helper for modeset_draw() below.
  * Please see modeset_draw() for more information.
  *
@@ -126,7 +199,8 @@ void Display::modeset_page_flip_event(int fd, unsigned int frame,
 {
 	Display *dev = (Display*)data;
 	if (dev != nullptr) {
-		dev->page_flip_pending = false;
+		dev->page_flips_pending -= 1;
+		// printf("[%lx] dev->page_flip_pending = %d;\n", (uint64_t)dev, dev->page_flips_pending); fflush(stdout);
 
 		if (!dev->destroying_in_progress) {
 			dev->draw();
@@ -233,16 +307,19 @@ Display::~Display() {
 	ev.page_flip_handler = Display::modeset_page_flip_event;
 
 	destroying_in_progress = true;
-	if (page_flip_pending) { fprintf(stderr, "wait for pending page-flip to complete...\n"); }
-	while (page_flip_pending) {
+	if (page_flips_pending > 0) { fprintf(stderr, "wait for pending page-flip to complete...\n"); }
+	while (page_flips_pending > 0) {
+		printf("drmHandleEvent in ~Display\n"); fflush(stdout);
 		int ret = drmHandleEvent(card.fd, &ev);
 		if (ret) {
+			printf("Oopsie!!! %d\n", ret); fflush(stdout);
 			break;
 		}
 	}
+	assert(page_flips_pending == 0);
 
 	/* restore saved CRTC configuration */
-	if (!page_flip_pending && crtc_set_successfully)
+	if (saved_crtc != nullptr) //crtc_set_successfully)
 		drmModeSetCrtc(card.fd,
 					saved_crtc->crtc_id,
 					saved_crtc->buffer_id,
@@ -258,7 +335,6 @@ Display::~Display() {
 		bufs[1].removeAndDestroy();
 		bufs[0].removeAndDestroy();
 	}
-
 }
 
 // void Display::swap_buffers() {

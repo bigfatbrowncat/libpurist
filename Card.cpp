@@ -34,7 +34,7 @@
 #include <drm.h>
 #include <xf86drm.h>
 
-
+#include <vector>
 
 /* Draw code here */
 // static void draw_color(uint32_t i)
@@ -76,7 +76,7 @@ Card::Card(const char *node) : fd(-1), displays(std::make_shared<Displays>(*this
 }
 
 static int match_config_to_visual(EGLDisplay egl_display, EGLint visual_id,
-                                  EGLConfig *configs, int count) {
+                                  const std::vector<EGLConfig>& configs, int count) {
 
   EGLint id;
   for (int i = 0; i < count; ++i) {
@@ -110,11 +110,11 @@ int Card::init_gl(void)
 		(PFNEGLGETPLATFORMDISPLAYEXTPROC) eglGetProcAddress("eglGetPlatformDisplayEXT");
 	assert(get_platform_display != NULL);
 
-	PFNEGLCREATEPLATFORMWINDOWSURFACEEXTPROC create_platform_window_surface = NULL;
+	/*PFNEGLCREATEPLATFORMWINDOWSURFACEEXTPROC create_platform_window_surface = NULL;
 	create_platform_window_surface =
 		(PFNEGLCREATEPLATFORMWINDOWSURFACEEXTPROC) eglGetProcAddress("eglCreatePlatformWindowSurfaceEXT");
 	assert(create_platform_window_surface != NULL);
-
+	*/
 
 	gl.display = get_platform_display(EGL_PLATFORM_GBM_KHR, gbmDevice, NULL);
 	//gl.display = eglGetDisplay( (EGLNativeDisplayType)gbm.dev );
@@ -139,11 +139,12 @@ int Card::init_gl(void)
 	EGLint count = 0;
 	eglGetConfigs(gl.display, NULL, 0, &count);
 
-	EGLConfig *configs;
-	configs = (EGLConfig*)malloc(count * sizeof(*configs));
+	//EGLConfig *configs;
+	//configs = (EGLConfig*)malloc(count * sizeof(*configs));
+	std::vector<EGLConfig> configs(count);
 
 	EGLint num_config;
-	if (!eglChooseConfig(gl.display, config_attribs, configs, count, &num_config)) {
+	if (!eglChooseConfig(gl.display, config_attribs, configs.data(), count, &num_config)) {
 		printf("failed to choose config: %d\n", num_config);
 		return -1;
 	}
@@ -274,9 +275,9 @@ void Card::runDrawingLoop()
 	if (ret)
 		throw errcode_exception(ret, "modeset::prepare failed");
 
-	bool modeset_success = displays->setAllCrtcs();
-	if (!modeset_success)
-		throw std::runtime_error("mode setting failed for some displays");
+	// bool modeset_success = displays->setAllCrtcs();
+	// if (!modeset_success)
+	// 	throw std::runtime_error("mode setting failed for some displays (1)");
 
 	
 	displays->updateDisplaysInDrawingLoop();
@@ -296,14 +297,15 @@ void Card::runDrawingLoop()
 			fprintf(stderr, "exit due to user-input\n");
 			break;
 		} else if (FD_ISSET(fd, &fds)) {
+			printf("drmHandleEvent in Card\n"); fflush(stdout);
 			drmHandleEvent(fd, &ev);
 
 			ret = displays->update();
 			if (ret)
 				throw errcode_exception(ret, "modeset::prepare failed");
-			bool modeset_success = displays->setAllCrtcs();
-			if (!modeset_success)
-				throw std::runtime_error("mode setting failed for some displays");
+			// bool modeset_success = displays->setAllCrtcs();
+			// if (!modeset_success)
+			// 	throw std::runtime_error("mode setting failed for some displays (2)");
 
 			displays->updateDisplaysInDrawingLoop();
 
@@ -312,59 +314,6 @@ void Card::runDrawingLoop()
 }
 
 
-/*
- * modeset_draw_dev() is a new function that redraws the screen of a single
- * output. It takes the DRM-fd and the output devices as arguments, redraws a
- * new frame and schedules the page-flip for the next vsync.
- *
- * This function does the same as modeset_draw() did in the previous examples
- * but only for a single output device now.
- * After we are done rendering a frame, we have to swap the buffers. Instead of
- * calling drmModeSetCrtc() as we did previously, we now want to schedule this
- * page-flip for the next vertical-blank (vblank). We use drmModePageFlip() for
- * this. It takes the CRTC-id and FB-id and will asynchronously swap the buffers
- * when the next vblank occurs. Note that this is done by the kernel, so neither
- * a thread is started nor any other magic is done in libdrm.
- * The DRM_MODE_PAGE_FLIP_EVENT flag tells drmModePageFlip() to send us a
- * page-flip event on the DRM-fd when the page-flip happened. The last argument
- * is a data-pointer that is returned with this event.
- * If we wouldn't pass this flag, we would not get notified when the page-flip
- * happened.
- *
- * Note: If you called drmModePageFlip() and directly call it again, it will
- * return EBUSY if the page-flip hasn't happened in between. So you almost
- * always want to pass DRM_MODE_PAGE_FLIP_EVENT to get notified when the
- * page-flip happens so you know when to render the next frame.
- * If you scheduled a page-flip but call drmModeSetCrtc() before the next
- * vblank, then the scheduled page-flip will become a no-op. However, you will
- * still get notified when it happens and you still cannot call
- * drmModePageFlip() again until it finished. So to sum it up: there is no way
- * to effectively cancel a page-flip.
- *
- * If you wonder why drmModePageFlip() takes fewer arguments than
- * drmModeSetCrtc(), then you should take into account, that drmModePageFlip()
- * reuses the arguments from drmModeSetCrtc(). So things like connector-ids,
- * x/y-offsets and so on have to be set via drmModeSetCrtc() first before you
- * can use drmModePageFlip()! We do this in main() as all the previous examples
- * did, too.
- */
-
-void Display::draw()
-{
-	FrameBuffer *buf = &bufs[front_buf ^ 1];
-
-	contents->drawIntoBuffer(buf);
-
-	auto user_data = this;
-
-	int ret = drmModePageFlip(card.fd, crtc_id, buf->framebuffer_id, DRM_MODE_PAGE_FLIP_EVENT, user_data);
-	if (ret) {
-		fprintf(stderr, "cannot flip CRTC for connector %u (%d): %m\n", connector_id, errno);
-	} else {
-		front_buf ^= 1;
-		page_flip_pending = true;
-	}
-}
 
 
 /*

@@ -26,6 +26,7 @@
 #include "Display.h"
 #include "exceptions.h"
 
+#include <EGL/egl.h>
 #include <cassert>
 #include <cstring>
 #include <unistd.h>
@@ -88,84 +89,66 @@ static int match_config_to_visual(EGLDisplay egl_display, EGLint visual_id,
 
 int Card::init_gl(void)
 {
-	EGLint major, minor;//, n;
-	//GLuint vertex_shader, fragment_shader;
-	//GLint ret;
+	EGLint config_attribs[] = {
+		EGL_SURFACE_TYPE,     EGL_WINDOW_BIT,
+        EGL_RED_SIZE,         8,
+		EGL_GREEN_SIZE,       8,
+		EGL_BLUE_SIZE,        8,
+        EGL_ALPHA_SIZE,       0,
+        EGL_RENDERABLE_TYPE,  EGL_OPENGL_ES2_BIT,
+        EGL_NONE
+	};
+	EGLint context_attribs[] = {
+		EGL_CONTEXT_CLIENT_VERSION, 	2,
+		EGL_NONE
+	};
 
-	EGLint config_attribs[] = {EGL_SURFACE_TYPE,     	EGL_WINDOW_BIT,
-                              EGL_RED_SIZE,         8,
-                              EGL_GREEN_SIZE,       8,
-                              EGL_BLUE_SIZE,        8,
-                              EGL_ALPHA_SIZE,       0,
-                              EGL_RENDERABLE_TYPE,  EGL_OPENGL_ES2_BIT,
-                              EGL_NONE};
+	EGLint major, minor;
 
-	EGLint context_attribs[] = {EGL_CONTEXT_CLIENT_VERSION, 2,
-                                         EGL_NONE};
-
-	PFNEGLGETPLATFORMDISPLAYEXTPROC get_platform_display = NULL;
-	get_platform_display =
+	PFNEGLGETPLATFORMDISPLAYEXTPROC eglGetPlatformDisplayEXT = NULL;
+	eglGetPlatformDisplayEXT =
 		(PFNEGLGETPLATFORMDISPLAYEXTPROC) eglGetProcAddress("eglGetPlatformDisplayEXT");
-	assert(get_platform_display != NULL);
+	assert(eglGetPlatformDisplayEXT != NULL);
 
-	/*PFNEGLCREATEPLATFORMWINDOWSURFACEEXTPROC create_platform_window_surface = NULL;
-	create_platform_window_surface =
-		(PFNEGLCREATEPLATFORMWINDOWSURFACEEXTPROC) eglGetProcAddress("eglCreatePlatformWindowSurfaceEXT");
-	assert(create_platform_window_surface != NULL);
-	*/
+	glDisplay = eglGetPlatformDisplayEXT(EGL_PLATFORM_GBM_KHR, gbmDevice, NULL);
 
-	gl.display = get_platform_display(EGL_PLATFORM_GBM_KHR, gbmDevice, NULL);
-	//gl.display = eglGetDisplay( (EGLNativeDisplayType)gbm.dev );
-
-	if (!eglInitialize(gl.display, &major, &minor)) {
+	if (!eglInitialize(glDisplay, &major, &minor)) {
 		printf("failed to initialize\n");
 		return -1;
 	}
 
-	printf("Using display %p with EGL version %d.%d\n",
-			gl.display, major, minor);
+	printf("Using display %p with EGL version %d.%d\n", glDisplay, major, minor);
 
-	printf("EGL Version \"%s\"\n", eglQueryString(gl.display, EGL_VERSION));
-	printf("EGL Vendor \"%s\"\n", eglQueryString(gl.display, EGL_VENDOR));
-	printf("EGL Extensions \"%s\"\n", eglQueryString(gl.display, EGL_EXTENSIONS));
+	printf("EGL Version \"%s\"\n", eglQueryString(glDisplay, EGL_VERSION));
+	printf("EGL Vendor \"%s\"\n", eglQueryString(glDisplay, EGL_VENDOR));
+	printf("EGL Extensions \"%s\"\n", eglQueryString(glDisplay, EGL_EXTENSIONS));
 
-	if (!eglBindAPI(EGL_OPENGL_ES_API) /*EGL_OPENGL_ES_API)*/) {
+	if (!eglBindAPI(EGL_OPENGL_ES_API)) {
 		printf("failed to bind api EGL_OPENGL_ES_API\n");
 		return -1;
 	}
 
 	EGLint count = 0;
-	eglGetConfigs(gl.display, NULL, 0, &count);
-
-	//EGLConfig *configs;
-	//configs = (EGLConfig*)malloc(count * sizeof(*configs));
+	eglGetConfigs(glDisplay, NULL, 0, &count);
 	std::vector<EGLConfig> configs(count);
+	eglGetConfigs(glDisplay, configs.data(), configs.size(), &count);
+	assert(count == configs.size());
 
 	EGLint num_config;
-	if (!eglChooseConfig(gl.display, config_attribs, configs.data(), count, &num_config)) {
+	if (!eglChooseConfig(glDisplay, config_attribs, configs.data(), count, &num_config)) {
 		printf("failed to choose config: %d\n", num_config);
 		return -1;
 	}
 
-	auto config_index = match_config_to_visual(gl.display, GBM_FORMAT_XRGB8888, configs, num_config);
+	auto config_index = match_config_to_visual(glDisplay, GBM_FORMAT_XRGB8888, configs, num_config);
 
-	gl.config = configs[config_index];
+	glConfig = configs[config_index];
 
-	gl.context = eglCreateContext(gl.display, gl.config,
-			EGL_NO_CONTEXT, context_attribs);
-	if (gl.context == NULL) {
+	glContext = eglCreateContext(glDisplay, glConfig, EGL_NO_CONTEXT, context_attribs);
+	if (glContext == NULL) {
 		printf("failed to create context\n");
 		return -1;
 	}
-
-
-	//gl.surface = create_platform_window_surface(gl.display, gl.config, gbm.surface, NULL);
-	// gl.surface = eglCreateWindowSurface(gl.display, gl.config, gbm.surface, NULL);
-	// if (gl.surface == EGL_NO_SURFACE) {
-	// 	printf("failed to create egl surface: %d\n", eglGetError());
-	// 	return -1;
-	// }
-
 
 	printf("GL Extensions: \"%s\"\n", glGetString(GL_EXTENSIONS));
 

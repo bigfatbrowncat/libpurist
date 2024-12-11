@@ -25,28 +25,15 @@ private:
     gbm_device *gbmDevice = nullptr;
 
 public:
-    struct _gbm {
-        struct gbm_surface *surface = nullptr;
 
-        //struct gbm_bo *bo;
-        struct gbm_bo *previous_bo = NULL;
-
-        uint32_t previous_fb;
-        
-        //uint32_t handle;
-        //uint32_t pitch;
-    } gbm;
-
-    struct _gl {
-        EGLDisplay display;
-        EGLConfig config;
-        EGLContext context;
-        //EGLSurface surface;
-        GLuint program;
-        GLint modelviewmatrix, modelviewprojectionmatrix, normalmatrix;
-        GLuint vbo;
-        GLuint positionsoffset, colorsoffset, normalsoffset;
-    } gl;
+    EGLDisplay glDisplay;
+    EGLConfig glConfig;
+    EGLContext glContext;
+    
+    // GLuint program;
+    // GLint modelviewmatrix, modelviewprojectionmatrix, normalmatrix;
+    // GLuint vbo;
+    // GLuint positionsoffset, colorsoffset, normalsoffset;
 
     const int fd;
     const bool enableOpenGL = true;

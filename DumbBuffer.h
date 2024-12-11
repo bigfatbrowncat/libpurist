@@ -82,7 +82,7 @@ public:
 	GBMSurface(const Card& card);
     void create(int width, int height) override;
 	void makeCurrent() override {
-		eglMakeCurrent(card.gl.display, glSurface, glSurface, card.gl.context);
+		eglMakeCurrent(card.glDisplay, glSurface, glSurface, card.glContext);
 	}
     void destroy() override;
 	void lock() override {
@@ -90,7 +90,7 @@ public:
 	}
 
 	virtual void swap() override {
-		eglSwapBuffers(card.gl.display, glSurface);	
+		eglSwapBuffers(card.glDisplay, glSurface);	
 	}
 
 	void unlock() override {

@@ -81,7 +81,7 @@ void GBMSurface::create(int width, int height) {
 		throw errcode_exception(-errno, std::string("failed to create the GBM surface. ") + strerror(errno));
 	}
 
-	glSurface = eglCreateWindowSurface(card.gl.display, card.gl.config, gbmSurface, NULL);
+	glSurface = eglCreateWindowSurface(card.glDisplay, card.glConfig, gbmSurface, NULL);
 	if (glSurface == EGL_NO_SURFACE) {
 		throw errcode_exception(eglGetError(), std::string("failed to create EGL surface. "));
 	}
@@ -115,7 +115,7 @@ void GBMSurface::destroy() {
 	assert(gbmSurface != nullptr);
 	assert(glSurface != EGL_NO_SURFACE);
 
-	eglDestroySurface(card.gl.display, glSurface);
+	eglDestroySurface(card.glDisplay, glSurface);
 	gbm_surface_destroy(gbmSurface);
 	created = false;
 }

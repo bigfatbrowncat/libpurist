@@ -90,15 +90,13 @@ int main(int argc, char **argv)
 
 		fprintf(stderr, "using card '%s'\n", card);
 
-		auto ms = std::make_unique<Card>(card, true);
-		
+		bool enableOpenGL = true;
+		auto ms = std::make_unique<Card>(card, enableOpenGL);
 		ms->displays->setDisplayContentsFactory(std::make_shared<ColoredScreenDisplayContentsFactory>());
-
-		/* draw some colors for 5seconds */
 		ms->runDrawingLoop();
-
 		ms = nullptr;
-		fprintf(stderr, "exiting\n");
+
+		printf("exiting\n");
 		return 0;
 	
 	} catch (const errcode_exception& ex) {

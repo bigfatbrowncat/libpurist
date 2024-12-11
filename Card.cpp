@@ -271,7 +271,7 @@ void Card::runDrawingLoop()
 
 
 	/* prepare all connectors and CRTCs */
-	ret = displays->update();
+	ret = displays->updateHardwareConfiguration();
 	if (ret)
 		throw errcode_exception(ret, "modeset::prepare failed");
 
@@ -280,7 +280,10 @@ void Card::runDrawingLoop()
 	// 	throw std::runtime_error("mode setting failed for some displays (1)");
 
 	
-	displays->updateDisplaysInDrawingLoop();
+	displays->addNewlyConnectedToDrawingLoop();
+
+	// We update the displays list each 100 event readings. That has to be frequent enough
+	int counter = 0, redraws_between_updates = 100;
 
 	int seconds = 600;
 	/* wait 5s for VBLANK or input events */
@@ -300,14 +303,15 @@ void Card::runDrawingLoop()
 			//printf("drmHandleEvent in Card\n"); fflush(stdout);
 			drmHandleEvent(fd, &ev);
 
-			ret = displays->update();
-			if (ret)
-				throw errcode_exception(ret, "modeset::prepare failed");
-			// bool modeset_success = displays->setAllCrtcs();
-			// if (!modeset_success)
-			// 	throw std::runtime_error("mode setting failed for some displays (2)");
+			if (counter % redraws_between_updates == 0) {
+				ret = displays->updateHardwareConfiguration();
+				if (ret) {
+					throw errcode_exception(ret, "Displays::updateHardwareConfiguration() failed");
+				}
 
-			displays->updateDisplaysInDrawingLoop();
+				displays->addNewlyConnectedToDrawingLoop();
+			}
+			counter ++;
 
 		}
 	}

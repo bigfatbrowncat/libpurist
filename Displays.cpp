@@ -23,7 +23,7 @@ bool Displays::setAllCrtcs() {
 	throw std::runtime_error("Unimplemented!!!");
 }
 
-void Displays::updateDisplaysInDrawingLoop() {
+void Displays::addNewlyConnectedToDrawingLoop() {
 	/* redraw all outputs */
 	for (auto& iter : *this) {
 		iter->updateInDrawingLoop(*this->displayContentsFactory);
@@ -40,7 +40,7 @@ Displays::iterator Displays::findDisplayOnConnector(const drmModeConnector *conn
 	return end();	// Hasn't find any
 }
 
-int Displays::update()
+int Displays::updateHardwareConfiguration()
 {
 	ModeResources modeRes(card);
 	auto resources = modeRes.resources;

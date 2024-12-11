@@ -63,13 +63,24 @@ int Display::setup(const drmModeRes *res, const drmModeConnector *conn) {
 
 	bool updating_mode = false;
 
-	auto new_width = conn->modes[0].hdisplay;
-	auto new_height = conn->modes[0].vdisplay;
+	int mm = 0;
+	// for (mm = 0; mm < conn->count_modes; mm++) {
+	// 	fprintf(stderr, "probing %ux%u\n", conn->modes[mm].hdisplay, conn->modes[mm].vdisplay);
+	// 	if ((conn->modes[mm].hdisplay == 720 && 
+	// 	    conn->modes[mm].vdisplay == 480) ||
+	// 		(conn->modes[mm].vdisplay == 720 && 
+	// 	    conn->modes[mm].hdisplay == 480)) break;
+	// }
+	// mm = mm % conn->count_modes;
+	// fprintf(stderr, "done! %ux%u\n\n", conn->modes[mm].hdisplay, conn->modes[mm].vdisplay);
+
+	auto new_width = conn->modes[mm].hdisplay;
+	auto new_height = conn->modes[mm].vdisplay;
 
 	if (mode != nullptr) {
 		// This display already has a mode
 
-		if (modes_equal(*mode, conn->modes[0])) {
+		if (modes_equal(*mode, conn->modes[mm])) {
 
 			// No mode change here
 			return 0;
@@ -95,7 +106,7 @@ int Display::setup(const drmModeRes *res, const drmModeConnector *conn) {
 
 	/* copy the mode information into our device structure and into both
 	* buffers */
-	mode = std::make_shared<drmModeModeInfo>(conn->modes[0]);
+	mode = std::make_shared<drmModeModeInfo>(conn->modes[mm]);
 
 	if (!updating_mode) {
 		/* find a crtc for this connector */
@@ -160,10 +171,6 @@ void Display::draw()
 	buf->target->makeCurrent();
 	contents->drawIntoBuffer(buf);
 	buf->target->swap();
-	// buf->activate();
-	// if (fbuf->isActive()) { 
-	// 	fbuf->deactivate();
-	// }
 
 	auto user_data = this;
 

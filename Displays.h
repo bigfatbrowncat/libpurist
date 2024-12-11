@@ -23,9 +23,9 @@ public:
 
     Displays(const Card& card) : card(card) { }
     void setDisplayContentsFactory(std::shared_ptr<DisplayContentsFactory> factory);
-    void updateDisplaysInDrawingLoop();
+    void addNewlyConnectedToDrawingLoop();
 
-    int update();
+    int updateHardwareConfiguration();
     bool setAllCrtcs();
 
     virtual ~Displays();

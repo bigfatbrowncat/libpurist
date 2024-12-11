@@ -11,9 +11,18 @@
 #include <cassert>
 #include <memory>
 
-FrameBuffer::FrameBuffer(const Card& card, Display& display)
-	: card(card), display(display), target(std::make_shared<GBMSurface>(card))//, mapping(std::make_shared<DumbBufferMapping>(card, *dumb))
-{}
+std::shared_ptr<TargetSurface> FrameBuffer::target_for(bool opengl, const Card& card) {
+	if (opengl) {
+		return std::make_shared<GBMSurface>(card);
+	} else {
+		return std::make_shared<DumbBuffer>(card);
+	}
+}
+
+FrameBuffer::FrameBuffer(const Card& card, Display& display, bool opengl)
+	: card(card), display(display), target(target_for(opengl, card)), enableOpenGL(opengl)
+{
+}
 
 void FrameBuffer::createAndAdd(int width, int height) {
 	assert(!added);
@@ -34,9 +43,6 @@ void FrameBuffer::createAndAdd(int width, int height) {
 	display.setCrtc(this);
 
 	added = true;
-
-	/* clear the framebuffer to 0 */
-	//memset((void*)this->mapping->map, 0, dumb->size);
 
 }
 

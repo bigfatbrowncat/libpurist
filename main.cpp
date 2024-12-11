@@ -1,7 +1,8 @@
 #include "Card.h"
 #include "FrameBuffer.h"
+
 #include "DumbBuffer.h"
-#include "DumbBufferMapping.h"
+
 #include "Displays.h"
 
 #include "exceptions.h"
@@ -43,19 +44,22 @@ public:
         g = next_color(&g_up, g, 10);
         b = next_color(&b_up, b, 5);
 
-		glClearColor(1.0f/256*r, 1.0f/256*g, 1.0f/256*b, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
+		if (buf->enableOpenGL) {
+			glClearColor(1.0f/256*r, 1.0f/256*g, 1.0f/256*b, 1.0f);
+			glClear(GL_COLOR_BUFFER_BIT);
+		} else {
+			auto dumb = std::dynamic_pointer_cast<DumbBuffer>(buf->target);
 
+			unsigned int j, k, off;
 
-    	/*unsigned int j, k, off;
-
-       	for (j = 0; j < buf->dumb->height; ++j) {
-            for (k = 0; k < buf->dumb->width; ++k) {
-                off = buf->dumb->stride * j + k * 4;
-                *(uint32_t*)&buf->mapping->map[off] =
-                        (r << 16) | (g << 8) | b;
-            }
-        }*/
+			for (j = 0; j < dumb->getHeight(); ++j) {
+				for (k = 0; k < dumb->getWidth(); ++k) {
+					off = dumb->getStride() * j + k * 4;
+					*(uint32_t*)&dumb->mapping->map[off] =
+							(r << 16) | (g << 8) | b;
+				}
+			}
+		}
     }
 };
 
@@ -86,7 +90,7 @@ int main(int argc, char **argv)
 
 		fprintf(stderr, "using card '%s'\n", card);
 
-		auto ms = std::make_unique<Card>(card);
+		auto ms = std::make_unique<Card>(card, true);
 		
 		ms->displays->setDisplayContentsFactory(std::make_shared<ColoredScreenDisplayContentsFactory>());
 

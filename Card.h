@@ -49,13 +49,10 @@ public:
     } gl;
 
     const int fd;
-    const std::shared_ptr<Displays> displays;
-    
-    const bool enableDumbBuffers = false;
     const bool enableOpenGL = true;
+    const std::shared_ptr<Displays> displays;
 
-
-    Card(const char *node);
+    Card(const char *node, bool enableOpenGL);
     virtual ~Card();
 
     int init_gbm(int fd, uint32_t width, uint32_t height);

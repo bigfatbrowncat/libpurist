@@ -3,6 +3,8 @@
 #include "Card.h"
 #include "DumbBuffer.h"
 
+class DumbBuffer;
+
 class DumbBufferMapping {
 private:
     const Card& card;

@@ -11,7 +11,8 @@
 #include <string>
 
 DumbBuffer::DumbBuffer(const Card& card) 
-	: TargetSurface(card), stride(0), size(0), handle(0), width(0), height(0) {
+	: TargetSurface(card), stride(0), size(0), handle(0), width(0), height(0), 
+	  mapping(std::make_shared<DumbBufferMapping>(card, *this)) {
 }
 
 void DumbBuffer::create(int width, int height) {
@@ -34,10 +35,17 @@ void DumbBuffer::create(int width, int height) {
 	this->height = height;
 
 	created = true;
+
+	mapping->doMapping();
+
+	/* clear the framebuffer to 0 */
+	memset((void*)this->mapping->map, 0, this->size);
 }
 
 void DumbBuffer::destroy() {
 	assert(created);
+
+	mapping->doUnmapping();
 
 	struct drm_mode_destroy_dumb dreq;
 	memset(&dreq, 0, sizeof(dreq));

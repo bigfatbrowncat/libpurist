@@ -22,7 +22,6 @@ bool Display::setCrtc(FrameBuffer *buf) {
 		saved_crtc = drmModeGetCrtc(card.fd, crtc_id);
 	}
 
-	//FrameBuffer *buf = &bufs[front_buf];
 	int ret = drmModeSetCrtc(card.fd, crtc_id, buf->framebuffer_id, 0, 0,
 				&connector_id, 1, mode.get());
 	
@@ -93,8 +92,8 @@ int Display::setup(const drmModeRes *res, const drmModeConnector *conn) {
 
 			fprintf(stderr, "Changing the mode from %ux%u @ %uHz to %ux%u @ %uHz\n", mode->hdisplay, mode->vdisplay, freq1, 
 			                                                                                        new_width, new_height, freq2);
-			bufs[0].removeAndDestroy();
-			bufs[1].removeAndDestroy();
+			framebuffers[0].removeAndDestroy();
+			framebuffers[1].removeAndDestroy();
 			updating_mode = true;
 			crtc_set_successfully = false;
 			is_in_drawing_loop = false;
@@ -119,8 +118,8 @@ int Display::setup(const drmModeRes *res, const drmModeConnector *conn) {
 	}
 
 	/* create framebuffer #1 for this CRTC */
-	bufs[0].createAndAdd(new_width, new_height);
-	bufs[1].createAndAdd(new_width, new_height);
+	framebuffers[0].createAndAdd(new_width, new_height);
+	framebuffers[1].createAndAdd(new_width, new_height);
 
 	return 0;
 }
@@ -165,31 +164,30 @@ int Display::setup(const drmModeRes *res, const drmModeConnector *conn) {
 
 void Display::draw()
 {
-	//FrameBuffer *fbuf = &bufs[front_buf];
-	FrameBuffer *buf = &bufs[front_buf ^ 1];
+	auto next_framebuffer_index = (current_framebuffer_index + 1) % framebuffers.size();
+	FrameBuffer *next_framebuffer = &framebuffers[next_framebuffer_index];
 
-	buf->target->makeCurrent();
-	contents->drawIntoBuffer(buf);
-	buf->target->swap();
+	next_framebuffer->target->makeCurrent();
+	contents->drawIntoBuffer(next_framebuffer);
+	next_framebuffer->target->swap();
 
 	auto user_data = this;
 
 	int ret = 0;
 	if (page_flips_pending < 2) {
-		// For some reason the page flip events accumulating themselves exceedingly.
+		// For some reason the page flip events accumulate themselves excessively.
 		// So here we are adding a new one only if there are less than 2 left in the queue.
-		ret = drmModePageFlip(card.fd, crtc_id, buf->framebuffer_id, DRM_MODE_PAGE_FLIP_EVENT, user_data);
+		ret = drmModePageFlip(card.fd, crtc_id, next_framebuffer->framebuffer_id, DRM_MODE_PAGE_FLIP_EVENT, user_data);
 		if (ret) {
 			fprintf(stderr, "cannot flip CRTC for connector %u (%d): %m\n", connector_id, errno);
 		} else {
 			page_flips_pending += 1;
-			// printf("[%lx] page_flip_pending = %d;\n", (uintptr_t)this, page_flips_pending); fflush(stdout);
 		}
 	}
 
 	if (ret == 0) {
 		// Switching the buffer
-		front_buf ^= 1;
+		current_framebuffer_index = next_framebuffer_index;
 	}
 }
 
@@ -339,30 +337,7 @@ Display::~Display() {
 
 	if (is_in_drawing_loop) {
 		/* destroy framebuffers */
-		bufs[1].removeAndDestroy();
-		bufs[0].removeAndDestroy();
+		framebuffers[1].removeAndDestroy();
+		framebuffers[0].removeAndDestroy();
 	}
 }
-
-// void Display::swap_buffers() {
-// 	Card& card = const_cast<Card&>(this->card);
-
-// 	if (card.gl.display != nullptr) {
-// 		eglSwapBuffers(card.gl.display, card.gl.surface);
-		
-		
-// 	//	card.gbm.bo = gbm_surface_lock_front_buffer(card.gbm.surface);
-// 	//	card.gbm.handle = gbm_bo_get_handle(card.gbm.bo).u32;
-// 	//	card.gbm.pitch = gbm_bo_get_stride(card.gbm.bo);
-// 	}
-
-// 	//drmModeAddFB(card.fd, mode->hdisplay, mode->vdisplay, 24, 32, card.gbm.pitch,
-// //	 			card.gbm.handle, &card.fb);
-// 	// drmModeSetCrtc(device, crtc->crtc_id, fb, 0, 0, &connector_id, 1, &mode_info);
-// //	if (card.gbm.previous_bo) {
-// //	 	drmModeRmFB(card.fd, card.gbm.previous_fb);
-// //	 	gbm_surface_release_buffer(card.gbm.surface, card.gbm.previous_bo);
-// //	}
-// //	card.gbm.previous_bo = card.gbm.bo;
-// //	card.gbm.previous_fb = card.gbm.fb;
-// }

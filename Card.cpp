@@ -44,7 +44,7 @@
 // }
 
 
-Card::Card(const char *node) : fd(-1), displays(std::make_shared<Displays>(*this))
+Card::Card(const char *node, bool enableOpenGL) : fd(-1), enableOpenGL(enableOpenGL), displays(std::make_shared<Displays>(*this, enableOpenGL))
 {
 	int ret;
 	uint64_t has_dumb;
@@ -56,19 +56,17 @@ Card::Card(const char *node) : fd(-1), displays(std::make_shared<Displays>(*this
 		throw errcode_exception(ret, "cannot open '" + std::string(node) + "'");
 	}
 	
-	// Configuring dumb buffers ability
-	if (enableDumbBuffers) {
-		if (drmGetCap(fd, DRM_CAP_DUMB_BUFFER, &has_dumb) < 0 || !has_dumb) {
-			close(fd);
-			throw errcode_exception(-EOPNOTSUPP, "drm device '" + std::string(node) + "' does not support dumb buffers");
-		}
-	}
-
 	// Initializing GBM
 	if (enableOpenGL) {
 		gbmDevice = gbm_create_device(fd);
 		if (gbmDevice == nullptr) {
 			throw errcode_exception(-errno, "drm device '" + std::string(node) + "' does not support libgbm");
+		}
+	} else {
+		// Configuring dumb buffers ability
+		if (drmGetCap(fd, DRM_CAP_DUMB_BUFFER, &has_dumb) < 0 || !has_dumb) {
+			close(fd);
+			throw errcode_exception(-EOPNOTSUPP, "drm device '" + std::string(node) + "' does not support dumb buffers");
 		}
 	}
 
@@ -257,7 +255,9 @@ void Card::runDrawingLoop()
 	struct timeval v;
 	drmEventContext ev;
 
-	init_gl();
+	if (enableOpenGL) {
+		init_gl();
+	}
 
 	/* init variables */
 	srand(time(&start));

@@ -6,6 +6,8 @@
 
 #include <xf86drmMode.h>
 
+#include <array>
+
 class Display {
     friend Card;
 
@@ -13,27 +15,33 @@ private:
     const Card& card;
     const Displays& displays;
 
-	unsigned int front_buf = 0;
-	FrameBuffer bufs[2];
+	unsigned int current_framebuffer_index = 0;
+	std::array<FrameBuffer, 2> framebuffers;
 
 	std::shared_ptr<drmModeModeInfo> mode = nullptr;
 	uint32_t crtc_id = 0;
 	drmModeCrtc *saved_crtc = nullptr;
 
-	int page_flips_pending = 0;
-	bool destroying_in_progress = false;
 
     std::shared_ptr<DisplayContents> contents = nullptr;
 
-    bool crtc_set_successfully = true;//false;
+	int page_flips_pending = 0;
+
+	bool destroying_in_progress = false;
+    bool crtc_set_successfully = false;
     bool is_in_drawing_loop = false;
 
 	uint32_t connector_id = 0;
 
 public:
 
-    Display(const Card& card, const Displays& displays, uint32_t connector_id)
-            : card(card), displays(displays), bufs { FrameBuffer(card, *this), FrameBuffer(card, *this) }, connector_id(connector_id) {}
+    Display(const Card& card, const Displays& displays, uint32_t connector_id, bool opengl)
+            : card(card), displays(displays), 
+              framebuffers { 
+                FrameBuffer(card, *this, opengl), 
+                FrameBuffer(card, *this, opengl) 
+              }, 
+              connector_id(connector_id) {}
     virtual ~Display();
 
     int connectDisplayToNotOccupiedCrtc(const drmModeRes *res, const drmModeConnector *conn);

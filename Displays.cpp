@@ -6,22 +6,6 @@
 #include <stdexcept>
 #include <cassert>
 
-bool Displays::setAllCrtcs() {
-	// bool some_modeset_failed = false;
-	// /* perform actual modesetting on each found connector+CRTC */
-	// for (auto& iter : *this) {
-	// 	if (!iter->isCrtcSet()) {
-	// 		auto set_successfully = iter->setCrtc();
-	// 		if (!set_successfully) {
-	// 			some_modeset_failed = true;
-	// 			fprintf(stderr, "cannot set CRTC for connector %u (%d): %m\n",
-	// 				iter->getConnectorId(), errno);
-	// 		}
-	// 	}
-	// }
-	// return !some_modeset_failed;
-	throw std::runtime_error("Unimplemented!!!");
-}
 
 void Displays::addNewlyConnectedToDrawingLoop() {
 	/* redraw all outputs */
@@ -62,7 +46,7 @@ int Displays::updateHardwareConfiguration()
 			} else {
 				// create a new display
 				auto cid = connector->connector_id;
-				display = std::make_shared<Display>(card, *this, cid);
+				display = std::make_shared<Display>(card, *this, cid, opengl);
 				new_display_connected = true;
 			}
 

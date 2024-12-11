@@ -1,7 +1,11 @@
 #pragma once
 
 #include "Card.h"
+#include "DumbBufferMapping.h"
+
 #include <cstdint>
+
+class DumbBufferMapping;
 
 class TargetSurface {
 public:
@@ -39,9 +43,12 @@ public:
 
 	uint32_t getSize() const { return size; }
 
+    const std::shared_ptr<DumbBufferMapping> mapping;
+
 	DumbBuffer(const Card& card);
 	void makeCurrent() override { }
 	void lock() override { }
+	void swap() override { }
 	void unlock() override { }
     void create(int width, int height) override;
     void destroy() override;

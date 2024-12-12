@@ -1,4 +1,5 @@
 #include "DumbBufferMapping.h"
+#include "DumbBufferTargetSurface.h"
 #include "exceptions.h"
 
 #include <drm.h>
@@ -7,7 +8,7 @@
 
 #include <cstring>
 
-DumbBufferMapping::DumbBufferMapping(const Card& card, const DumbBuffer& dumb)
+DumbBufferMapping::DumbBufferMapping(const Card& card, const DumbBufferTargetSurface& dumb)
 		: card(card), /*buf(buf),*/ dumb(dumb), map((uint8_t*)MAP_FAILED) { }
 
 void DumbBufferMapping::doMapping() {

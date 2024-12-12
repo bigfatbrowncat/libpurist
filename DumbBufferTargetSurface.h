@@ -8,7 +8,7 @@
 
 class DumbBufferMapping;
 
-class DumbBuffer : public TargetSurface {
+class DumbBufferTargetSurface : public TargetSurface {
 private:
     bool created = false;
 
@@ -27,12 +27,12 @@ public:
 
     const std::shared_ptr<DumbBufferMapping> mapping;
 
-	DumbBuffer(const Card& card);
+	DumbBufferTargetSurface(const Card& card);
 	void makeCurrent() override { }
 	void lock() override { }
 	void swap() override { }
 	void unlock() override { }
     void create(int width, int height) override;
     void destroy() override;
-	virtual ~DumbBuffer();
+	virtual ~DumbBufferTargetSurface();
 };

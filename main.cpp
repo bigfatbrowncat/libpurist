@@ -1,7 +1,7 @@
 #include "Card.h"
 #include "FrameBuffer.h"
 
-#include "DumbBuffer.h"
+#include "DumbBufferTargetSurface.h"
 
 #include "Displays.h"
 
@@ -48,7 +48,7 @@ public:
 			glClearColor(1.0f/256*r, 1.0f/256*g, 1.0f/256*b, 1.0f);
 			glClear(GL_COLOR_BUFFER_BIT);
 		} else {
-			auto dumb = std::dynamic_pointer_cast<DumbBuffer>(buf->target);
+			auto dumb = std::dynamic_pointer_cast<DumbBufferTargetSurface>(buf->target);
 
 			unsigned int j, k, off;
 

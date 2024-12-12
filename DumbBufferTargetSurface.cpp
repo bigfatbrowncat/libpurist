@@ -1,4 +1,4 @@
-#include "DumbBuffer.h"
+#include "DumbBufferTargetSurface.h"
 #include "exceptions.h"
 
 #include <EGL/egl.h>
@@ -10,12 +10,12 @@
 #include <cerrno>
 #include <string>
 
-DumbBuffer::DumbBuffer(const Card& card) 
+DumbBufferTargetSurface::DumbBufferTargetSurface(const Card& card) 
 	: TargetSurface(card), stride(0), size(0), handle(0), width(0), height(0), 
 	  mapping(std::make_shared<DumbBufferMapping>(card, *this)) {
 }
 
-void DumbBuffer::create(int width, int height) {
+void DumbBufferTargetSurface::create(int width, int height) {
 	struct drm_mode_create_dumb creq;
 	/* create dumb buffer */
 	memset(&creq, 0, sizeof(creq));
@@ -42,7 +42,7 @@ void DumbBuffer::create(int width, int height) {
 	memset((void*)this->mapping->map, 0, this->size);
 }
 
-void DumbBuffer::destroy() {
+void DumbBufferTargetSurface::destroy() {
 	assert(created);
 
 	mapping->doUnmapping();
@@ -58,7 +58,7 @@ void DumbBuffer::destroy() {
 	created = false;
 }
 
-DumbBuffer::~DumbBuffer() {
+DumbBufferTargetSurface::~DumbBufferTargetSurface() {
 	if (created) {
 		destroy();
 	}

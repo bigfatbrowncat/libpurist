@@ -1,9 +1,9 @@
 #pragma once
 
 #include "Card.h"
-#include "DumbBuffer.h"
+#include "DumbBufferTargetSurface.h"
 
-class DumbBuffer;
+class DumbBufferTargetSurface;
 
 class FrameBuffer {
 private:

@@ -89,7 +89,7 @@ int Display::setup(const ModeResources& res, const ModeConnector& conn) {
 			uint32_t freq2 = selected_mode.clock * 1000.0f / (selected_mode.htotal * selected_mode.vtotal);
 			freq2 = (uint32_t)(freq2 * 1000.0f) / 1000.0f;
 
-			fprintf(stderr, "Changing the mode from %ux%u @ %uHz to %ux%u @ %uHz\n", mode->hdisplay, mode->vdisplay, freq1, 
+			fprintf(stderr, "changing the mode from %ux%u @ %uHz to %ux%u @ %uHz\n", mode->hdisplay, mode->vdisplay, freq1, 
 			                                                                                        new_width, new_height, freq2);
 			for (auto& fb : framebuffers) {
 				fb->removeAndDestroy();
@@ -221,7 +221,7 @@ void Display::modeset_page_flip_event(int fd, unsigned int frame,
 void Display::updateInDrawingLoop(DisplayContentsFactory& factory) {
 	if (state == State::CRTC_SET_SUCCESSFULLY) { //crtc_set_successfully && !is_in_drawing_loop) {
 		state = State::IN_DRAWING_LOOP; //is_in_drawing_loop = true;
-		printf("display initialized on connector: %d\n", connector_id); fflush(stdout);
+		printf("display initialized at connector: %d\n", connector_id); fflush(stdout);
 		if (contents == nullptr) {
 			contents = factory.createDisplayContents();
 		}
@@ -231,9 +231,6 @@ void Display::updateInDrawingLoop(DisplayContentsFactory& factory) {
 
 
 int Display::connectDisplayToNotOccupiedCrtc(const ModeResources& res, const ModeConnector& conn) {
-	unsigned int i, j;
-	int32_t enc_crtc_id;
-
 	/* first try the currently conected encoder+crtc */
 	std::unique_ptr<ModeEncoder> enc;
 	if (conn.connector->encoder_id)
@@ -244,9 +241,9 @@ int Display::connectDisplayToNotOccupiedCrtc(const ModeResources& res, const Mod
 	// If we got an encoder...
 	if (enc) {
 		// ...and the encoder has a CRTC
-		if (enc->encoder->crtc_id) {
+		if (enc->getCrtcId()) {
 			// Check if there is a display that is already connected th this CRTC
-			enc_crtc_id = enc->encoder->crtc_id;
+			int32_t enc_crtc_id = enc->getCrtcId();
 			for (auto& iter : displays) {
 				if (iter->crtc_id == enc_crtc_id) {
 					enc_crtc_id = -1;
@@ -266,7 +263,7 @@ int Display::connectDisplayToNotOccupiedCrtc(const ModeResources& res, const Mod
 	 * encoder+crtc is already used by another connector (actually unlikely
 	 * but lets be safe), iterate all other available encoders to find a
 	 * matching CRTC. */
-	for (i = 0; i < conn.connector->count_encoders; ++i) {
+	for (unsigned int i = 0; i < conn.connector->count_encoders; ++i) {
 		try {
 			enc = std::make_unique<ModeEncoder>(conn, i); //drmModeGetEncoder(card.fd, conn->encoders[i]);
 		} catch (const errcode_exception& ex) {
@@ -274,13 +271,14 @@ int Display::connectDisplayToNotOccupiedCrtc(const ModeResources& res, const Mod
 		}
 
 		/* iterate all global CRTCs */
-		for (j = 0; j < res.getCountCrtcs(); ++j) {
+		for (unsigned int j = 0; j < res.getCountCrtcs(); ++j) {
 			/* check whether this CRTC works with the encoder */
-			if (!(enc->encoder->possible_crtcs & (1 << j)))
+			if (!(enc->isCrtcPossible(j))) {
 				continue;
+			}
 
 			/* check that no other device already uses this CRTC */
-			enc_crtc_id = res.getCrtcId(j);
+			int32_t enc_crtc_id = res.getCrtcId(j);
 			for (auto& iter : displays) {
 				if (iter->crtc_id == enc_crtc_id) {
 					enc_crtc_id = -1;
@@ -310,7 +308,7 @@ Display::~Display() {
 	ev.page_flip_handler = Display::modeset_page_flip_event;
 
 	destroying_in_progress = true;
-	if (page_flips_pending > 0) { fprintf(stderr, "wait for pending page-flip to complete...\n"); }
+	if (page_flips_pending > 0) { fprintf(stderr, "wait for pending page-flip to complete at connector %d...\n", connector_id); }
 	while (page_flips_pending > 0) {
 		//printf("drmHandleEvent in ~Display\n"); fflush(stdout);
 		int ret = drmHandleEvent(card.fd, &ev);

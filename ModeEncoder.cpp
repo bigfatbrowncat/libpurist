@@ -19,3 +19,7 @@ ModeEncoder::ModeEncoder(const ModeConnector& connector, size_t index) {
 ModeEncoder::~ModeEncoder() {
 	drmModeFreeEncoder(const_cast<drmModeEncoderPtr>(encoder));
 }
+
+bool ModeEncoder::isCrtcPossible(int index) const {
+	return encoder->possible_crtcs & (1 << index);
+}

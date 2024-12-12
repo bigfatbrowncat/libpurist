@@ -18,7 +18,9 @@ static bool modes_equal(const drmModeModeInfo& mode1, const drmModeModeInfo& mod
 		mode1.clock == mode2.clock;
 }
 
-bool Display::setCrtc(FrameBuffer *buf) {
+void Display::setCrtc(FrameBuffer *buf) {
+	assert(state != State::CRTC_SET_SUCCESSFULLY);
+	
 	if (saved_crtc == nullptr) {
 		saved_crtc = std::make_unique<ModeCrtc>(card, crtc_id);
 	}
@@ -26,15 +28,9 @@ bool Display::setCrtc(FrameBuffer *buf) {
 	int ret = drmModeSetCrtc(card.fd, crtc_id, buf->framebuffer_id, 0, 0,
 				&connector_id, 1, mode.get());
 	
-	if (ret == 0) {
-		crtc_set_successfully = true;
-		is_in_drawing_loop = false;
-	} else {
-		crtc_set_successfully = false;
-		is_in_drawing_loop = false;
+	if (ret) {
+		throw errcode_exception(-errno, std::string("cannot assign crtc with framebuffer. ") + strerror(errno));
 	}
-
-	return crtc_set_successfully;
 }
 
 
@@ -47,7 +43,7 @@ int Display::setup(const ModeResources& res, const ModeConnector& conn) {
 
 	/* check if a monitor is connected */
 	if (conn.connector->connection != DRM_MODE_CONNECTED) {
-		if (is_in_drawing_loop) {
+		if (state == State::IN_DRAWING_LOOP) {
 			fprintf(stderr, "display disconnected from connector %u\n", conn.connector->connector_id);
 			return -ENXIO;
 		} else {
@@ -100,8 +96,9 @@ int Display::setup(const ModeResources& res, const ModeConnector& conn) {
 			}
 
 			updating_mode = true;
-			crtc_set_successfully = false;
-			is_in_drawing_loop = false;
+			// crtc_set_successfully = false;
+			// is_in_drawing_loop = false;
+			state = State::INITIALIZED;
 			mode = nullptr;
 		}
 	} else {
@@ -125,7 +122,9 @@ int Display::setup(const ModeResources& res, const ModeConnector& conn) {
 	/* create framebuffer #1 for this CRTC */
 	for (auto& fb : framebuffers) {
 		fb->createAndAdd(new_width, new_height);
+		setCrtc(fb.get());
 	}
+	state = State::CRTC_SET_SUCCESSFULLY;
 
 	printf("display connected to connector: %d\n", connector_id); fflush(stdout);
 	return 0;
@@ -212,18 +211,16 @@ void Display::modeset_page_flip_event(int fd, unsigned int frame,
 	Display *dev = (Display*)data;
 	if (dev != nullptr) {
 		dev->page_flips_pending -= 1;
-		// printf("[%lx] dev->page_flip_pending = %d;\n", (uint64_t)dev, dev->page_flips_pending); fflush(stdout);
 
 		if (!dev->destroying_in_progress) {
 			dev->draw();
-			//dev->swap_buffers();
 		}
 	}
 }
 
 void Display::updateInDrawingLoop(DisplayContentsFactory& factory) {
-	if (crtc_set_successfully && !is_in_drawing_loop) {
-		is_in_drawing_loop = true;
+	if (state == State::CRTC_SET_SUCCESSFULLY) { //crtc_set_successfully && !is_in_drawing_loop) {
+		state = State::IN_DRAWING_LOOP; //is_in_drawing_loop = true;
 		printf("display initialized on connector: %d\n", connector_id); fflush(stdout);
 		if (contents == nullptr) {
 			contents = factory.createDisplayContents();
@@ -240,7 +237,7 @@ int Display::connectDisplayToNotOccupiedCrtc(const ModeResources& res, const Mod
 	/* first try the currently conected encoder+crtc */
 	std::unique_ptr<ModeEncoder> enc;
 	if (conn.connector->encoder_id)
-		enc = std::make_unique<ModeEncoder>(conn); //drmModeGetEncoder(card.fd, conn->encoder_id);
+		enc = std::make_unique<ModeEncoder>(conn);
 	else
 		enc = nullptr;
 
@@ -259,13 +256,10 @@ int Display::connectDisplayToNotOccupiedCrtc(const ModeResources& res, const Mod
 
 			// If the display is not found, connecting it to the CRTC
 			if (enc_crtc_id >= 0) {
-				//drmModeFreeEncoder(enc);
 				this->crtc_id = enc_crtc_id;
 				return 0;
 			}
 		}
-
-		//drmModeFreeEncoder(enc);
 	}
 
 	/* If the connector is not currently bound to an encoder or if the
@@ -296,13 +290,11 @@ int Display::connectDisplayToNotOccupiedCrtc(const ModeResources& res, const Mod
 
 			/* we have found a CRTC, so save it and return */
 			if (enc_crtc_id >= 0) {
-				//drmModeFreeEncoder(enc);
 				this->crtc_id = enc_crtc_id;
 				return 0;
 			}
 		}
 
-		//drmModeFreeEncoder(enc);
 	}
 
 	fprintf(stderr, "cannot find suitable CRTC for connector %u\n", conn.connector->connector_id);
@@ -339,9 +331,8 @@ Display::~Display() {
 					&connector_id,
 					1,
 					const_cast<drmModeModeInfo*>(&saved_crtc->crtc->mode));
-	//drmModeFreeCrtc(saved_crtc);
 
-	if (is_in_drawing_loop) {
+	if (state == State::IN_DRAWING_LOOP) {
 		/* destroy framebuffers */
 		for (auto& fb : framebuffers) {
 			fb->removeAndDestroy();

@@ -15,6 +15,12 @@ class Display {
     friend Card;
 
 private:
+    enum class State { 
+        INITIALIZED = 0,
+        CRTC_SET_SUCCESSFULLY = 1, 
+        IN_DRAWING_LOOP = 2
+    } state;
+
     // Forbidding object copying
     Display(const Display& other) = delete;
     Display& operator = (const Display& other) = delete;
@@ -34,9 +40,9 @@ private:
 
 	int page_flips_pending = 0;
 
-	bool destroying_in_progress = false;
-    bool crtc_set_successfully = false;
-    bool is_in_drawing_loop = false;
+    // bool crtc_set_successfully = false;
+    // bool is_in_drawing_loop = false;
+	 bool destroying_in_progress = false;
 
 	uint32_t connector_id = 0;
 
@@ -54,12 +60,12 @@ public:
     int connectDisplayToNotOccupiedCrtc(const ModeResources& res, const ModeConnector& conn);
     int setup(const ModeResources& res, const ModeConnector& conn);
     void draw();
-    bool setCrtc(FrameBuffer *buf);
-    bool isCrtcSet() const { return crtc_set_successfully; }
-    bool isInDrawingLoop() const { return is_in_drawing_loop; }
+    void setCrtc(FrameBuffer *buf);
+    //bool isCrtcSet() const { return crtc_set_successfully; }
+    //bool isInDrawingLoop() const { return is_in_drawing_loop; }
+	//bool isDestroyingInProgress() const { return destroying_in_progress; }
     void updateInDrawingLoop(DisplayContentsFactory& factory);
     uint32_t getConnectorId() const { return connector_id; }
-	bool isDestroyingInProgress() const { return destroying_in_progress; }
 
     void swap_buffers();
 

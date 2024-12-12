@@ -40,10 +40,8 @@ void FrameBuffer::createAndAdd(int width, int height) {
 	}
 	target->unlock();
 	added = true;
-	display.setCrtc(this);
 
-	added = true;
-
+	(void)display;
 }
 
 void FrameBuffer::removeAndDestroy() {
@@ -53,9 +51,6 @@ void FrameBuffer::removeAndDestroy() {
 	if (ret) {
 		throw errcode_exception(-errno, std::string("cannot destroy framebuffer. ") + strerror(errno));
 	}
-
-	// Unmapping the dumb
-	//mapping->doUnmapping();
 
 	// Destroying the target
 	target->destroy();

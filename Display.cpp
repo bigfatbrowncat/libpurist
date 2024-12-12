@@ -127,6 +127,7 @@ int Display::setup(const ModeResources& res, const ModeConnector& conn) {
 		fb->createAndAdd(new_width, new_height);
 	}
 
+	printf("display connected to connector: %d\n", connector_id); fflush(stdout);
 	return 0;
 }
 
@@ -223,6 +224,7 @@ void Display::modeset_page_flip_event(int fd, unsigned int frame,
 void Display::updateInDrawingLoop(DisplayContentsFactory& factory) {
 	if (crtc_set_successfully && !is_in_drawing_loop) {
 		is_in_drawing_loop = true;
+		printf("display initialized on connector: %d\n", connector_id); fflush(stdout);
 		if (contents == nullptr) {
 			contents = factory.createDisplayContents();
 		}
@@ -303,8 +305,7 @@ int Display::connectDisplayToNotOccupiedCrtc(const ModeResources& res, const Mod
 		//drmModeFreeEncoder(enc);
 	}
 
-	fprintf(stderr, "cannot find suitable CRTC for connector %u\n",
-		conn.connector->connector_id);
+	fprintf(stderr, "cannot find suitable CRTC for connector %u\n", conn.connector->connector_id);
 	return -ENOENT;
 }
 
@@ -345,5 +346,6 @@ Display::~Display() {
 		for (auto& fb : framebuffers) {
 			fb->removeAndDestroy();
 		}
+		printf("display finalized on connector: %d\n", connector_id); fflush(stdout);
 	}
 }

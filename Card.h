@@ -18,23 +18,20 @@ class Displays;
 
 
 class Card {
-    friend class Display;
-    friend class Displays;
-
 private:
+    // Forbidding object copying
+    Card(const Card& other) = delete;
+    Card& operator = (const Card& other) = delete;
+
     gbm_device *gbmDevice = nullptr;
 
+    int init_gbm(int fd, uint32_t width, uint32_t height);
+    int init_gl(void);
 public:
-
     EGLDisplay glDisplay;
     EGLConfig glConfig;
     EGLContext glContext;
     
-    // GLuint program;
-    // GLint modelviewmatrix, modelviewprojectionmatrix, normalmatrix;
-    // GLuint vbo;
-    // GLuint positionsoffset, colorsoffset, normalsoffset;
-
     const int fd;
     const bool enableOpenGL = true;
     const std::shared_ptr<Displays> displays;
@@ -42,8 +39,6 @@ public:
     Card(const char *node, bool enableOpenGL);
     virtual ~Card();
 
-    int init_gbm(int fd, uint32_t width, uint32_t height);
-    int init_gl(void);
     void runDrawingLoop();
 
     gbm_device* getGBMDevice() const { return gbmDevice; }

@@ -6,6 +6,11 @@
 #include <xf86drmMode.h>
 
 class ModeConnector {
+private:
+    // Forbidding object copying
+    ModeConnector(const ModeConnector& other) = delete;
+    ModeConnector& operator = (const ModeConnector& other) = delete;
+
 public:
     const drmModeConnector *connector;
 

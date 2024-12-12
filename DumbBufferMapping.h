@@ -7,6 +7,10 @@ class DumbBuffer;
 
 class DumbBufferMapping {
 private:
+    // Forbidding object copying
+    DumbBufferMapping(const DumbBufferMapping& other) = delete;
+    DumbBufferMapping& operator = (const DumbBufferMapping& other) = delete;
+
     const Card& card;
     const DumbBuffer& dumb;
 

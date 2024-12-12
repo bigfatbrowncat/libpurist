@@ -7,6 +7,10 @@ class DumbBuffer;
 
 class FrameBuffer {
 private:
+    // Forbidding object copying
+    FrameBuffer(const FrameBuffer& other) = delete;
+    FrameBuffer& operator = (const FrameBuffer& other) = delete;
+
     bool added = false;
     const Card& card;
     Display& display;

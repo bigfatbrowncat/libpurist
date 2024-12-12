@@ -8,6 +8,11 @@
 class DumbBufferMapping;
 
 class TargetSurface {
+private:
+    // Forbidding object copying
+    TargetSurface(const TargetSurface& other) = delete;
+    TargetSurface& operator = (const TargetSurface& other) = delete;
+
 public:
 	const Card& card;
 

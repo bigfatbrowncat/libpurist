@@ -12,6 +12,10 @@ class Displays : protected std::list<std::shared_ptr<Display>> {
     friend class Card;
     friend class Display;
 private:
+    // Forbidding object copying
+    Displays(const Displays& other) = delete;
+    Displays& operator = (const Displays& other) = delete;
+
     const Card& card;
     std::shared_ptr<DisplayContentsFactory> displayContentsFactory;
     bool opengl;

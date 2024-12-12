@@ -12,11 +12,15 @@ class Display {
     friend Card;
 
 private:
+    // Forbidding object copying
+    Display(const Display& other) = delete;
+    Display& operator = (const Display& other) = delete;
+
     const Card& card;
     const Displays& displays;
 
 	unsigned int current_framebuffer_index = 0;
-	std::array<FrameBuffer, 2> framebuffers;
+	std::array<std::unique_ptr<FrameBuffer>, 2> framebuffers;
 
 	std::shared_ptr<drmModeModeInfo> mode = nullptr;
 	uint32_t crtc_id = 0;
@@ -38,8 +42,8 @@ public:
     Display(const Card& card, const Displays& displays, uint32_t connector_id, bool opengl)
             : card(card), displays(displays), 
               framebuffers { 
-                FrameBuffer(card, *this, opengl), 
-                FrameBuffer(card, *this, opengl) 
+                std::make_unique<FrameBuffer>(card, *this, opengl), 
+                std::make_unique<FrameBuffer>(card, *this, opengl) 
               }, 
               connector_id(connector_id) {}
     virtual ~Display();

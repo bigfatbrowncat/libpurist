@@ -92,8 +92,10 @@ int Display::setup(const drmModeRes *res, const drmModeConnector *conn) {
 
 			fprintf(stderr, "Changing the mode from %ux%u @ %uHz to %ux%u @ %uHz\n", mode->hdisplay, mode->vdisplay, freq1, 
 			                                                                                        new_width, new_height, freq2);
-			framebuffers[0].removeAndDestroy();
-			framebuffers[1].removeAndDestroy();
+			for (auto& fb : framebuffers) {
+				fb->removeAndDestroy();
+			}
+
 			updating_mode = true;
 			crtc_set_successfully = false;
 			is_in_drawing_loop = false;
@@ -118,8 +120,9 @@ int Display::setup(const drmModeRes *res, const drmModeConnector *conn) {
 	}
 
 	/* create framebuffer #1 for this CRTC */
-	framebuffers[0].createAndAdd(new_width, new_height);
-	framebuffers[1].createAndAdd(new_width, new_height);
+	for (auto& fb : framebuffers) {
+		fb->createAndAdd(new_width, new_height);
+	}
 
 	return 0;
 }
@@ -165,7 +168,7 @@ int Display::setup(const drmModeRes *res, const drmModeConnector *conn) {
 void Display::draw()
 {
 	auto next_framebuffer_index = (current_framebuffer_index + 1) % framebuffers.size();
-	FrameBuffer *next_framebuffer = &framebuffers[next_framebuffer_index];
+	FrameBuffer *next_framebuffer = framebuffers[next_framebuffer_index].get();
 
 	next_framebuffer->target->makeCurrent();
 	contents->drawIntoBuffer(next_framebuffer);
@@ -337,7 +340,8 @@ Display::~Display() {
 
 	if (is_in_drawing_loop) {
 		/* destroy framebuffers */
-		framebuffers[1].removeAndDestroy();
-		framebuffers[0].removeAndDestroy();
+		for (auto& fb : framebuffers) {
+			fb->removeAndDestroy();
+		}
 	}
 }

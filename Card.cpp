@@ -117,7 +117,7 @@ int Card::init_gl(void)
 		return -1;
 	}
 
-	printf("Using display %p with EGL version %d.%d\n", glDisplay, major, minor);
+	printf("EGL Display %p initialized with with EGL version %d.%d\n", glDisplay, major, minor);
 
 	printf("EGL Version \"%s\"\n", eglQueryString(glDisplay, EGL_VERSION));
 	printf("EGL Vendor \"%s\"\n", eglQueryString(glDisplay, EGL_VENDOR));

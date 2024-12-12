@@ -14,10 +14,10 @@ void Displays::addNewlyConnectedToDrawingLoop() {
 	}
 }
 
-Displays::iterator Displays::findDisplayOnConnector(const drmModeConnector *conn) {
+Displays::iterator Displays::findDisplayOnConnector(const ModeConnector& conn) {
 	// Looking for the display on this connector
 	for (auto iter = this->begin(); iter != this->end(); iter++) {
-		if (iter->get()->getConnectorId() == conn->connector_id) {
+		if (iter->get()->getConnectorId() == conn.connector->connector_id) {
 			return iter;
 		}
 	}
@@ -36,7 +36,7 @@ int Displays::updateHardwareConfiguration()
 			ModeConnector modeConnector(card, modeRes, i);
 			auto connector = modeConnector.connector;
 
-			auto display_iter = findDisplayOnConnector(connector);
+			auto display_iter = findDisplayOnConnector(modeConnector);
 			std::shared_ptr<Display> display = nullptr;
 			bool new_display_connected = false;
 			

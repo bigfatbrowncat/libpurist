@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Card.h"
+#include "ModeConnector.h"
 
 #include "interfaces.h"
 
@@ -19,7 +20,7 @@ private:
     const Card& card;
     std::shared_ptr<DisplayContentsFactory> displayContentsFactory;
     bool opengl;
-    Displays::iterator findDisplayOnConnector(const drmModeConnector *conn);
+    Displays::iterator findDisplayOnConnector(const ModeConnector& conn);
 
 public:
     bool empty() const {

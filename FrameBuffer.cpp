@@ -26,7 +26,6 @@ FrameBuffer::FrameBuffer(const Card& card, bool opengl)
 void FrameBuffer::createAndAdd(int width, int height) {
 	assert(!added);
 	target->create(width, height);
-	//mapping->doMapping();
 
 	target->makeCurrent();
 	target->swap();

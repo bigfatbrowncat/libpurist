@@ -12,10 +12,9 @@
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 
+#include "interfaces.h"
 
-class Display;
 class Displays;
-
 
 class Card {
 private:
@@ -24,9 +23,11 @@ private:
     Card& operator = (const Card& other) = delete;
 
     gbm_device *gbmDevice = nullptr;
+    std::shared_ptr<Displays> displays;
 
-    int init_gbm(int fd, uint32_t width, uint32_t height);
-    int init_gl(void);
+    int initGBM(int fd, uint32_t width, uint32_t height);
+    int initGL();
+
 public:
     EGLDisplay glDisplay;
     EGLConfig glConfig;
@@ -34,7 +35,6 @@ public:
     
     const int fd;
     const bool enableOpenGL = true;
-    const std::shared_ptr<Displays> displays;
 
     Card(const char *node, bool enableOpenGL);
     virtual ~Card();
@@ -42,4 +42,7 @@ public:
     void runDrawingLoop();
 
     gbm_device* getGBMDevice() const { return gbmDevice; }
+
+    void setDisplayContentsFactory(std::shared_ptr<DisplayContentsFactory> factory);
+
 };

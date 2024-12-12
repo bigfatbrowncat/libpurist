@@ -29,6 +29,7 @@
 #include <EGL/egl.h>
 #include <cassert>
 #include <cstring>
+#include <memory>
 #include <unistd.h>
 #include <fcntl.h>
 
@@ -37,15 +38,9 @@
 
 #include <vector>
 
-/* Draw code here */
-// static void draw_color(uint32_t i)
-// {
-// 	glClear(GL_COLOR_BUFFER_BIT);
-// 	glClearColor(0.2f, 0.3f, 0.5f, 1.0f);
-// }
 
-
-Card::Card(const char *node, bool enableOpenGL) : fd(-1), enableOpenGL(enableOpenGL), displays(std::make_shared<Displays>(*this, enableOpenGL))
+Card::Card(const char *node, bool enableOpenGL) 
+	: displays(std::make_shared<Displays>(*this, enableOpenGL)), fd(-1), enableOpenGL(enableOpenGL)
 {
 	int ret;
 	uint64_t has_dumb;
@@ -87,7 +82,7 @@ static int match_config_to_visual(EGLDisplay egl_display, EGLint visual_id,
   return -1;
 }
 
-int Card::init_gl(void)
+int Card::initGL()
 {
 	EGLint config_attribs[] = {
 		EGL_SURFACE_TYPE,     EGL_WINDOW_BIT,
@@ -98,6 +93,7 @@ int Card::init_gl(void)
         EGL_RENDERABLE_TYPE,  EGL_OPENGL_ES2_BIT,
         EGL_NONE
 	};
+
 	EGLint context_attribs[] = {
 		EGL_CONTEXT_CLIENT_VERSION, 	2,
 		EGL_NONE
@@ -168,7 +164,9 @@ int Card::init_gl(void)
  * a blocking operation, but it's mostly just <16ms so we can ignore that.
  */
 Card::~Card() {
-	displays->clear();
+	//displays->clear();
+	displays = nullptr;
+	//std::const_pointer_cast<Displays>(displays) = nullptr;
 
     // Closing the video card file
 	close(fd);
@@ -239,7 +237,7 @@ void Card::runDrawingLoop()
 	drmEventContext ev;
 
 	if (enableOpenGL) {
-		init_gl();
+		initGL();
 	}
 
 	/* init variables */
@@ -255,13 +253,9 @@ void Card::runDrawingLoop()
 
 	/* prepare all connectors and CRTCs */
 	ret = displays->updateHardwareConfiguration();
-	if (ret)
+	if (ret) {
 		throw errcode_exception(ret, "modeset::prepare failed");
-
-	// bool modeset_success = displays->setAllCrtcs();
-	// if (!modeset_success)
-	// 	throw std::runtime_error("mode setting failed for some displays (1)");
-
+	}
 	
 	displays->addNewlyConnectedToDrawingLoop();
 
@@ -283,7 +277,6 @@ void Card::runDrawingLoop()
 			fprintf(stderr, "exit due to user-input\n");
 			break;
 		} else if (FD_ISSET(fd, &fds)) {
-			//printf("drmHandleEvent in Card\n"); fflush(stdout);
 			drmHandleEvent(fd, &ev);
 
 			if (counter % redraws_between_updates == 0) {
@@ -295,12 +288,13 @@ void Card::runDrawingLoop()
 				displays->addNewlyConnectedToDrawingLoop();
 			}
 			counter ++;
-
 		}
 	}
 }
 
-
+void Card::setDisplayContentsFactory(std::shared_ptr<DisplayContentsFactory> factory) {
+	displays->setDisplayContentsFactory(factory);
+}
 
 
 /*

@@ -24,6 +24,15 @@ Displays::iterator Displays::findDisplayOnConnector(const ModeConnector& conn) {
 	return end();	// Hasn't find any
 }
 
+std::shared_ptr<Display> Displays::findDisplayConnectedToCrtc(uint32_t crtc_id) const {
+	for (auto& disp : *this) {
+		if (disp->getCrtcId() == crtc_id) {
+			return disp;
+		}
+	}
+	return nullptr;
+}
+
 int Displays::updateHardwareConfiguration()
 {
 	ModeResources modeRes(card);

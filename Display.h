@@ -12,7 +12,9 @@
 #include <array>
 
 class Display {
-    friend Card;
+    // Forbidding object copying
+    Display(const Display& other) = delete;
+    Display& operator = (const Display& other) = delete;
 
 private:
     enum class State { 
@@ -20,10 +22,6 @@ private:
         CRTC_SET_SUCCESSFULLY = 1, 
         IN_DRAWING_LOOP = 2
     } state;
-
-    // Forbidding object copying
-    Display(const Display& other) = delete;
-    Display& operator = (const Display& other) = delete;
 
     const Card& card;
     const Displays& displays;
@@ -63,8 +61,9 @@ public:
     int setup(const ModeResources& res, const ModeConnector& conn);
     void updateInDrawingLoop(DisplayContentsFactory& factory);
     uint32_t getConnectorId() const { return connector_id; }
+    uint32_t getCrtcId() const { return crtc_id; }
 
-    void swap_buffers();
+    //void swap_buffers();
 
     static void modeset_page_flip_event(int fd, unsigned int frame, unsigned int sec, unsigned int usec, void *data);
 };

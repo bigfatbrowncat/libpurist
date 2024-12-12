@@ -34,6 +34,7 @@ void Display::setCrtc(FrameBuffer *buf) {
 }
 
 
+
 /*
  * modeset_setup_dev() stays the same.
  */
@@ -244,11 +245,14 @@ int Display::connectDisplayToNotOccupiedCrtc(const ModeResources& res, const Mod
 		if (enc->getCrtcId()) {
 			// Check if there is a display that is already connected th this CRTC
 			int32_t enc_crtc_id = enc->getCrtcId();
-			for (auto& iter : displays) {
-				if (iter->crtc_id == enc_crtc_id) {
-					enc_crtc_id = -1;
-					break;
-				}
+			// for (auto& iter : displays) {
+			// 	if (iter->crtc_id == enc_crtc_id) {
+			// 		enc_crtc_id = -1;
+			// 		break;
+			// 	}
+			// }
+			if (displays.findDisplayConnectedToCrtc(enc_crtc_id) != nullptr) {
+				enc_crtc_id = -1;
 			}
 
 			// If the display is not found, connecting it to the CRTC
@@ -279,11 +283,14 @@ int Display::connectDisplayToNotOccupiedCrtc(const ModeResources& res, const Mod
 
 			/* check that no other device already uses this CRTC */
 			int32_t enc_crtc_id = res.getCrtcId(j);
-			for (auto& iter : displays) {
-				if (iter->crtc_id == enc_crtc_id) {
-					enc_crtc_id = -1;
-					break;
-				}
+			// for (auto& iter : displays) {
+			// 	if (iter->crtc_id == enc_crtc_id) {
+			// 		enc_crtc_id = -1;
+			// 		break;
+			// 	}
+			// }
+			if (displays.findDisplayConnectedToCrtc(enc_crtc_id) != nullptr) {
+				enc_crtc_id = -1;
 			}
 
 			/* we have found a CRTC, so save it and return */

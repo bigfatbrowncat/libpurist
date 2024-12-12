@@ -95,7 +95,7 @@ int main(int argc, char **argv)
 
 		bool enableOpenGL = true;
 		auto ms = std::make_unique<Card>(card, enableOpenGL);
-		ms->displays->setDisplayContentsFactory(std::make_shared<ColoredScreenDisplayContentsFactory>());
+		ms->setDisplayContentsFactory(std::make_shared<ColoredScreenDisplayContentsFactory>());
 		ms->runDrawingLoop();
 		ms = nullptr;
 

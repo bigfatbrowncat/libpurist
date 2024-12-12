@@ -22,6 +22,8 @@ add_executable(purist
     Displays.h
     DumbBuffer.cpp
     DumbBuffer.h
+    EGLTargetSurface.cpp
+    EGLTargetSurface.h
     DumbBufferMapping.cpp
     DumbBufferMapping.h
     FrameBuffer.cpp

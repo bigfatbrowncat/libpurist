@@ -1,7 +1,7 @@
 #include "FrameBuffer.h"
 #include "Display.h"
 #include "DumbBuffer.h"
-#include "DumbBufferMapping.h"
+#include "EGLTargetSurface.h"
 #include "exceptions.h"
 
 #include <EGL/egl.h>

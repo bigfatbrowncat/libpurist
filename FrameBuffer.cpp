@@ -19,8 +19,8 @@ std::shared_ptr<TargetSurface> FrameBuffer::target_for(bool opengl, const Card& 
 	}
 }
 
-FrameBuffer::FrameBuffer(const Card& card, Display& display, bool opengl)
-	: card(card), display(display), target(target_for(opengl, card)), enableOpenGL(opengl)
+FrameBuffer::FrameBuffer(const Card& card, bool opengl)
+	: card(card), target(target_for(opengl, card)), enableOpenGL(opengl)
 {
 }
 
@@ -40,8 +40,6 @@ void FrameBuffer::createAndAdd(int width, int height) {
 	}
 	target->unlock();
 	added = true;
-
-	(void)display;
 }
 
 void FrameBuffer::removeAndDestroy() {

@@ -42,28 +42,25 @@ private:
 
     // bool crtc_set_successfully = false;
     // bool is_in_drawing_loop = false;
-	 bool destroying_in_progress = false;
+	bool destroying_in_progress = false;
 
 	uint32_t connector_id = 0;
 
+    void setCrtc(FrameBuffer *buf);
+    void draw();
 public:
 
     Display(const Card& card, const Displays& displays, uint32_t connector_id, bool opengl)
             : card(card), displays(displays), 
               framebuffers { 
-                std::make_unique<FrameBuffer>(card, *this, opengl), 
-                std::make_unique<FrameBuffer>(card, *this, opengl) 
+                std::make_unique<FrameBuffer>(card, opengl), 
+                std::make_unique<FrameBuffer>(card, opengl) 
               }, 
               connector_id(connector_id) {}
     virtual ~Display();
 
     int connectDisplayToNotOccupiedCrtc(const ModeResources& res, const ModeConnector& conn);
     int setup(const ModeResources& res, const ModeConnector& conn);
-    void draw();
-    void setCrtc(FrameBuffer *buf);
-    //bool isCrtcSet() const { return crtc_set_successfully; }
-    //bool isInDrawingLoop() const { return is_in_drawing_loop; }
-	//bool isDestroyingInProgress() const { return destroying_in_progress; }
     void updateInDrawingLoop(DisplayContentsFactory& factory);
     uint32_t getConnectorId() const { return connector_id; }
 

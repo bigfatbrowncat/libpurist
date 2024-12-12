@@ -1,5 +1,6 @@
 #include "Display.h"
 #include "Displays.h"
+#include "ModeEncoder.h"
 #include "exceptions.h"
 #include "interfaces.h"
 
@@ -41,13 +42,13 @@ bool Display::setCrtc(FrameBuffer *buf) {
  * modeset_setup_dev() stays the same.
  */
 
-int Display::setup(const drmModeRes *res, const drmModeConnector *conn) {
+int Display::setup(const ModeResources& res, const ModeConnector& conn) {
 	int ret;
 
 	/* check if a monitor is connected */
-	if (conn->connection != DRM_MODE_CONNECTED) {
+	if (conn.connector->connection != DRM_MODE_CONNECTED) {
 		if (is_in_drawing_loop) {
-			fprintf(stderr, "display disconnected from connector %u\n", conn->connector_id);
+			fprintf(stderr, "display disconnected from connector %u\n", conn.connector->connector_id);
 			return -ENXIO;
 		} else {
 			return -ENOENT;
@@ -55,8 +56,8 @@ int Display::setup(const drmModeRes *res, const drmModeConnector *conn) {
 	}
 
 	/* check if there is at least one valid mode */
-	if (conn->count_modes == 0) {
-		fprintf(stderr, "no valid mode for connector %u\n",	conn->connector_id);
+	if (conn.connector->count_modes == 0) {
+		fprintf(stderr, "no valid mode for connector %u\n",	conn.connector->connector_id);
 		return -EFAULT;
 	}
 
@@ -73,13 +74,15 @@ int Display::setup(const drmModeRes *res, const drmModeConnector *conn) {
 	// mm = mm % conn->count_modes;
 	// fprintf(stderr, "done! %ux%u\n\n", conn->modes[mm].hdisplay, conn->modes[mm].vdisplay);
 
-	auto new_width = conn->modes[mm].hdisplay;
-	auto new_height = conn->modes[mm].vdisplay;
+	drmModeModeInfo& selected_mode = conn.connector->modes[mm];
+
+	auto new_width = selected_mode.hdisplay;
+	auto new_height = selected_mode.vdisplay;
 
 	if (mode != nullptr) {
 		// This display already has a mode
 
-		if (modes_equal(*mode, conn->modes[mm])) {
+		if (modes_equal(*mode, selected_mode)) {
 
 			// No mode change here
 			return 0;
@@ -87,7 +90,7 @@ int Display::setup(const drmModeRes *res, const drmModeConnector *conn) {
 		} else {
 			uint32_t freq1 = mode->clock * 1000.0f / (mode->htotal * mode->vtotal);
 			freq1 = (uint32_t)(freq1 * 1000.0f) / 1000.0f;
-			uint32_t freq2 = conn->modes[0].clock * 1000.0f / (conn->modes[0].htotal * conn->modes[0].vtotal);
+			uint32_t freq2 = selected_mode.clock * 1000.0f / (selected_mode.htotal * selected_mode.vtotal);
 			freq2 = (uint32_t)(freq2 * 1000.0f) / 1000.0f;
 
 			fprintf(stderr, "Changing the mode from %ux%u @ %uHz to %ux%u @ %uHz\n", mode->hdisplay, mode->vdisplay, freq1, 
@@ -102,19 +105,19 @@ int Display::setup(const drmModeRes *res, const drmModeConnector *conn) {
 			mode = nullptr;
 		}
 	} else {
-		fprintf(stderr, "mode for connector %u is %ux%u\n", conn->connector_id, new_width, new_height);
+		fprintf(stderr, "mode for connector %u is %ux%u\n", conn.connector->connector_id, new_width, new_height);
 	}
 
 	/* copy the mode information into our device structure and into both
 	* buffers */
-	mode = std::make_shared<drmModeModeInfo>(conn->modes[mm]);
+	mode = std::make_shared<drmModeModeInfo>(selected_mode);
 
 	if (!updating_mode) {
 		/* find a crtc for this connector */
 		ret = this->connectDisplayToNotOccupiedCrtc(res, conn);
 		if (ret) {
 			fprintf(stderr, "no valid crtc for connector %u: \n",
-				conn->connector_id);
+				conn.connector->connector_id);
 			return ret;
 		}
 	}
@@ -228,23 +231,23 @@ void Display::updateInDrawingLoop(DisplayContentsFactory& factory) {
 }
 
 
-int Display::connectDisplayToNotOccupiedCrtc(const drmModeRes *res, const drmModeConnector *conn) {
+int Display::connectDisplayToNotOccupiedCrtc(const ModeResources& res, const ModeConnector& conn) {
 	unsigned int i, j;
 	int32_t enc_crtc_id;
 
 	/* first try the currently conected encoder+crtc */
-	drmModeEncoder *enc;
-	if (conn->encoder_id)
-		enc = drmModeGetEncoder(card.fd, conn->encoder_id);
+	std::unique_ptr<ModeEncoder> enc;
+	if (conn.connector->encoder_id)
+		enc = std::make_unique<ModeEncoder>(conn); //drmModeGetEncoder(card.fd, conn->encoder_id);
 	else
 		enc = nullptr;
 
 	// If we got an encoder...
 	if (enc) {
 		// ...and the encoder has a CRTC
-		if (enc->crtc_id) {
+		if (enc->encoder->crtc_id) {
 			// Check if there is a display that is already connected th this CRTC
-			enc_crtc_id = enc->crtc_id;
+			enc_crtc_id = enc->encoder->crtc_id;
 			for (auto& iter : displays) {
 				if (iter->crtc_id == enc_crtc_id) {
 					enc_crtc_id = -1;
@@ -254,35 +257,34 @@ int Display::connectDisplayToNotOccupiedCrtc(const drmModeRes *res, const drmMod
 
 			// If the display is not found, connecting it to the CRTC
 			if (enc_crtc_id >= 0) {
-				drmModeFreeEncoder(enc);
+				//drmModeFreeEncoder(enc);
 				this->crtc_id = enc_crtc_id;
 				return 0;
 			}
 		}
 
-		drmModeFreeEncoder(enc);
+		//drmModeFreeEncoder(enc);
 	}
 
 	/* If the connector is not currently bound to an encoder or if the
 	 * encoder+crtc is already used by another connector (actually unlikely
 	 * but lets be safe), iterate all other available encoders to find a
 	 * matching CRTC. */
-	for (i = 0; i < conn->count_encoders; ++i) {
-		enc = drmModeGetEncoder(card.fd, conn->encoders[i]);
-		if (!enc) {
-			fprintf(stderr, "cannot retrieve encoder %u:%u (%d): %m\n",
-				i, conn->encoders[i], errno);
-			continue;
+	for (i = 0; i < conn.connector->count_encoders; ++i) {
+		try {
+			enc = std::make_unique<ModeEncoder>(conn, i); //drmModeGetEncoder(card.fd, conn->encoders[i]);
+		} catch (const errcode_exception& ex) {
+			fprintf(stderr, "%s\n", ex.what());
 		}
 
 		/* iterate all global CRTCs */
-		for (j = 0; j < res->count_crtcs; ++j) {
+		for (j = 0; j < res.resources->count_crtcs; ++j) {
 			/* check whether this CRTC works with the encoder */
-			if (!(enc->possible_crtcs & (1 << j)))
+			if (!(enc->encoder->possible_crtcs & (1 << j)))
 				continue;
 
 			/* check that no other device already uses this CRTC */
-			enc_crtc_id = res->crtcs[j];
+			enc_crtc_id = res.resources->crtcs[j];
 			for (auto& iter : displays) {
 				if (iter->crtc_id == enc_crtc_id) {
 					enc_crtc_id = -1;
@@ -292,17 +294,17 @@ int Display::connectDisplayToNotOccupiedCrtc(const drmModeRes *res, const drmMod
 
 			/* we have found a CRTC, so save it and return */
 			if (enc_crtc_id >= 0) {
-				drmModeFreeEncoder(enc);
+				//drmModeFreeEncoder(enc);
 				this->crtc_id = enc_crtc_id;
 				return 0;
 			}
 		}
 
-		drmModeFreeEncoder(enc);
+		//drmModeFreeEncoder(enc);
 	}
 
 	fprintf(stderr, "cannot find suitable CRTC for connector %u\n",
-		conn->connector_id);
+		conn.connector->connector_id);
 	return -ENOENT;
 }
 

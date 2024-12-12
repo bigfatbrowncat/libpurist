@@ -51,7 +51,7 @@ int Displays::updateHardwareConfiguration()
 			}
 
 			/* call helper function to prepare this connector */
-			int ret = display->setup(resources, connector);
+			int ret = display->setup(modeRes, modeConnector);
 			if (ret) {
 				if (ret == -ENXIO || display_iter != end()) {
 					this->remove(display);

@@ -52,11 +52,14 @@ public:
 
 			unsigned int j, k, off;
 
-			for (j = 0; j < dumb->getHeight(); ++j) {
-				for (k = 0; k < dumb->getWidth(); ++k) {
-					off = dumb->getStride() * j + k * 4;
-					*(uint32_t*)&dumb->mapping->map[off] =
-							(r << 16) | (g << 8) | b;
+			uint32_t h = dumb->getHeight();
+			uint32_t w = dumb->getWidth(); 
+			uint32_t s = dumb->getStride(); 
+			uint32_t c = (r << 16) | (g << 8) | b;
+			for (j = 0; j < h; ++j) {
+				for (k = 0; k < w; ++k) {
+					off = s * j + k * 4;
+					*(uint32_t*)&dumb->mapping->map[off] = c;
 				}
 			}
 		}

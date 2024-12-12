@@ -12,7 +12,9 @@ private:
     ModeConnector& operator = (const ModeConnector& other) = delete;
 
 public:
+    const Card& card;
     const drmModeConnector *connector;
+    const uint32_t connector_id;
 
 	ModeConnector(const Card& card, uint32_t connector_id);
     ModeConnector(const Card& card, const ModeResources& resources, size_t index);

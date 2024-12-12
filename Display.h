@@ -4,6 +4,7 @@
 #include "FrameBuffer.h"
 #include "ModeResources.h"
 #include "ModeConnector.h"
+#include "ModeCrtc.h"
 
 #include "interfaces.h"
 
@@ -25,9 +26,9 @@ private:
 	std::array<std::unique_ptr<FrameBuffer>, 2> framebuffers;
 
 	std::shared_ptr<drmModeModeInfo> mode = nullptr;
-	uint32_t crtc_id = 0;
-	drmModeCrtc *saved_crtc = nullptr;
-
+	
+    uint32_t crtc_id = 0;
+	std::unique_ptr<ModeCrtc> saved_crtc = nullptr;
 
     std::shared_ptr<DisplayContents> contents = nullptr;
 

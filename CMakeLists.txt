@@ -28,10 +28,13 @@ add_executable(purist
     DumbBufferMapping.h
     FrameBuffer.cpp
     FrameBuffer.h
-    ModeEncoder.cpp
-    ModeEncoder.h
+
     ModeConnector.cpp
     ModeConnector.h
+    ModeCrtc.cpp
+    ModeCrtc.h
+    ModeEncoder.cpp
+    ModeEncoder.h
     ModeResources.cpp
     ModeResources.h
 )

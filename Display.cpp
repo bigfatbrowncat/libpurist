@@ -20,7 +20,7 @@ static bool modes_equal(const drmModeModeInfo& mode1, const drmModeModeInfo& mod
 
 bool Display::setCrtc(FrameBuffer *buf) {
 	if (saved_crtc == nullptr) {
-		saved_crtc = drmModeGetCrtc(card.fd, crtc_id);
+		saved_crtc = std::make_unique<ModeCrtc>(card, crtc_id);
 	}
 
 	int ret = drmModeSetCrtc(card.fd, crtc_id, buf->framebuffer_id, 0, 0,
@@ -332,14 +332,14 @@ Display::~Display() {
 	/* restore saved CRTC configuration */
 	if (saved_crtc != nullptr) //crtc_set_successfully)
 		drmModeSetCrtc(card.fd,
-					saved_crtc->crtc_id,
-					saved_crtc->buffer_id,
-					saved_crtc->x,
-					saved_crtc->y,
+					saved_crtc->crtc->crtc_id,
+					saved_crtc->crtc->buffer_id,
+					saved_crtc->crtc->x,
+					saved_crtc->crtc->y,
 					&connector_id,
 					1,
-					&saved_crtc->mode);
-	drmModeFreeCrtc(saved_crtc);
+					const_cast<drmModeModeInfo*>(&saved_crtc->crtc->mode));
+	//drmModeFreeCrtc(saved_crtc);
 
 	if (is_in_drawing_loop) {
 		/* destroy framebuffers */

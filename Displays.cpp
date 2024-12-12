@@ -27,14 +27,14 @@ Displays::iterator Displays::findDisplayOnConnector(const ModeConnector& conn) {
 int Displays::updateHardwareConfiguration()
 {
 	ModeResources modeRes(card);
-	auto resources = modeRes.resources;
+	//auto resources = modeRes.resources;
 
 	/* iterate all connectors */
-	for (unsigned int i = 0; i < resources->count_connectors; ++i) {
+	for (unsigned int i = 0; i < modeRes.getCountConnectors(); ++i) {
 		/* get information for each connector */
 		try {
 			ModeConnector modeConnector(card, modeRes, i);
-			auto connector = modeConnector.connector;
+			//auto connector = modeConnector.connector;
 
 			auto display_iter = findDisplayOnConnector(modeConnector);
 			std::shared_ptr<Display> display = nullptr;
@@ -45,7 +45,7 @@ int Displays::updateHardwareConfiguration()
 				display = *display_iter;
 			} else {
 				// create a new display
-				auto cid = connector->connector_id;
+				auto cid = modeConnector.getConnectorId(); // connector->connector_id;
 				display = std::make_shared<Display>(card, *this, cid, opengl);
 				new_display_connected = true;
 			}
@@ -58,16 +58,10 @@ int Displays::updateHardwareConfiguration()
 				} else if (ret != -ENOENT) {
 					errno = -ret;
 					fprintf(stderr, "cannot setup device for connector %u:%u (%d): %m\n",
-						i, resources->connectors[i], errno);
+						i, modeRes.getConnectorId(i), errno);	//  resources->connectors[i]
 				}
 				
-				// if (display_iter != end()) {
-				// 	this->erase(display_iter);
-				// }
-				
 				display = nullptr;
-				
-				//drmModeFreeConnector(connector);
 				continue;
 			}
 

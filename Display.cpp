@@ -20,7 +20,7 @@ static bool modes_equal(const drmModeModeInfo& mode1, const drmModeModeInfo& mod
 
 void Display::setCrtc(FrameBuffer *buf) {
 	assert(state != State::CRTC_SET_SUCCESSFULLY);
-	
+
 	if (saved_crtc == nullptr) {
 		saved_crtc = std::make_unique<ModeCrtc>(card, crtc_id);
 	}
@@ -274,13 +274,13 @@ int Display::connectDisplayToNotOccupiedCrtc(const ModeResources& res, const Mod
 		}
 
 		/* iterate all global CRTCs */
-		for (j = 0; j < res.resources->count_crtcs; ++j) {
+		for (j = 0; j < res.getCountCrtcs(); ++j) {
 			/* check whether this CRTC works with the encoder */
 			if (!(enc->encoder->possible_crtcs & (1 << j)))
 				continue;
 
 			/* check that no other device already uses this CRTC */
-			enc_crtc_id = res.resources->crtcs[j];
+			enc_crtc_id = res.getCrtcId(j);
 			for (auto& iter : displays) {
 				if (iter->crtc_id == enc_crtc_id) {
 					enc_crtc_id = -1;

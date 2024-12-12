@@ -1,5 +1,4 @@
 #include "FrameBuffer.h"
-#include "Display.h"
 #include "DumbBufferTargetSurface.h"
 #include "EGLTargetSurface.h"
 #include "exceptions.h"
@@ -13,7 +12,7 @@
 
 std::shared_ptr<TargetSurface> FrameBuffer::target_for(bool opengl, const Card& card) {
 	if (opengl) {
-		return std::make_shared<GBMSurface>(card);
+		return std::make_shared<EGLTargetSurface>(card);
 	} else {
 		return std::make_shared<DumbBufferTargetSurface>(card);
 	}

@@ -8,11 +8,11 @@
 #include <cstring>
 #include <string>
 
-GBMSurface::GBMSurface(const Card& card) 
+EGLTargetSurface::EGLTargetSurface(const Card& card) 
 	: TargetSurface(card), width(0), height(0) {
 }
 
-void GBMSurface::create(int width, int height) {
+void EGLTargetSurface::create(int width, int height) {
 	this->width = width;
 	this->height = height;
 
@@ -32,28 +32,28 @@ void GBMSurface::create(int width, int height) {
 	created = true;
 }
 
-uint32_t GBMSurface::getWidth() const {
+uint32_t EGLTargetSurface::getWidth() const {
 	return width;
 }
 
-uint32_t GBMSurface::getHeight() const {
+uint32_t EGLTargetSurface::getHeight() const {
 	return height;
 }
 
-uint32_t GBMSurface::getStride() const {
+uint32_t EGLTargetSurface::getStride() const {
 	assert (gbmBO != nullptr);
 	return gbm_bo_get_stride(gbmBO);
 	
 }
 
-uint32_t GBMSurface::getHandle() const {
+uint32_t EGLTargetSurface::getHandle() const {
 	assert (gbmBO != nullptr);
 	return gbm_bo_get_handle(gbmBO).u32;
 	
 }
 
 
-void GBMSurface::destroy() {
+void EGLTargetSurface::destroy() {
 	assert(created);
 	assert(gbmSurface != nullptr);
 	assert(glSurface != EGL_NO_SURFACE);
@@ -63,24 +63,24 @@ void GBMSurface::destroy() {
 	created = false;
 }
 
-GBMSurface::~GBMSurface() {
+EGLTargetSurface::~EGLTargetSurface() {
 	if (created) {
 		destroy();
 	}
 }
 
-void GBMSurface::makeCurrent() {
+void EGLTargetSurface::makeCurrent() {
     eglMakeCurrent(card.glDisplay, glSurface, glSurface, card.glContext);
 }
 
-void GBMSurface::lock() {
+void EGLTargetSurface::lock() {
     gbmBO = gbm_surface_lock_front_buffer(gbmSurface);
 }
 
-void GBMSurface::swap() {
+void EGLTargetSurface::swap() {
     eglSwapBuffers(card.glDisplay, glSurface);	
 }
 
-void GBMSurface::unlock() {
+void EGLTargetSurface::unlock() {
     gbm_surface_release_buffer(gbmSurface, gbmBO);
 }

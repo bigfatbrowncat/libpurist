@@ -10,7 +10,7 @@
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 
-class GBMSurface : public TargetSurface {
+class EGLTargetSurface : public TargetSurface {
 private:
 	bool created = false;
 
@@ -26,7 +26,7 @@ public:
 	uint32_t getStride() const override;
 	uint32_t getHandle() const override;
 
-	GBMSurface(const Card& card);
+	EGLTargetSurface(const Card& card);
     void create(int width, int height) override;
 	void makeCurrent() override;
     void destroy() override;
@@ -34,5 +34,5 @@ public:
 	void swap() override;
 	void unlock() override;
 
-	virtual ~GBMSurface();
+	virtual ~EGLTargetSurface();
 };

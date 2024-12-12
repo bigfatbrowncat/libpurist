@@ -19,6 +19,8 @@ public:
 	ModeConnector(const Card& card, uint32_t connector_id);
     ModeConnector(const Card& card, const ModeResources& resources, size_t index);
 
+    uint32_t getConnectorId() const;
+
 	virtual ~ModeConnector();
 
 };

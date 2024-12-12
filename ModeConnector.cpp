@@ -1,6 +1,8 @@
 #include "ModeConnector.h"
 #include "exceptions.h"
 
+#include <cassert>
+
 ModeConnector::ModeConnector(const Card& card, uint32_t connector_id) : card(card), connector_id(connector_id) {
 	connector = drmModeGetConnector(card.fd, connector_id);
 	if (!connector) {
@@ -10,8 +12,13 @@ ModeConnector::ModeConnector(const Card& card, uint32_t connector_id) : card(car
 }
 
 ModeConnector::ModeConnector(const Card& card, const ModeResources& resources, size_t index) 
-	: ModeConnector(card, resources.resources->connectors[index]) { }
+	: ModeConnector(card, resources.getConnectorId(index)) { }
 
 ModeConnector::~ModeConnector() {
 	drmModeFreeConnector(const_cast<drmModeConnectorPtr>(connector));
+}
+
+uint32_t ModeConnector::getConnectorId() const { 
+	assert(connector->connector_id == connector_id);
+	return connector->connector_id; 
 }

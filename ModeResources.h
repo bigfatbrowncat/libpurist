@@ -2,6 +2,7 @@
 
 #include "Card.h"
 
+#include <cstddef>
 #include <xf86drmMode.h>
 
 class ModeResources {
@@ -10,9 +11,16 @@ private:
     ModeResources(const ModeResources& other) = delete;
     ModeResources& operator = (const ModeResources& other) = delete;
 
-public:
 	const drmModeRes *resources;
 
+public:
 	ModeResources(const Card& card);
-	virtual ~ModeResources();
+    
+    int getCountConnectors() const { return resources->count_connectors; }
+    uint32_t getConnectorId(int index) const { return resources->connectors[index]; }
+
+    int getCountCrtcs() const { return resources->count_crtcs; }
+    uint32_t getCrtcId(int index) const { return resources->crtcs[index]; }
+
+    virtual ~ModeResources();
 };

@@ -2,7 +2,9 @@
 #include "Display.h"
 #include "ModeResources.h"
 #include "ModeConnector.h"
-#include "exceptions.h"
+
+#include <purist/platform/exceptions.h>
+
 #include <stdexcept>
 #include <cassert>
 

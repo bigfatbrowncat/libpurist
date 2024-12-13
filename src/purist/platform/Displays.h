@@ -3,7 +3,7 @@
 #include "Card.h"
 #include "ModeConnector.h"
 
-#include "interfaces.h"
+#include <purist/platform/interfaces.h>
 
 #include <memory>
 #include <list>

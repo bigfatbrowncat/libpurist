@@ -1,6 +1,5 @@
 #include "ModeConnector.h"
-#include "exceptions.h"
-
+#include <purist/platform/exceptions.h>
 #include <cassert>
 
 ModeConnector::ModeConnector(const Card& card, uint32_t connector_id) : card(card), connector_id(connector_id) {

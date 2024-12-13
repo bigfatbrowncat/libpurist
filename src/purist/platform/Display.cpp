@@ -1,8 +1,9 @@
 #include "Display.h"
 #include "Displays.h"
 #include "ModeEncoder.h"
-#include "exceptions.h"
-#include "interfaces.h"
+
+#include <purist/platform/exceptions.h>
+#include <purist/platform/interfaces.h>
 
 #include <cstdint>
 #include <xf86drm.h>
@@ -174,9 +175,9 @@ void Display::draw()
 	auto next_framebuffer_index = (current_framebuffer_index + 1) % framebuffers.size();
 	FrameBuffer *next_framebuffer = framebuffers[next_framebuffer_index].get();
 
-	next_framebuffer->target->makeCurrent();
+	next_framebuffer->getTarget()->makeCurrent();
 	contents->drawIntoBuffer(next_framebuffer);
-	next_framebuffer->target->swap();
+	next_framebuffer->getTarget()->swap();
 
 	auto user_data = this;
 

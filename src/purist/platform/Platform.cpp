@@ -1,6 +1,7 @@
-#include "Entry.h"
+#include <purist/platform/Platform.h>
+#include <purist/platform/exceptions.h>
+
 #include "Card.h"
-#include "exceptions.h"
 
 #include <cassert>
 #include <cstdio>
@@ -13,13 +14,13 @@
 namespace fs = std::filesystem;
 
 
-Entry::Entry(bool enableOpenGL)
+Platform::Platform(bool enableOpenGL)
         : enableOpenGL(enableOpenGL) {
 
     
 }
 
-void Entry::run(std::shared_ptr<DisplayContentsFactory> contentsFactory) {
+void Platform::run(std::shared_ptr<DisplayContentsFactory> contentsFactory) {
     // Probing dri cards
     std::unique_ptr<Card> ms;
     fs::path dri_path = "/dev/dri";
@@ -53,6 +54,6 @@ void Entry::run(std::shared_ptr<DisplayContentsFactory> contentsFactory) {
     printf("exiting\n");
 }
 
-Entry::~Entry() {
+Platform::~Platform() {
     
 }

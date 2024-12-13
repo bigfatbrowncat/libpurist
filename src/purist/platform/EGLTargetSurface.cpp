@@ -1,6 +1,7 @@
 #include "EGLTargetSurface.h"
 #include "Card.h"
-#include "exceptions.h"
+
+#include <purist/platform/exceptions.h>
 
 #include <cassert>
 #include <cerrno>
@@ -9,7 +10,7 @@
 #include <string>
 
 EGLTargetSurface::EGLTargetSurface(const Card& card) 
-	: TargetSurface(card), width(0), height(0) {
+	: card(card), width(0), height(0) {
 }
 
 void EGLTargetSurface::create(int width, int height) {

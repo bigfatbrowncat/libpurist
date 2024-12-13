@@ -1,6 +1,5 @@
 #include "ModeCrtc.h"
-#include "exceptions.h"
-
+#include <purist/platform/exceptions.h>
 ModeCrtc::ModeCrtc(const Card& card, uint32_t crtc_id) {
 	crtc = drmModeGetCrtc(card.fd, crtc_id);
 	if (!crtc) {

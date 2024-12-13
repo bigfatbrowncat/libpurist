@@ -1,5 +1,7 @@
 #pragma once
 
+#include <purist/platform/interfaces.h>
+
 #include <memory>
 #include <list>
 #include <set>
@@ -12,8 +14,6 @@
 #include <GLES2/gl2ext.h>
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
-
-#include "interfaces.h"
 
 namespace fs = std::filesystem;
 

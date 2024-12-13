@@ -2,7 +2,8 @@
 
 #include "Card.h"
 #include "DumbBufferMapping.h"
-#include "TargetSurface.h"
+
+#include <purist/platform/interfaces.h>
 
 #include <cstdint>
 
@@ -10,6 +11,7 @@ class DumbBufferMapping;
 
 class DumbBufferTargetSurface : public TargetSurface {
 private:
+	const Card& card;
     bool created = false;
 
 	uint32_t stride;
@@ -34,5 +36,8 @@ public:
 	void unlock() override { }
     void create(int width, int height) override;
     void destroy() override;
+
+	uint32_t* getMappedBuffer() const override { return (uint32_t*)mapping->map; }
+
 	virtual ~DumbBufferTargetSurface();
 };

@@ -1,7 +1,6 @@
 #include "DumbBufferMapping.h"
 #include "DumbBufferTargetSurface.h"
-#include "exceptions.h"
-
+#include <purist/platform/exceptions.h>
 #include <drm.h>
 #include <sys/mman.h>
 #include <xf86drm.h>

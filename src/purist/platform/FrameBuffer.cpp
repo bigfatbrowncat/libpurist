@@ -1,8 +1,7 @@
 #include "FrameBuffer.h"
 #include "DumbBufferTargetSurface.h"
 #include "EGLTargetSurface.h"
-#include "exceptions.h"
-
+#include <purist/platform/exceptions.h>
 #include <EGL/egl.h>
 #include <xf86drmMode.h>
 

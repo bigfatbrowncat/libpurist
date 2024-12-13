@@ -1,6 +1,8 @@
 #pragma once
 
-#include "TargetSurface.h"
+#include "Card.h"
+
+#include <purist/platform/interfaces.h>
 
 #include <gbm.h>
 
@@ -18,6 +20,7 @@ private:
 	gbm_bo* gbmBO = nullptr;
 	EGLSurface glSurface = EGL_NO_SURFACE;
 
+	const Card& card;
 	uint32_t width, height;
 
 public:
@@ -33,6 +36,8 @@ public:
 	void lock() override;
 	void swap() override;
 	void unlock() override;
+
+	uint32_t* getMappedBuffer() const override { return nullptr; }
 
 	virtual ~EGLTargetSurface();
 };

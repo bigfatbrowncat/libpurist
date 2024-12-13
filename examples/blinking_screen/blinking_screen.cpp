@@ -1,14 +1,4 @@
-#include "Card.h"
-#include "Entry.h"
-#include "FrameBuffer.h"
-
-#include "DumbBufferTargetSurface.h"
-
-#include "Displays.h"
-
-#include "exceptions.h"
-#include "interfaces.h"
-
+#include <purist/platform/Platform.h>
 
 #define GL_GLEXT_PROTOTYPES 1
 #include <GLES2/gl2.h>
@@ -38,16 +28,16 @@ public:
     }
 
 
-    void drawIntoBuffer(FrameBuffer* buf) override {
+    void drawIntoBuffer(FrameBufferInterface* buf) override {
        	r = next_color(&r_up, r, 20);
         g = next_color(&g_up, g, 10);
         b = next_color(&b_up, b, 5);
 
-		if (buf->enableOpenGL) {
+		if (buf->isOpenGLEnabled()) {
 			glClearColor(1.0f/256*r, 1.0f/256*g, 1.0f/256*b, 1.0f);
 			glClear(GL_COLOR_BUFFER_BIT);
 		} else {
-			auto dumb = std::dynamic_pointer_cast<DumbBufferTargetSurface>(buf->target);
+			auto dumb = buf->getTarget();
 
 			unsigned int j, k, off;
 
@@ -58,7 +48,8 @@ public:
 			for (j = 0; j < h; ++j) {
 				for (k = 0; k < w; ++k) {
 					off = s * j + k * 4;
-					*(uint32_t*)&dumb->mapping->map[off] = c;
+					buf->getTarget()->getMappedBuffer()[off] = c;
+					//*(uint32_t*)&dumb->mapping->map[off] = c;
 				}
 			}
 		}
@@ -84,7 +75,7 @@ int main(int argc, char **argv)
 	try {
 		bool enableOpenGL = true;
 
-		Entry puristEntry(enableOpenGL);
+		Platform puristEntry(enableOpenGL);
 		auto contentsFactory = std::make_shared<ColoredScreenDisplayContentsFactory>();
 		puristEntry.run(contentsFactory);
 

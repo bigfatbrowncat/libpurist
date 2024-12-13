@@ -6,7 +6,7 @@
 #include "ModeConnector.h"
 #include "ModeCrtc.h"
 
-#include "interfaces.h"
+#include <purist/platform/interfaces.h>
 
 #include <xf86drmMode.h>
 #include <array>

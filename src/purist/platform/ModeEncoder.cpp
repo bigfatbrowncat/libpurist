@@ -1,7 +1,6 @@
 #include "ModeEncoder.h"
 #include "ModeConnector.h"
-#include "exceptions.h"
-
+#include <purist/platform/exceptions.h>
 ModeEncoder::ModeEncoder(const ModeConnector& connector) {
 	encoder = drmModeGetEncoder(connector.card.fd, connector.connector->encoder_id);
 	if (!encoder) {

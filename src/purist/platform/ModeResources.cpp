@@ -1,6 +1,5 @@
 #include "ModeResources.h"
-#include "exceptions.h"
-
+#include <purist/platform/exceptions.h>
 ModeResources::ModeResources(const Card& card) /*: card(card)*/ {
 	resources = drmModeGetResources(card.fd);
 	if (!resources) {

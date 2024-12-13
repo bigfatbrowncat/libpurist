@@ -25,8 +25,7 @@
 #include "Displays.h"
 #include "Display.h"
 #include "ModeResources.h"
-#include "exceptions.h"
-
+#include <purist/platform/exceptions.h>
 #include <EGL/egl.h>
 #include <cassert>
 #include <cstring>

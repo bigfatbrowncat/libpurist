@@ -3,9 +3,11 @@
 #include "Card.h"
 #include "DumbBufferTargetSurface.h"
 
+#include <purist/platform/interfaces.h>
+
 class DumbBufferTargetSurface;
 
-class FrameBuffer {
+class FrameBuffer : public FrameBufferInterface {
 private:
     // Forbidding object copying
     FrameBuffer(const FrameBuffer& other) = delete;
@@ -15,13 +17,18 @@ private:
     const Card& card;
 
     static std::shared_ptr<TargetSurface> target_for(bool opengl, const Card& card);
-public:
     const std::shared_ptr<TargetSurface> target;
-	const uint32_t framebuffer_id = 0;
     const bool enableOpenGL;
+    
+public:
+	const uint32_t framebuffer_id = 0;
 
     FrameBuffer(const Card& card, bool opengl);
     void createAndAdd(int width, int height);
+
+    std::shared_ptr<TargetSurface> getTarget() const override { return target; }
+    bool isOpenGLEnabled() const override { return enableOpenGL; }
+
     void removeAndDestroy();
     virtual ~FrameBuffer();
 };

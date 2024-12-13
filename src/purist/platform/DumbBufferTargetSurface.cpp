@@ -1,5 +1,6 @@
 #include "DumbBufferTargetSurface.h"
-#include "exceptions.h"
+
+#include <purist/platform/exceptions.h>
 
 #include <EGL/egl.h>
 #include <gbm.h>
@@ -11,7 +12,7 @@
 #include <string>
 
 DumbBufferTargetSurface::DumbBufferTargetSurface(const Card& card) 
-	: TargetSurface(card), stride(0), size(0), handle(0), width(0), height(0), 
+	: card(card), stride(0), size(0), handle(0), width(0), height(0), 
 	  mapping(std::make_shared<DumbBufferMapping>(card, *this)) {
 }
 

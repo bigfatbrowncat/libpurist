@@ -37,7 +37,7 @@ public:
 	void swap() override;
 	void unlock() override;
 
-	uint32_t* getMappedBuffer() const override { return nullptr; }
+	uint8_t* getMappedBuffer() const override { return nullptr; }
 
 	virtual ~EGLTargetSurface();
 };

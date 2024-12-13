@@ -1,7 +1,11 @@
 #pragma once
 
 #include "interfaces.h"
-#include <purist/platform/exceptions.h>
+#include "exceptions.h"
+
+#define GL_GLEXT_PROTOTYPES 1
+#include <GLES2/gl2.h>
+
 class Platform {
 private:
     // Forbidding object copying

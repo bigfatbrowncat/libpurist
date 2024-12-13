@@ -19,7 +19,7 @@ public:
     virtual void create(int width, int height) = 0;
     virtual void destroy() = 0;
 
-    virtual uint32_t* getMappedBuffer() const = 0;
+    virtual uint8_t* getMappedBuffer() const = 0;
 };
 
 class FrameBufferInterface {

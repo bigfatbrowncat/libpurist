@@ -37,7 +37,7 @@ public:
     void create(int width, int height) override;
     void destroy() override;
 
-	uint32_t* getMappedBuffer() const override { return (uint32_t*)mapping->map; }
+	uint8_t* getMappedBuffer() const override { return (uint8_t*)mapping->map; }
 
 	virtual ~DumbBufferTargetSurface();
 };

@@ -1,9 +1,5 @@
 #include <purist/platform/Platform.h>
 
-#define GL_GLEXT_PROTOTYPES 1
-#include <GLES2/gl2.h>
-
-
 class ColoredScreenDisplayContents : public DisplayContents {
 public:
 	uint8_t r, g, b;
@@ -48,8 +44,7 @@ public:
 			for (j = 0; j < h; ++j) {
 				for (k = 0; k < w; ++k) {
 					off = s * j + k * 4;
-					buf->getTarget()->getMappedBuffer()[off] = c;
-					//*(uint32_t*)&dumb->mapping->map[off] = c;
+					*(uint32_t*)&(buf->getTarget()->getMappedBuffer()[off]) = c;
 				}
 			}
 		}
@@ -73,11 +68,12 @@ public:
 int main(int argc, char **argv)
 {
 	try {
-		bool enableOpenGL = true;
+		bool enableOpenGL = false;
 
-		Platform puristEntry(enableOpenGL);
+		Platform purist(enableOpenGL);
 		auto contentsFactory = std::make_shared<ColoredScreenDisplayContentsFactory>();
-		puristEntry.run(contentsFactory);
+		
+		purist.run(contentsFactory);
 
 		return 0;
 	

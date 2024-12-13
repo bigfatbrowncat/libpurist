@@ -19,7 +19,7 @@ static bool modes_equal(const drmModeModeInfo& mode1, const drmModeModeInfo& mod
 		mode1.clock == mode2.clock;
 }
 
-void Display::setCrtc(FrameBuffer *buf) {
+void Display::setCrtc(FrameBufferImpl *buf) {
 	assert(state != State::CRTC_SET_SUCCESSFULLY);
 
 	if (saved_crtc == nullptr) {
@@ -173,7 +173,7 @@ int Display::setup(const ModeResources& res, const ModeConnector& conn) {
 void Display::draw()
 {
 	auto next_framebuffer_index = (current_framebuffer_index + 1) % framebuffers.size();
-	FrameBuffer *next_framebuffer = framebuffers[next_framebuffer_index].get();
+	FrameBufferImpl *next_framebuffer = framebuffers[next_framebuffer_index].get();
 
 	next_framebuffer->getTarget()->makeCurrent();
 	contents->drawIntoBuffer(next_framebuffer);

@@ -3,6 +3,8 @@
 #include <memory>
 #include <cstdint>
 
+// Implemented on the library side
+
 class TargetSurface {
 public:
 	virtual ~TargetSurface() = default;
@@ -22,19 +24,22 @@ public:
     virtual uint8_t* getMappedBuffer() const = 0;
 };
 
-class FrameBufferInterface {
+class FrameBuffer {
 public:
-    virtual ~FrameBufferInterface() = default;
+    virtual ~FrameBuffer() = default;
 
     virtual std::shared_ptr<TargetSurface> getTarget() const = 0;
     virtual bool isOpenGLEnabled() const = 0;
 };
 
+
+// Implemented on the user side
+
 class DisplayContents {
 public:
     virtual ~DisplayContents() = default;
 
-    virtual void drawIntoBuffer(FrameBufferInterface* buf) = 0;
+    virtual void drawIntoBuffer(FrameBuffer* buf) = 0;
 };
 
 class DisplayContentsFactory {

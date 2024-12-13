@@ -15,10 +15,7 @@ namespace fs = std::filesystem;
 
 
 Platform::Platform(bool enableOpenGL)
-        : enableOpenGL(enableOpenGL) {
-
-    
-}
+        : enableOpenGL(enableOpenGL) { }
 
 void Platform::run(std::shared_ptr<DisplayContentsFactory> contentsFactory) {
     // Probing dri cards

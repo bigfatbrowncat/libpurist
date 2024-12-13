@@ -24,7 +24,7 @@ public:
     }
 
 
-    void drawIntoBuffer(FrameBufferInterface* buf) override {
+    void drawIntoBuffer(FrameBuffer* buf) override {
        	r = next_color(&r_up, r, 20);
         g = next_color(&g_up, g, 10);
         b = next_color(&b_up, b, 5);
@@ -68,7 +68,7 @@ public:
 int main(int argc, char **argv)
 {
 	try {
-		bool enableOpenGL = false;
+		bool enableOpenGL = true;
 
 		Platform purist(enableOpenGL);
 		auto contentsFactory = std::make_shared<ColoredScreenDisplayContentsFactory>();

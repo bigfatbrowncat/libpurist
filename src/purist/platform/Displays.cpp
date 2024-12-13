@@ -93,6 +93,15 @@ int Displays::updateHardwareConfiguration()
 	return 0;
 }
 
+bool Displays::empty() const {
+	return std::list<std::shared_ptr<Display>>::empty();
+}
+
+void Displays::clear() { 
+	std::list<std::shared_ptr<Display>>::clear(); 
+}
+
+
 void Displays::setDisplayContentsFactory(std::shared_ptr<DisplayContentsFactory> factory) {
 	this->displayContentsFactory = factory;
 }

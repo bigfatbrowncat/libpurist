@@ -1,4 +1,4 @@
-#include "FrameBuffer.h"
+#include "FrameBufferImpl.h"
 #include "DumbBufferTargetSurface.h"
 #include "EGLTargetSurface.h"
 #include <purist/platform/exceptions.h>
@@ -9,7 +9,7 @@
 #include <cassert>
 #include <memory>
 
-std::shared_ptr<TargetSurface> FrameBuffer::target_for(bool opengl, const Card& card) {
+std::shared_ptr<TargetSurface> FrameBufferImpl::target_for(bool opengl, const Card& card) {
 	if (opengl) {
 		return std::make_shared<EGLTargetSurface>(card);
 	} else {
@@ -17,12 +17,12 @@ std::shared_ptr<TargetSurface> FrameBuffer::target_for(bool opengl, const Card& 
 	}
 }
 
-FrameBuffer::FrameBuffer(const Card& card, bool opengl)
+FrameBufferImpl::FrameBufferImpl(const Card& card, bool opengl)
 	: card(card), target(target_for(opengl, card)), enableOpenGL(opengl)
 {
 }
 
-void FrameBuffer::createAndAdd(int width, int height) {
+void FrameBufferImpl::createAndAdd(int width, int height) {
 	assert(!added);
 	target->create(width, height);
 
@@ -39,7 +39,7 @@ void FrameBuffer::createAndAdd(int width, int height) {
 	added = true;
 }
 
-void FrameBuffer::removeAndDestroy() {
+void FrameBufferImpl::removeAndDestroy() {
 	assert(added);
 
 	int ret = drmModeRmFB(card.fd, framebuffer_id);
@@ -53,7 +53,7 @@ void FrameBuffer::removeAndDestroy() {
 	added = false;
 }
 
-FrameBuffer::~FrameBuffer() {
+FrameBufferImpl::~FrameBufferImpl() {
 	if (added) {
 		removeAndDestroy();
 	}

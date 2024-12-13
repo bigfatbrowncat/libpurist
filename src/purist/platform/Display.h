@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Card.h"
-#include "FrameBuffer.h"
+#include "FrameBufferImpl.h"
 #include "ModeResources.h"
 #include "ModeConnector.h"
 #include "ModeCrtc.h"
@@ -27,7 +27,7 @@ private:
     const Displays& displays;
 
 	unsigned int current_framebuffer_index = 0;
-	std::array<std::unique_ptr<FrameBuffer>, 2> framebuffers;
+	std::array<std::unique_ptr<FrameBufferImpl>, 2> framebuffers;
 
 	std::shared_ptr<drmModeModeInfo> mode = nullptr;
 	
@@ -44,15 +44,15 @@ private:
 
 	uint32_t connector_id = 0;
 
-    void setCrtc(FrameBuffer *buf);
+    void setCrtc(FrameBufferImpl *buf);
     void draw();
 public:
 
     Display(const Card& card, const Displays& displays, uint32_t connector_id, bool opengl)
             : card(card), displays(displays), 
               framebuffers { 
-                std::make_unique<FrameBuffer>(card, opengl), 
-                std::make_unique<FrameBuffer>(card, opengl) 
+                std::make_unique<FrameBufferImpl>(card, opengl), 
+                std::make_unique<FrameBufferImpl>(card, opengl) 
               }, 
               connector_id(connector_id) {}
     virtual ~Display();

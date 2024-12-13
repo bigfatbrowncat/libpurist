@@ -28,8 +28,8 @@ add_library(purist STATIC
     src/purist/platform/Platform.cpp
     src/purist/platform/DumbBufferMapping.cpp
     src/purist/platform/DumbBufferMapping.h
-    src/purist/platform/FrameBuffer.cpp
-    src/purist/platform/FrameBuffer.h
+    src/purist/platform/FrameBufferImpl.cpp
+    src/purist/platform/FrameBufferImpl.h
     src/purist/platform/ModeConnector.cpp
     src/purist/platform/ModeConnector.h
     src/purist/platform/ModeCrtc.cpp

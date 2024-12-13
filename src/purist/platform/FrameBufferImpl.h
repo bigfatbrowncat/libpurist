@@ -7,11 +7,11 @@
 
 class DumbBufferTargetSurface;
 
-class FrameBuffer : public FrameBufferInterface {
+class FrameBufferImpl : public FrameBuffer {
 private:
     // Forbidding object copying
-    FrameBuffer(const FrameBuffer& other) = delete;
-    FrameBuffer& operator = (const FrameBuffer& other) = delete;
+    FrameBufferImpl(const FrameBufferImpl& other) = delete;
+    FrameBufferImpl& operator = (const FrameBufferImpl& other) = delete;
 
     bool added = false;
     const Card& card;
@@ -23,12 +23,12 @@ private:
 public:
 	const uint32_t framebuffer_id = 0;
 
-    FrameBuffer(const Card& card, bool opengl);
+    FrameBufferImpl(const Card& card, bool opengl);
     void createAndAdd(int width, int height);
 
     std::shared_ptr<TargetSurface> getTarget() const override { return target; }
     bool isOpenGLEnabled() const override { return enableOpenGL; }
 
     void removeAndDestroy();
-    virtual ~FrameBuffer();
+    virtual ~FrameBufferImpl();
 };

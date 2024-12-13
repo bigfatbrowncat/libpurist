@@ -1,8 +1,7 @@
 #pragma once
 
 #include "Card.h"
-
-#include <purist/platform/interfaces.h>
+#include "TargetSurface.h"
 
 #include <gbm.h>
 

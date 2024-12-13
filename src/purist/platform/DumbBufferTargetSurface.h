@@ -3,7 +3,7 @@
 #include "Card.h"
 #include "DumbBufferMapping.h"
 
-#include <purist/platform/interfaces.h>
+#include "TargetSurface.h"
 
 #include <cstdint>
 

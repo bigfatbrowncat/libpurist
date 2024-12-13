@@ -1,6 +1,6 @@
 #include "FrameBufferImpl.h"
-#include "DumbBufferTargetSurface.h"
-#include "EGLTargetSurface.h"
+#include "DumbBufferTargetSurfaceImpl.h"
+#include "EGLTargetSurfaceImpl.h"
 #include <purist/platform/exceptions.h>
 #include <EGL/egl.h>
 #include <xf86drmMode.h>
@@ -11,9 +11,9 @@
 
 std::shared_ptr<TargetSurfaceBackface> FrameBufferImpl::target_for(bool opengl, const Card& card) {
 	if (opengl) {
-		return std::make_shared<EGLTargetSurface>(card);
+		return std::make_shared<EGLTargetSurfaceImpl>(card);
 	} else {
-		return std::make_shared<DumbBufferTargetSurface>(card);
+		return std::make_shared<DumbBufferTargetSurfaceImpl>(card);
 	}
 }
 

@@ -9,7 +9,7 @@
 
 class DumbBufferMapping;
 
-class DumbBufferTargetSurface : public TargetSurfaceBackface {
+class DumbBufferTargetSurfaceImpl : public TargetSurfaceBackface {
 private:
 	const Card& card;
     bool created = false;
@@ -29,7 +29,7 @@ public:
 
     const std::shared_ptr<DumbBufferMapping> mapping;
 
-	DumbBufferTargetSurface(const Card& card);
+	DumbBufferTargetSurfaceImpl(const Card& card);
 	void makeCurrent() override { }
 	void lock() override { }
 	void swap() override { }
@@ -39,5 +39,5 @@ public:
 
 	uint8_t* getMappedBuffer() const override { return (uint8_t*)mapping->map; }
 
-	virtual ~DumbBufferTargetSurface();
+	virtual ~DumbBufferTargetSurfaceImpl();
 };

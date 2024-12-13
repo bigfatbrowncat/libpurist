@@ -21,10 +21,10 @@ add_library(purist STATIC
     src/purist/platform/Display.h
     src/purist/platform/Displays.cpp
     src/purist/platform/Displays.h
-    src/purist/platform/DumbBufferTargetSurface.cpp
-    src/purist/platform/DumbBufferTargetSurface.h
-    src/purist/platform/EGLTargetSurface.cpp
-    src/purist/platform/EGLTargetSurface.h
+    src/purist/platform/DumbBufferTargetSurfaceImpl.cpp
+    src/purist/platform/DumbBufferTargetSurfaceImpl.h
+    src/purist/platform/EGLTargetSurfaceImpl.cpp
+    src/purist/platform/EGLTargetSurfaceImpl.h
     src/purist/platform/Platform.cpp
     src/purist/platform/DumbBufferMapping.cpp
     src/purist/platform/DumbBufferMapping.h

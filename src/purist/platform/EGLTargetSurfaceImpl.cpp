@@ -1,4 +1,4 @@
-#include "EGLTargetSurface.h"
+#include "EGLTargetSurfaceImpl.h"
 #include "Card.h"
 
 #include <purist/platform/exceptions.h>
@@ -9,11 +9,11 @@
 #include <cstring>
 #include <string>
 
-EGLTargetSurface::EGLTargetSurface(const Card& card) 
+EGLTargetSurfaceImpl::EGLTargetSurfaceImpl(const Card& card) 
 	: card(card), width(0), height(0) {
 }
 
-void EGLTargetSurface::create(int width, int height) {
+void EGLTargetSurfaceImpl::create(int width, int height) {
 	this->width = width;
 	this->height = height;
 
@@ -33,28 +33,28 @@ void EGLTargetSurface::create(int width, int height) {
 	created = true;
 }
 
-uint32_t EGLTargetSurface::getWidth() const {
+uint32_t EGLTargetSurfaceImpl::getWidth() const {
 	return width;
 }
 
-uint32_t EGLTargetSurface::getHeight() const {
+uint32_t EGLTargetSurfaceImpl::getHeight() const {
 	return height;
 }
 
-uint32_t EGLTargetSurface::getStride() const {
+uint32_t EGLTargetSurfaceImpl::getStride() const {
 	assert (gbmBO != nullptr);
 	return gbm_bo_get_stride(gbmBO);
 	
 }
 
-uint32_t EGLTargetSurface::getHandle() const {
+uint32_t EGLTargetSurfaceImpl::getHandle() const {
 	assert (gbmBO != nullptr);
 	return gbm_bo_get_handle(gbmBO).u32;
 	
 }
 
 
-void EGLTargetSurface::destroy() {
+void EGLTargetSurfaceImpl::destroy() {
 	assert(created);
 	assert(gbmSurface != nullptr);
 	assert(glSurface != EGL_NO_SURFACE);
@@ -64,24 +64,24 @@ void EGLTargetSurface::destroy() {
 	created = false;
 }
 
-EGLTargetSurface::~EGLTargetSurface() {
+EGLTargetSurfaceImpl::~EGLTargetSurfaceImpl() {
 	if (created) {
 		destroy();
 	}
 }
 
-void EGLTargetSurface::makeCurrent() {
+void EGLTargetSurfaceImpl::makeCurrent() {
     eglMakeCurrent(card.glDisplay, glSurface, glSurface, card.glContext);
 }
 
-void EGLTargetSurface::lock() {
+void EGLTargetSurfaceImpl::lock() {
     gbmBO = gbm_surface_lock_front_buffer(gbmSurface);
 }
 
-void EGLTargetSurface::swap() {
+void EGLTargetSurfaceImpl::swap() {
     eglSwapBuffers(card.glDisplay, glSurface);	
 }
 
-void EGLTargetSurface::unlock() {
+void EGLTargetSurfaceImpl::unlock() {
     gbm_surface_release_buffer(gbmSurface, gbmBO);
 }

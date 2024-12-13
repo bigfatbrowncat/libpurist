@@ -1,18 +1,18 @@
 #pragma once
 
 #include "Card.h"
-#include "DumbBufferTargetSurface.h"
+#include "DumbBufferTargetSurfaceImpl.h"
 
 #include "TargetSurfaceBackface.h"
 
-class DumbBufferTargetSurface;
+class DumbBufferTargetSurfaceImpl;
 
 class FrameBufferImpl : public FrameBuffer {
-private:
     // Forbidding object copying
     FrameBufferImpl(const FrameBufferImpl& other) = delete;
     FrameBufferImpl& operator = (const FrameBufferImpl& other) = delete;
 
+private:
     bool added = false;
     const Card& card;
 

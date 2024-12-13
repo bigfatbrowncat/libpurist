@@ -2,7 +2,7 @@
 
 #include "Card.h"
 
-class DumbBufferTargetSurface;
+class DumbBufferTargetSurfaceImpl;
 
 class DumbBufferMapping {
 private:
@@ -11,12 +11,12 @@ private:
     DumbBufferMapping& operator = (const DumbBufferMapping& other) = delete;
 
     const Card& card;
-    const DumbBufferTargetSurface& dumb;
+    const DumbBufferTargetSurfaceImpl& dumb;
 
 public:
     uint8_t const* map = nullptr;
 
-    DumbBufferMapping(const Card& card, const DumbBufferTargetSurface& dumb);
+    DumbBufferMapping(const Card& card, const DumbBufferTargetSurfaceImpl& dumb);
     void doMapping();
     void doUnmapping();
     virtual ~DumbBufferMapping();

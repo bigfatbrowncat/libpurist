@@ -1,4 +1,4 @@
-#include "DumbBufferTargetSurface.h"
+#include "DumbBufferTargetSurfaceImpl.h"
 
 #include <purist/platform/exceptions.h>
 
@@ -11,12 +11,12 @@
 #include <cerrno>
 #include <string>
 
-DumbBufferTargetSurface::DumbBufferTargetSurface(const Card& card) 
+DumbBufferTargetSurfaceImpl::DumbBufferTargetSurfaceImpl(const Card& card) 
 	: card(card), stride(0), size(0), handle(0), width(0), height(0), 
 	  mapping(std::make_shared<DumbBufferMapping>(card, *this)) {
 }
 
-void DumbBufferTargetSurface::create(int width, int height) {
+void DumbBufferTargetSurfaceImpl::create(int width, int height) {
 	struct drm_mode_create_dumb creq;
 	/* create dumb buffer */
 	memset(&creq, 0, sizeof(creq));
@@ -43,7 +43,7 @@ void DumbBufferTargetSurface::create(int width, int height) {
 	memset((void*)this->mapping->map, 0, this->size);
 }
 
-void DumbBufferTargetSurface::destroy() {
+void DumbBufferTargetSurfaceImpl::destroy() {
 	assert(created);
 
 	mapping->doUnmapping();
@@ -59,7 +59,7 @@ void DumbBufferTargetSurface::destroy() {
 	created = false;
 }
 
-DumbBufferTargetSurface::~DumbBufferTargetSurface() {
+DumbBufferTargetSurfaceImpl::~DumbBufferTargetSurfaceImpl() {
 	if (created) {
 		destroy();
 	}

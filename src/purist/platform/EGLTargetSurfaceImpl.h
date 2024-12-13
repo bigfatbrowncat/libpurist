@@ -11,7 +11,7 @@
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 
-class EGLTargetSurface : public TargetSurfaceBackface {
+class EGLTargetSurfaceImpl : public TargetSurfaceBackface {
 private:
 	bool created = false;
 
@@ -28,7 +28,7 @@ public:
 	uint32_t getStride() const override;
 	uint32_t getHandle() const override;
 
-	EGLTargetSurface(const Card& card);
+	EGLTargetSurfaceImpl(const Card& card);
     void create(int width, int height) override;
 	void makeCurrent() override;
     void destroy() override;
@@ -38,5 +38,5 @@ public:
 
 	uint8_t* getMappedBuffer() const override { return nullptr; }
 
-	virtual ~EGLTargetSurface();
+	virtual ~EGLTargetSurfaceImpl();
 };

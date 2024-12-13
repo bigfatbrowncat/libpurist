@@ -46,8 +46,8 @@ private:
 
     void setCrtc(FrameBufferImpl *buf);
     void draw();
-public:
 
+public:
     Display(const Card& card, const Displays& displays, uint32_t connector_id, bool opengl)
             : card(card), displays(displays), 
               framebuffers { 
@@ -62,8 +62,6 @@ public:
     void updateInDrawingLoop(DisplayContentsFactory& factory);
     uint32_t getConnectorId() const { return connector_id; }
     uint32_t getCrtcId() const { return crtc_id; }
-
-    //void swap_buffers();
 
     static void modeset_page_flip_event(int fd, unsigned int frame, unsigned int sec, unsigned int usec, void *data);
 };

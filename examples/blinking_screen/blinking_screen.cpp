@@ -23,7 +23,7 @@ public:
         return next;
     }
 
-    void drawIntoBuffer(TargetSurfaceInterface& target) override {
+    void drawIntoBuffer(TargetSurface& target) override {
        	r = next_color(&r_up, r, 20);
         g = next_color(&g_up, g, 10);
         b = next_color(&b_up, b, 5);

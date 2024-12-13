@@ -38,7 +38,7 @@ add_library(purist STATIC
     src/purist/platform/ModeEncoder.h
     src/purist/platform/ModeResources.cpp
     src/purist/platform/ModeResources.h
-    src/purist/platform/TargetSurface.h
+    src/purist/platform/TargetSurfaceBackface.h
 )
 
 target_compile_features(purist PUBLIC cxx_std_17)

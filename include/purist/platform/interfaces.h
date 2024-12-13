@@ -5,9 +5,9 @@
 
 // Implemented on the library side
 
-class TargetSurfaceInterface {
+class TargetSurface {
 public:
-	virtual ~TargetSurfaceInterface() = default;
+	virtual ~TargetSurface() = default;
 
 	virtual uint32_t getWidth() const = 0;
 	virtual uint32_t getHeight() const = 0;
@@ -21,7 +21,7 @@ class FrameBuffer {
 public:
     virtual ~FrameBuffer() = default;
 
-    virtual std::shared_ptr<TargetSurfaceInterface> getTarget() const = 0;
+    virtual std::shared_ptr<TargetSurface> getTarget() const = 0;
     virtual bool isOpenGLEnabled() const = 0;
 };
 
@@ -32,7 +32,7 @@ class DisplayContents {
 public:
     virtual ~DisplayContents() = default;
 
-    virtual void drawIntoBuffer(TargetSurfaceInterface& target) = 0;
+    virtual void drawIntoBuffer(TargetSurface& target) = 0;
 };
 
 class DisplayContentsFactory {

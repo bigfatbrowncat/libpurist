@@ -3,7 +3,7 @@
 #include "Card.h"
 #include "DumbBufferTargetSurface.h"
 
-#include <purist/platform/interfaces.h>
+#include "TargetSurfaceBackface.h"
 
 class DumbBufferTargetSurface;
 
@@ -16,8 +16,8 @@ private:
     bool added = false;
     const Card& card;
 
-    static std::shared_ptr<TargetSurface> target_for(bool opengl, const Card& card);
-    const std::shared_ptr<TargetSurface> target;
+    static std::shared_ptr<TargetSurfaceBackface> target_for(bool opengl, const Card& card);
+    const std::shared_ptr<TargetSurfaceBackface> target;
     const bool enableOpenGL;
     
 public:
@@ -26,7 +26,7 @@ public:
     FrameBufferImpl(const Card& card, bool opengl);
     void createAndAdd(int width, int height);
 
-    std::shared_ptr<TargetSurfaceInterface> getTarget() const override { return target; }
+    std::shared_ptr<TargetSurface> getTarget() const override { return target; }
     bool isOpenGLEnabled() const override { return enableOpenGL; }
 
     void removeAndDestroy();

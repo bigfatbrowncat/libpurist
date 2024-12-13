@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Card.h"
-#include "TargetSurface.h"
+#include "TargetSurfaceBackface.h"
 
 #include <gbm.h>
 
@@ -11,7 +11,7 @@
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 
-class EGLTargetSurface : public TargetSurface {
+class EGLTargetSurface : public TargetSurfaceBackface {
 private:
 	bool created = false;
 

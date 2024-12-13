@@ -2,9 +2,9 @@
 
 #include <purist/platform/interfaces.h>
 
-class TargetSurface : public TargetSurfaceInterface {
+class TargetSurfaceBackface : public TargetSurface {
 public:
-	virtual ~TargetSurface() = default;
+	virtual ~TargetSurfaceBackface() = default;
 
 	virtual void makeCurrent() = 0;
 	virtual void lock() = 0;

@@ -3,13 +3,13 @@
 #include "Card.h"
 #include "DumbBufferMapping.h"
 
-#include "TargetSurface.h"
+#include "TargetSurfaceBackface.h"
 
 #include <cstdint>
 
 class DumbBufferMapping;
 
-class DumbBufferTargetSurface : public TargetSurface {
+class DumbBufferTargetSurface : public TargetSurfaceBackface {
 private:
 	const Card& card;
     bool created = false;

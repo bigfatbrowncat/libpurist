@@ -9,7 +9,7 @@
 #include <cassert>
 #include <memory>
 
-std::shared_ptr<TargetSurface> FrameBufferImpl::target_for(bool opengl, const Card& card) {
+std::shared_ptr<TargetSurfaceBackface> FrameBufferImpl::target_for(bool opengl, const Card& card) {
 	if (opengl) {
 		return std::make_shared<EGLTargetSurface>(card);
 	} else {

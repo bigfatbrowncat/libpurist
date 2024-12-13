@@ -23,6 +23,8 @@ add_executable(purist
     DumbBufferTargetSurface.h
     EGLTargetSurface.cpp
     EGLTargetSurface.h
+    Entry.cpp
+    Entry.h
     DumbBufferMapping.cpp
     DumbBufferMapping.h
     FrameBuffer.cpp

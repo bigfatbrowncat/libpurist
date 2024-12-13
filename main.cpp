@@ -1,4 +1,5 @@
 #include "Card.h"
+#include "Entry.h"
 #include "FrameBuffer.h"
 
 #include "DumbBufferTargetSurface.h"
@@ -8,18 +9,10 @@
 #include "exceptions.h"
 #include "interfaces.h"
 
-#include <cassert>
-#include <cstdio>
-#include <cstring>
-#include <memory>
 
 #define GL_GLEXT_PROTOTYPES 1
 #include <GLES2/gl2.h>
 
-#include <filesystem>
-#include <iostream>
-
-namespace fs = std::filesystem;
 
 class ColoredScreenDisplayContents : public DisplayContents {
 public:
@@ -91,50 +84,10 @@ int main(int argc, char **argv)
 	try {
 		bool enableOpenGL = true;
 
-		// Probing dri cards
-		std::unique_ptr<Card> ms;
-		fs::path dri_path = "/dev/dri";
-		std::string card_path;
-    	for (const auto & entry : fs::directory_iterator(dri_path)) {
-			card_path = entry.path();
-			if (card_path.find(std::string(dri_path / "card")) == 0) {
-				try {
-					ms = std::make_unique<Card>(card_path, enableOpenGL);
-					ms->initialize();
-				} catch (const errcode_exception& ex) {
-					if (ex.errcode == EOPNOTSUPP) {
-						std::cout << "DRM not supported at " << card_path << std::endl;
-					} else {
-						std::cout << "DRM can not be initialized at " << card_path << ": " << strerror(errno) << std::endl;
-					}
-					ms = nullptr;
-					continue;
-				}
-				break; // Success
-			}
-		}
-		if (ms == nullptr) {
-			std::cerr << "Can't find a card supporting DRM." << std::endl;
-			return 1;
-		}
-		std::cout << "Using " << card_path << std::endl;
+		Entry puristEntry(enableOpenGL);
+		auto contentsFactory = std::make_shared<ColoredScreenDisplayContentsFactory>();
+		puristEntry.run(contentsFactory);
 
-		// const char *card;
-
-		// /* check which DRM device to open */
-		// if (argc > 1)
-		// 	card = argv[1];
-		// else
-		// 	card = "/dev/dri/card0";
-
-		// fprintf(stderr, "using card '%s'\n", card);
-
-	
-		ms->setDisplayContentsFactory(std::make_shared<ColoredScreenDisplayContentsFactory>());
-		ms->runDrawingLoop();
-		ms = nullptr;
-
-		printf("exiting\n");
 		return 0;
 	
 	} catch (const errcode_exception& ex) {

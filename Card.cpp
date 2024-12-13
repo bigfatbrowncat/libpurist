@@ -24,6 +24,7 @@
 #include "Card.h"
 #include "Displays.h"
 #include "Display.h"
+#include "ModeResources.h"
 #include "exceptions.h"
 
 #include <EGL/egl.h>
@@ -38,20 +39,28 @@
 
 #include <vector>
 
+Card::Card(const fs::path& node, bool enableOpenGL) 
+	: displays(std::make_shared<Displays>(*this, enableOpenGL)), 
+	  fd(-1), enableOpenGL(enableOpenGL), node(node) { }
 
-Card::Card(const char *node, bool enableOpenGL) 
-	: displays(std::make_shared<Displays>(*this, enableOpenGL)), fd(-1), enableOpenGL(enableOpenGL)
+
+void Card::initialize()
 {
 	int ret;
 	uint64_t has_dumb;
 
 	// Opening the GPU file
-	int fd = open(node, O_RDWR | O_CLOEXEC);
+	int fd = open(node.c_str(), O_RDWR | O_CLOEXEC);
 	if (fd < 0) {
 		ret = -errno;
 		throw errcode_exception(ret, "cannot open '" + std::string(node) + "'");
 	}
+
+	*const_cast<int*>(&this->fd) = fd;
 	
+	// Probing for DRM
+	ModeResources resProbe(*this);
+
 	// Initializing GBM
 	if (enableOpenGL) {
 		gbmDevice = gbm_create_device(fd);
@@ -66,8 +75,9 @@ Card::Card(const char *node, bool enableOpenGL)
 		}
 	}
 
-	*const_cast<int*>(&this->fd) = fd;
 }
+
+
 
 static int match_config_to_visual(EGLDisplay egl_display, EGLint visual_id,
                                   const std::vector<EGLConfig>& configs, int count) {

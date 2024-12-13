@@ -8,7 +8,6 @@ add_compile_options(-Wall -Werror)
 add_link_options($<$<CONFIG:DEBUG>:-fsanitize=address,undefined>)
 add_link_options($<$<CONFIG:DEBUG>:-fsanitize-recover=all>)
 
-
 project(purist)
 
 add_executable(purist 
@@ -39,5 +38,6 @@ add_executable(purist
     ModeResources.h
 )
 
+target_compile_features(purist PUBLIC cxx_std_17)
 target_include_directories(purist PRIVATE /usr/include/libdrm)
 target_link_libraries(purist drm gbm EGL GL)

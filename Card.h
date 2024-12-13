@@ -3,6 +3,7 @@
 #include <memory>
 #include <list>
 #include <set>
+#include <filesystem>
 
 #include <gbm.h>
 
@@ -13,6 +14,8 @@
 #include <EGL/eglext.h>
 
 #include "interfaces.h"
+
+namespace fs = std::filesystem;
 
 class Displays;
 
@@ -35,8 +38,11 @@ public:
     
     const int fd;
     const bool enableOpenGL = true;
+    const fs::path node;
 
-    Card(const char *node, bool enableOpenGL);
+    Card(const fs::path& node, bool enableOpenGL);
+    void initialize();
+
     virtual ~Card();
 
     void runDrawingLoop();

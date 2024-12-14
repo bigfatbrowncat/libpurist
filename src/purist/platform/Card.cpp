@@ -23,7 +23,7 @@
 
 #include "Card.h"
 #include "Displays.h"
-#include "Display.h"
+#include "DisplayImpl.h"
 #include "ModeResources.h"
 #include <purist/platform/exceptions.h>
 #include <EGL/egl.h>
@@ -37,6 +37,8 @@
 #include <xf86drm.h>
 
 #include <vector>
+
+namespace purist::platform {
 
 Card::Card(const fs::path& node, bool enableOpenGL) 
 	: displays(std::make_shared<Displays>(*this, enableOpenGL)), 
@@ -173,9 +175,7 @@ int Card::initGL()
  * a blocking operation, but it's mostly just <16ms so we can ignore that.
  */
 Card::~Card() {
-	//displays->clear();
 	displays = nullptr;
-	//std::const_pointer_cast<Displays>(displays) = nullptr;
 
     // Closing the video card file
 	close(fd);
@@ -257,7 +257,7 @@ void Card::runDrawingLoop()
 	/* Set this to only the latest version you support. Version 2
 	 * introduced the page_flip_handler, so we use that. */
 	ev.version = 2;
-	ev.page_flip_handler = Display::modeset_page_flip_event; //  unsigned int frame, unsigned int sec, unsigned int usec, void *data
+	ev.page_flip_handler = DisplayImpl::modeset_page_flip_event; //  unsigned int frame, unsigned int sec, unsigned int usec, void *data
 
 
 	/* prepare all connectors and CRTCs */
@@ -340,3 +340,5 @@ void Card::setDisplayContentsFactory(std::shared_ptr<DisplayContentsFactory> fac
  *  - Hosted on http://github.com/dvdhrm/docs
  *  - Written by David Rheinsberg <david.rheinsberg@gmail.com>
  */
+
+}

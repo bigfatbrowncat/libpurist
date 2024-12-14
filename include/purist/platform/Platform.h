@@ -6,6 +6,8 @@
 #define GL_GLEXT_PROTOTYPES 1
 #include <GLES2/gl2.h>
 
+namespace purist::platform {
+
 class Platform {
 private:
     // Forbidding object copying
@@ -20,3 +22,5 @@ public:
     void run(std::shared_ptr<DisplayContentsFactory> contentsFactory);
     ~Platform();
 };
+
+}

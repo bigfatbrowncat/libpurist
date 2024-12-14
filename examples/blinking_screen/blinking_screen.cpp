@@ -1,6 +1,6 @@
 #include <purist/platform/Platform.h>
 
-class ColoredScreenDisplayContents : public DisplayContents {
+class ColoredScreenDisplayContents : public purist::platform::DisplayContents {
 public:
 	uint8_t r, g, b;
 	bool r_up, g_up, b_up;
@@ -23,18 +23,17 @@ public:
         return next;
     }
 
-    void drawIntoBuffer(TargetSurface& target) override {
+    void drawIntoBuffer(purist::platform::TargetSurface& target) override {
        	r = next_color(&r_up, r, 20);
         g = next_color(&g_up, g, 10);
         b = next_color(&b_up, b, 5);
 
 		if (!target.getMappedBuffer()) {
-
-		//if (buf->isOpenGLEnabled()) {
+			
 			glClearColor(1.0f/256*r, 1.0f/256*g, 1.0f/256*b, 1.0f);
 			glClear(GL_COLOR_BUFFER_BIT);
+
 		} else {
-			//auto dumb = buf->getTarget();
 
 			unsigned int j, k, off;
 
@@ -52,9 +51,9 @@ public:
     }
 };
 
-class ColoredScreenDisplayContentsFactory : public DisplayContentsFactory {
+class ColoredScreenDisplayContentsFactory : public purist::platform::DisplayContentsFactory {
 public:
-	std::shared_ptr<DisplayContents> createDisplayContents() {
+	std::shared_ptr<purist::platform::DisplayContents> createDisplayContents(purist::platform::Display& display) {
 		auto contents = std::make_shared<ColoredScreenDisplayContents>();
 		contents->r = rand() % 0xff;
 		contents->g = rand() % 0xff;
@@ -71,14 +70,14 @@ int main(int argc, char **argv)
 	try {
 		bool enableOpenGL = true;
 
-		Platform purist(enableOpenGL);
+		purist::platform::Platform purist(enableOpenGL);
 		auto contentsFactory = std::make_shared<ColoredScreenDisplayContentsFactory>();
 		
 		purist.run(contentsFactory);
 
 		return 0;
 	
-	} catch (const errcode_exception& ex) {
+	} catch (const purist::platform::errcode_exception& ex) {
 		fprintf(stderr, "%s\n", ex.what());
 		return ex.errcode;
 	}

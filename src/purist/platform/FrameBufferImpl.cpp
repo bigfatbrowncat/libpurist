@@ -9,6 +9,8 @@
 #include <cassert>
 #include <memory>
 
+namespace purist::platform {
+
 std::shared_ptr<TargetSurfaceBackface> FrameBufferImpl::target_for(bool opengl, const Card& card) {
 	if (opengl) {
 		return std::make_shared<EGLTargetSurfaceImpl>(card);
@@ -59,3 +61,4 @@ FrameBufferImpl::~FrameBufferImpl() {
 	}
 }
 
+}

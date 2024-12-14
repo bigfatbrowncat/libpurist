@@ -17,6 +17,8 @@
 
 namespace fs = std::filesystem;
 
+namespace purist::platform {
+
 class Displays;
 
 class Card {
@@ -52,3 +54,5 @@ public:
     void setDisplayContentsFactory(std::shared_ptr<DisplayContentsFactory> factory);
 
 };
+
+}

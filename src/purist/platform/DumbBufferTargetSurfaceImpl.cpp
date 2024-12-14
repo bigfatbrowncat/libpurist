@@ -11,6 +11,8 @@
 #include <cerrno>
 #include <string>
 
+namespace purist::platform {
+
 DumbBufferTargetSurfaceImpl::DumbBufferTargetSurfaceImpl(const Card& card) 
 	: card(card), stride(0), size(0), handle(0), width(0), height(0), 
 	  mapping(std::make_shared<DumbBufferMapping>(card, *this)) {
@@ -63,4 +65,6 @@ DumbBufferTargetSurfaceImpl::~DumbBufferTargetSurfaceImpl() {
 	if (created) {
 		destroy();
 	}
+}
+
 }

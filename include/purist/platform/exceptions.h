@@ -2,6 +2,8 @@
 
 #include <stdexcept>
 
+namespace purist::platform {
+
 class errcode_exception : public std::runtime_error {
 public:
     const int errcode;
@@ -18,3 +20,4 @@ public:
     cant_get_connector_exception(int errcode, const std::string& message) : errcode_exception(errcode, message) { }
 };
 
+}

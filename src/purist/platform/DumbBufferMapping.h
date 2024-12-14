@@ -2,6 +2,8 @@
 
 #include "Card.h"
 
+namespace purist::platform {
+
 class DumbBufferTargetSurfaceImpl;
 
 class DumbBufferMapping {
@@ -21,3 +23,5 @@ public:
     void doUnmapping();
     virtual ~DumbBufferMapping();
 };
+
+}

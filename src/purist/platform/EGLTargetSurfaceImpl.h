@@ -11,6 +11,8 @@
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 
+namespace purist::platform {
+
 class EGLTargetSurfaceImpl : public TargetSurfaceBackface {
 private:
 	bool created = false;
@@ -40,3 +42,5 @@ public:
 
 	virtual ~EGLTargetSurfaceImpl();
 };
+
+}

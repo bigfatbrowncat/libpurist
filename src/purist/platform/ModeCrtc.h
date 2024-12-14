@@ -4,6 +4,8 @@
 
 #include <xf86drmMode.h>
 
+namespace purist::platform {
+
 class ModeCrtc {
 private:
     // Forbidding object copying
@@ -16,3 +18,5 @@ public:
 	explicit ModeCrtc(const Card& card, uint32_t crtc_id);
 	virtual ~ModeCrtc();
 };
+
+}

@@ -5,6 +5,8 @@
 
 #include <xf86drmMode.h>
 
+namespace purist::platform {
+
 class ModeConnector {
 private:
     // Forbidding object copying
@@ -24,3 +26,5 @@ public:
 	virtual ~ModeConnector();
 
 };
+
+}

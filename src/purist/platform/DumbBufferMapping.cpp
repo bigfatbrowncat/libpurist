@@ -7,6 +7,8 @@
 
 #include <cstring>
 
+namespace purist::platform {
+
 DumbBufferMapping::DumbBufferMapping(const Card& card, const DumbBufferTargetSurfaceImpl& dumb)
 		: card(card), /*buf(buf),*/ dumb(dumb), map((uint8_t*)MAP_FAILED) { }
 
@@ -38,4 +40,6 @@ void DumbBufferMapping::doUnmapping() {
 
 DumbBufferMapping::~DumbBufferMapping() {
 	doUnmapping();
+}
+
 }

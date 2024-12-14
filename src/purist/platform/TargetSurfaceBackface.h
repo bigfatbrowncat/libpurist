@@ -2,6 +2,8 @@
 
 #include <purist/platform/interfaces.h>
 
+namespace purist::platform {
+
 class TargetSurfaceBackface : public TargetSurface {
 public:
 	virtual ~TargetSurfaceBackface() = default;
@@ -13,3 +15,5 @@ public:
     virtual void create(int width, int height) = 0;
     virtual void destroy() = 0;
 };
+
+}

@@ -11,10 +11,12 @@
 #include <xf86drmMode.h>
 #include <array>
 
-class Display {
+namespace purist::platform {
+
+class DisplayImpl : public Display {
     // Forbidding object copying
-    Display(const Display& other) = delete;
-    Display& operator = (const Display& other) = delete;
+    DisplayImpl(const DisplayImpl& other) = delete;
+    DisplayImpl& operator = (const DisplayImpl& other) = delete;
 
 private:
     enum class State { 
@@ -48,21 +50,22 @@ private:
     void draw();
 
 public:
-    Display(const Card& card, const Displays& displays, uint32_t connector_id, bool opengl)
+    DisplayImpl(const Card& card, const Displays& displays, uint32_t connector_id, bool opengl)
             : card(card), displays(displays), 
               framebuffers { 
                 std::make_unique<FrameBufferImpl>(card, opengl), 
                 std::make_unique<FrameBufferImpl>(card, opengl) 
               }, 
               connector_id(connector_id) {}
-    virtual ~Display();
+    virtual ~DisplayImpl();
 
     int connectDisplayToNotOccupiedCrtc(const ModeResources& res, const ModeConnector& conn);
     int setup(const ModeResources& res, const ModeConnector& conn);
     void updateInDrawingLoop(DisplayContentsFactory& factory);
-    uint32_t getConnectorId() const { return connector_id; }
+    uint32_t getConnectorId() const override { return connector_id; }
     uint32_t getCrtcId() const { return crtc_id; }
 
     static void modeset_page_flip_event(int fd, unsigned int frame, unsigned int sec, unsigned int usec, void *data);
 };
 
+}

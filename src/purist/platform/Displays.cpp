@@ -1,5 +1,5 @@
 #include "Displays.h"
-#include "Display.h"
+#include "DisplayImpl.h"
 #include "ModeResources.h"
 #include "ModeConnector.h"
 
@@ -8,6 +8,7 @@
 #include <stdexcept>
 #include <cassert>
 
+namespace purist::platform {
 
 void Displays::addNewlyConnectedToDrawingLoop() {
 	/* redraw all outputs */
@@ -26,7 +27,7 @@ Displays::iterator Displays::findDisplayOnConnector(const ModeConnector& conn) {
 	return end();	// Hasn't find any
 }
 
-std::shared_ptr<Display> Displays::findDisplayConnectedToCrtc(uint32_t crtc_id) const {
+std::shared_ptr<DisplayImpl> Displays::findDisplayConnectedToCrtc(uint32_t crtc_id) const {
 	for (auto& disp : *this) {
 		if (disp->getCrtcId() == crtc_id) {
 			return disp;
@@ -48,7 +49,7 @@ int Displays::updateHardwareConfiguration()
 			//auto connector = modeConnector.connector;
 
 			auto display_iter = findDisplayOnConnector(modeConnector);
-			std::shared_ptr<Display> display = nullptr;
+			std::shared_ptr<DisplayImpl> display = nullptr;
 			bool new_display_connected = false;
 			
 			if (display_iter != end()) {
@@ -57,7 +58,7 @@ int Displays::updateHardwareConfiguration()
 			} else {
 				// create a new display
 				auto cid = modeConnector.getConnectorId(); // connector->connector_id;
-				display = std::make_shared<Display>(card, *this, cid, opengl);
+				display = std::make_shared<DisplayImpl>(card, *this, cid, opengl);
 				new_display_connected = true;
 			}
 
@@ -94,11 +95,11 @@ int Displays::updateHardwareConfiguration()
 }
 
 bool Displays::empty() const {
-	return std::list<std::shared_ptr<Display>>::empty();
+	return std::list<std::shared_ptr<DisplayImpl>>::empty();
 }
 
 void Displays::clear() { 
-	std::list<std::shared_ptr<Display>>::clear(); 
+	std::list<std::shared_ptr<DisplayImpl>>::clear(); 
 }
 
 
@@ -109,4 +110,6 @@ void Displays::setDisplayContentsFactory(std::shared_ptr<DisplayContentsFactory>
 
 Displays::~Displays() {
 	clear();
+}
+
 }

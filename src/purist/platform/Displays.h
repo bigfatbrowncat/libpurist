@@ -9,9 +9,11 @@
 #include <list>
 #include <xf86drmMode.h>
 
-class Display;
+namespace purist::platform {
 
-class Displays : protected std::list<std::shared_ptr<Display>> {
+class DisplayImpl;
+
+class Displays : protected std::list<std::shared_ptr<DisplayImpl>> {
     // Forbidding object copying
     Displays(const Displays& other) = delete;
     Displays& operator = (const Displays& other) = delete;
@@ -31,8 +33,9 @@ public:
 
     int updateHardwareConfiguration();
 
-    std::shared_ptr<Display> findDisplayConnectedToCrtc(uint32_t crtc_id) const;
+    std::shared_ptr<DisplayImpl> findDisplayConnectedToCrtc(uint32_t crtc_id) const;
 
     virtual ~Displays();
 };
 
+}

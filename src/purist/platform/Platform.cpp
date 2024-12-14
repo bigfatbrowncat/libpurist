@@ -13,6 +13,7 @@
 
 namespace fs = std::filesystem;
 
+namespace purist::platform {
 
 Platform::Platform(bool enableOpenGL)
         : enableOpenGL(enableOpenGL) { }
@@ -53,4 +54,6 @@ void Platform::run(std::shared_ptr<DisplayContentsFactory> contentsFactory) {
 
 Platform::~Platform() {
     
+}
+
 }

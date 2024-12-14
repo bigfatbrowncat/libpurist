@@ -3,6 +3,8 @@
 #include <memory>
 #include <cstdint>
 
+namespace purist::platform {
+
 // Implemented on the library side
 
 class TargetSurface {
@@ -25,6 +27,13 @@ public:
     virtual bool isOpenGLEnabled() const = 0;
 };
 
+class Display {
+public:
+    virtual ~Display() = default;
+
+    virtual uint32_t getConnectorId() const = 0;
+};
+
 
 // Implemented on the user side
 
@@ -39,6 +48,7 @@ class DisplayContentsFactory {
 public:
     virtual ~DisplayContentsFactory() = default;
 
-    virtual std::shared_ptr<DisplayContents> createDisplayContents() = 0;
+    virtual std::shared_ptr<DisplayContents> createDisplayContents(Display& display) = 0;
 };
 
+}

@@ -1,6 +1,9 @@
 #include "ModeEncoder.h"
 #include "ModeConnector.h"
 #include <purist/platform/exceptions.h>
+
+namespace purist::platform {
+
 ModeEncoder::ModeEncoder(const ModeConnector& connector) {
 	encoder = drmModeGetEncoder(connector.card.fd, connector.connector->encoder_id);
 	if (!encoder) {
@@ -21,4 +24,6 @@ ModeEncoder::~ModeEncoder() {
 
 bool ModeEncoder::isCrtcPossible(int index) const {
 	return encoder->possible_crtcs & (1 << index);
+}
+
 }

@@ -7,6 +7,8 @@
 
 #include <cstdint>
 
+namespace purist::platform {
+
 class DumbBufferMapping;
 
 class DumbBufferTargetSurfaceImpl : public TargetSurfaceBackface {
@@ -41,3 +43,5 @@ public:
 
 	virtual ~DumbBufferTargetSurfaceImpl();
 };
+
+}

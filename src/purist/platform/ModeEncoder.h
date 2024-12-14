@@ -5,12 +5,14 @@
 
 #include <xf86drmMode.h>
 
+namespace purist::platform {
+
 class ModeEncoder {
-private:
     // Forbidding object copying
     ModeEncoder(const ModeEncoder& other) = delete;
     ModeEncoder& operator = (const ModeEncoder& other) = delete;
 
+private:
 	const drmModeEncoder *encoder;
 
 public:
@@ -22,3 +24,5 @@ public:
 
 	virtual ~ModeEncoder();
 };
+
+}

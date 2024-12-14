@@ -17,8 +17,8 @@ add_library(purist STATIC
 
     src/purist/platform/Card.cpp
     src/purist/platform/Card.h
-    src/purist/platform/Display.cpp
-    src/purist/platform/Display.h
+    src/purist/platform/DisplayImpl.cpp
+    src/purist/platform/DisplayImpl.h
     src/purist/platform/Displays.cpp
     src/purist/platform/Displays.h
     src/purist/platform/DumbBufferTargetSurfaceImpl.cpp

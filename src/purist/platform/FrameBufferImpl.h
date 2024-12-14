@@ -5,6 +5,8 @@
 
 #include "TargetSurfaceBackface.h"
 
+namespace purist::platform {
+
 class DumbBufferTargetSurfaceImpl;
 
 class FrameBufferImpl : public FrameBuffer {
@@ -32,3 +34,5 @@ public:
     void removeAndDestroy();
     virtual ~FrameBufferImpl();
 };
+
+}

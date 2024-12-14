@@ -9,6 +9,8 @@
 #include <cstring>
 #include <string>
 
+namespace purist::platform {
+
 EGLTargetSurfaceImpl::EGLTargetSurfaceImpl(const Card& card) 
 	: card(card), width(0), height(0) {
 }
@@ -84,4 +86,6 @@ void EGLTargetSurfaceImpl::swap() {
 
 void EGLTargetSurfaceImpl::unlock() {
     gbm_surface_release_buffer(gbmSurface, gbmBO);
+}
+
 }

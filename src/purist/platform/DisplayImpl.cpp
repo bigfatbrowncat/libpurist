@@ -1,4 +1,4 @@
-#include "Display.h"
+#include "DisplayImpl.h"
 #include "Displays.h"
 #include "ModeEncoder.h"
 
@@ -12,6 +12,7 @@
 #include <cstring>
 #include <cassert>
 
+namespace purist::platform {
 
 static bool modes_equal(const drmModeModeInfo& mode1, const drmModeModeInfo& mode2) {
 	return 
@@ -20,7 +21,7 @@ static bool modes_equal(const drmModeModeInfo& mode1, const drmModeModeInfo& mod
 		mode1.clock == mode2.clock;
 }
 
-void Display::setCrtc(FrameBufferImpl *buf) {
+void DisplayImpl::setCrtc(FrameBufferImpl *buf) {
 	assert(state != State::CRTC_SET_SUCCESSFULLY);
 
 	if (saved_crtc == nullptr) {
@@ -41,7 +42,7 @@ void Display::setCrtc(FrameBufferImpl *buf) {
  * modeset_setup_dev() stays the same.
  */
 
-int Display::setup(const ModeResources& res, const ModeConnector& conn) {
+int DisplayImpl::setup(const ModeResources& res, const ModeConnector& conn) {
 	int ret;
 
 	/* check if a monitor is connected */
@@ -171,7 +172,7 @@ int Display::setup(const ModeResources& res, const ModeConnector& conn) {
  * did, too.
  */
 
-void Display::draw()
+void DisplayImpl::draw()
 {
 	auto next_framebuffer_index = (current_framebuffer_index + 1) % framebuffers.size();
 	FrameBufferImpl *next_framebuffer = framebuffers[next_framebuffer_index].get();
@@ -209,10 +210,10 @@ void Display::draw()
  * allows to wait for outstanding page-flips during cleanup.
  */
 
-void Display::modeset_page_flip_event(int fd, unsigned int frame,
+void DisplayImpl::modeset_page_flip_event(int fd, unsigned int frame,
 				    unsigned int sec, unsigned int usec, void *data)
 {
-	Display *dev = (Display*)data;
+	DisplayImpl *dev = (DisplayImpl*)data;
 	if (dev != nullptr) {
 		dev->page_flips_pending -= 1;
 
@@ -222,19 +223,19 @@ void Display::modeset_page_flip_event(int fd, unsigned int frame,
 	}
 }
 
-void Display::updateInDrawingLoop(DisplayContentsFactory& factory) {
+void DisplayImpl::updateInDrawingLoop(DisplayContentsFactory& factory) {
 	if (state == State::CRTC_SET_SUCCESSFULLY) { //crtc_set_successfully && !is_in_drawing_loop) {
 		state = State::IN_DRAWING_LOOP; //is_in_drawing_loop = true;
 		printf("display initialized at connector: %d\n", connector_id); fflush(stdout);
 		if (contents == nullptr) {
-			contents = factory.createDisplayContents();
+			contents = factory.createDisplayContents(*this);
 		}
 		draw();
 	}
 }
 
 
-int Display::connectDisplayToNotOccupiedCrtc(const ModeResources& res, const ModeConnector& conn) {
+int DisplayImpl::connectDisplayToNotOccupiedCrtc(const ModeResources& res, const ModeConnector& conn) {
 	/* first try the currently conected encoder+crtc */
 	std::unique_ptr<ModeEncoder> enc;
 	if (conn.connector->encoder_id)
@@ -309,13 +310,13 @@ int Display::connectDisplayToNotOccupiedCrtc(const ModeResources& res, const Mod
 	return -ENOENT;
 }
 
-Display::~Display() {
+DisplayImpl::~DisplayImpl() {
     drmEventContext ev;
 
 	/* init variables */
 	memset(&ev, 0, sizeof(ev));
 	ev.version = DRM_EVENT_CONTEXT_VERSION;
-	ev.page_flip_handler = Display::modeset_page_flip_event;
+	ev.page_flip_handler = DisplayImpl::modeset_page_flip_event;
 
 	destroying_in_progress = true;
 	if (page_flips_pending > 0) { fprintf(stderr, "wait for pending page-flip to complete at connector %d...\n", connector_id); }
@@ -347,4 +348,6 @@ Display::~Display() {
 		}
 		printf("display finalized on connector: %d\n", connector_id); fflush(stdout);
 	}
+}
+
 }

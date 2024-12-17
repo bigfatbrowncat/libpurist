@@ -1,6 +1,6 @@
 .cache
 /.vscode
 /build
-/third_party/prefix
-/third_party/skia-world/out
+/third-party/prefix
+/third-party/skia-world/out
 Linux_DRM_OpenGLES.c

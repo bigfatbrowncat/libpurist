@@ -4,9 +4,9 @@ cd skia
 
 # Need to run /Applications/Python\ 3.10/Install\ Certificates.command before starting
 
-#python3 bin/fetch-gn
-#python3 tools/git-sync-deps
-#python3 bin/fetch-ninja
+python3 bin/fetch-gn
+python3 tools/git-sync-deps
+python3 bin/fetch-ninja
 
 echo bin/gn gen ../${OUT} --args="${ARGS}"
 bin/gn gen ../${OUT} --args="${ARGS}"

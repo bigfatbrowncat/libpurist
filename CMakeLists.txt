@@ -43,9 +43,9 @@ add_library(purist STATIC
 
 target_compile_features(purist PUBLIC cxx_std_17)
 set_property(TARGET purist PROPERTY POSITION_INDEPENDENT_CODE ON)
-target_include_directories(purist PUBLIC ${purist_SOURCE_DIR}/third_party/prefix/include/skia)
+target_include_directories(purist PUBLIC ${purist_SOURCE_DIR}/third-party/prefix/include/skia)
 target_include_directories(purist PRIVATE /usr/include/libdrm)
-target_link_directories(purist PUBLIC ${purist_SOURCE_DIR}/third_party/prefix/lib-release)
+target_link_directories(purist PUBLIC ${purist_SOURCE_DIR}/third-party/prefix/lib-release)
 target_link_libraries(purist PUBLIC 
     skia
     webpmux

@@ -43,28 +43,15 @@ add_library(purist STATIC
 
 target_compile_features(purist PUBLIC cxx_std_17)
 set_property(TARGET purist PROPERTY POSITION_INDEPENDENT_CODE ON)
-target_include_directories(purist PUBLIC ${purist_SOURCE_DIR}/third-party/prefix/include/skia)
 target_include_directories(purist PRIVATE /usr/include/libdrm)
-target_link_directories(purist PUBLIC ${purist_SOURCE_DIR}/third-party/prefix/lib-release)
+
+target_include_directories(purist PUBLIC ${purist_SOURCE_DIR}/include)
 target_link_libraries(purist PUBLIC 
-    skia
-    webpmux
-    webpdemux
-    webp
-    jpeg
-    png
-    freetype
     drm 
     gbm 
     EGL 
     GL
-    GLX
-    fontconfig
-    z
 )
-
-target_include_directories(purist PUBLIC ${purist_SOURCE_DIR}/include)
-
 
 ##########################################
 
@@ -72,5 +59,20 @@ add_executable(blinking_screen
     examples/blinking_screen/blinking_screen.cpp
 )
 target_include_directories(blinking_screen PUBLIC ${purist_SOURCE_DIR}/include)
-target_link_libraries(blinking_screen purist)
+target_include_directories(blinking_screen PUBLIC ${purist_SOURCE_DIR}/third-party/prefix/include/skia)
+target_link_directories(blinking_screen PUBLIC ${purist_SOURCE_DIR}/third-party/prefix/lib-release)
+target_link_libraries(blinking_screen PUBLIC 
+    purist
+    
+    skia
+    webpmux
+    webpdemux
+    webp
+    jpeg
+    png
+    freetype
+    GLX
+    fontconfig
+    z
+)
 add_dependencies(blinking_screen purist)

@@ -1,9 +1,9 @@
 #define SK_GANESH
 #define SK_GL
-#include <include/gpu/GrBackendSurface.h>
-#include <include/gpu/GrDirectContext.h>
-#include <include/gpu/gl/GrGLInterface.h>
-#include <include/gpu/gl/GrGLAssembleInterface.h>
+#include <include/gpu/ganesh/GrBackendSurface.h>
+#include <include/gpu/ganesh/GrDirectContext.h>
+#include <include/gpu/ganesh/gl/GrGLInterface.h>
+#include <include/gpu/ganesh/gl/GrGLAssembleInterface.h>
 #include <include/gpu/ganesh/SkSurfaceGanesh.h>
 #include <include/gpu/ganesh/gl/GrGLBackendSurface.h>
 #include <include/gpu/ganesh/gl/egl/GrGLMakeEGLInterface.h>

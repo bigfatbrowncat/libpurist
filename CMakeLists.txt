@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.25)
 # Globally adding libasan for debug build
 add_compile_options($<$<CONFIG:DEBUG>:-fsanitize=address,undefined>)
 add_compile_options($<$<CONFIG:DEBUG>:-fsanitize-recover=all>)
-add_compile_options(-Wall -Werror)
+add_compile_options(-Wall -Werror -fno-rtti)
 
 add_link_options($<$<CONFIG:DEBUG>:-fsanitize=address,undefined>)
 add_link_options($<$<CONFIG:DEBUG>:-fsanitize-recover=all>)
@@ -42,9 +42,29 @@ add_library(purist STATIC
 )
 
 target_compile_features(purist PUBLIC cxx_std_17)
-target_include_directories(purist PUBLIC ${purist_SOURCE_DIR}/include)
+set_property(TARGET purist PROPERTY POSITION_INDEPENDENT_CODE ON)
+target_include_directories(purist PUBLIC ${purist_SOURCE_DIR}/third_party/prefix/include/skia)
 target_include_directories(purist PRIVATE /usr/include/libdrm)
-target_link_libraries(purist PUBLIC drm gbm EGL GL)
+target_link_directories(purist PUBLIC ${purist_SOURCE_DIR}/third_party/prefix/lib-release)
+target_link_libraries(purist PUBLIC 
+    skia
+    webpmux
+    webpdemux
+    webp
+    jpeg
+    png
+    freetype
+    drm 
+    gbm 
+    EGL 
+    GL
+    GLX
+    fontconfig
+    z
+)
+
+target_include_directories(purist PUBLIC ${purist_SOURCE_DIR}/include)
+
 
 ##########################################
 

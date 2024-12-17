@@ -29,6 +29,7 @@ public:
     void createAndAdd(int width, int height);
 
     std::shared_ptr<TargetSurface> getTarget() const override { return target; }
+    std::shared_ptr<TargetSurfaceBackface> getTargetBackface() const { return target; }
     bool isOpenGLEnabled() const override { return enableOpenGL; }
 
     void removeAndDestroy();

@@ -177,7 +177,7 @@ void DisplayImpl::draw()
 	auto next_framebuffer_index = (current_framebuffer_index + 1) % framebuffers.size();
 	FrameBufferImpl *next_framebuffer = framebuffers[next_framebuffer_index].get();
 
-	auto next_fb_target = std::dynamic_pointer_cast<TargetSurfaceBackface>(next_framebuffer->getTarget());
+	auto next_fb_target = /*std::dynamic_pointer_cast<TargetSurfaceBackface>(*/next_framebuffer->getTargetBackface();//);
 	next_fb_target->makeCurrent();
 	contents->drawIntoBuffer(*next_fb_target.get());
 	next_fb_target->swap();

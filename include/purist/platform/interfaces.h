@@ -41,7 +41,7 @@ class DisplayContents {
 public:
     virtual ~DisplayContents() = default;
 
-    virtual void drawIntoBuffer(TargetSurface& target) = 0;
+    virtual void drawIntoBuffer(std::shared_ptr<Display> display, std::shared_ptr<TargetSurface> target) = 0;
 };
 
 class DisplayContentsFactory {

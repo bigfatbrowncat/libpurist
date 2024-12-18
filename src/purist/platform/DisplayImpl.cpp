@@ -179,7 +179,7 @@ void DisplayImpl::draw()
 
 	auto next_fb_target = /*std::dynamic_pointer_cast<TargetSurfaceBackface>(*/next_framebuffer->getTargetBackface();//);
 	next_fb_target->makeCurrent();
-	contents->drawIntoBuffer(*next_fb_target.get());
+	contents->drawIntoBuffer(shared_from_this(), next_fb_target);
 	next_fb_target->swap();
 
 	auto user_data = this;

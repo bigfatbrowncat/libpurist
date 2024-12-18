@@ -6,6 +6,7 @@
 #include "ModeConnector.h"
 #include "ModeCrtc.h"
 
+#include <memory>
 #include <purist/platform/interfaces.h>
 
 #include <xf86drmMode.h>
@@ -13,7 +14,7 @@
 
 namespace purist::platform {
 
-class DisplayImpl : public Display {
+class DisplayImpl : public Display, public std::enable_shared_from_this<DisplayImpl> {
     // Forbidding object copying
     DisplayImpl(const DisplayImpl& other) = delete;
     DisplayImpl& operator = (const DisplayImpl& other) = delete;
@@ -23,7 +24,7 @@ private:
         INITIALIZED = 0,
         CRTC_SET_SUCCESSFULLY = 1, 
         IN_DRAWING_LOOP = 2
-    } state;
+    } state = State::INITIALIZED;
 
     const Card& card;
     const Displays& displays;

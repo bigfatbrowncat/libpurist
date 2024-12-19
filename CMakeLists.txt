@@ -1,20 +1,27 @@
 cmake_minimum_required(VERSION 3.25)
 
-# Globally adding libasan for debug build
+# Globally adding libasan for debug builds
 add_compile_options($<$<CONFIG:DEBUG>:-fsanitize=address,undefined>)
 add_compile_options($<$<CONFIG:DEBUG>:-fsanitize-recover=all>)
-add_compile_options(-Wall -Werror -fno-rtti)
-
 add_link_options($<$<CONFIG:DEBUG>:-fsanitize=address,undefined>)
 add_link_options($<$<CONFIG:DEBUG>:-fsanitize-recover=all>)
 
+# Making strict build checks everywhere
+add_compile_options(-Wall -Werror)
+
+# Disabling RTTI globally, because Skia is built without it
+add_compile_options(-fno-rtti)
+
+
 project(purist)
 
-add_library(purist STATIC
+add_library(purist_graphics STATIC
+    # Public includes
     include/purist/platform/Platform.h
     include/purist/platform/exceptions.h
     include/purist/platform/interfaces.h
 
+    # Private includes/sources
     src/purist/platform/Card.cpp
     src/purist/platform/Card.h
     src/purist/platform/DisplayImpl.cpp
@@ -41,12 +48,11 @@ add_library(purist STATIC
     src/purist/platform/TargetSurfaceBackface.h
 )
 
-target_compile_features(purist PUBLIC cxx_std_17)
-set_property(TARGET purist PROPERTY POSITION_INDEPENDENT_CODE ON)
-target_include_directories(purist PRIVATE /usr/include/libdrm)
-
-target_include_directories(purist PUBLIC ${purist_SOURCE_DIR}/include)
-target_link_libraries(purist PUBLIC 
+target_compile_features(purist_graphics PUBLIC cxx_std_17)
+set_property(TARGET purist_graphics PROPERTY POSITION_INDEPENDENT_CODE ON)
+target_include_directories(purist_graphics PRIVATE /usr/include/libdrm)
+target_include_directories(purist_graphics PUBLIC ${purist_SOURCE_DIR}/include)
+target_link_libraries(purist_graphics PUBLIC 
     drm 
     gbm 
     EGL 
@@ -55,15 +61,24 @@ target_link_libraries(purist PUBLIC
 
 ##########################################
 
-add_executable(blinking_screen
-    examples/blinking_screen/blinking_screen.cpp
+add_library(purist_graphics_skia STATIC
+    # Public includes
+    include/purist/graphics/skia/SkiaEGLOverlay.h
+
+    # Private includes/sources
+    src/purist/graphics/skia/SkiaEGLOverlay.cpp
 )
-target_include_directories(blinking_screen PUBLIC ${purist_SOURCE_DIR}/include)
-target_include_directories(blinking_screen PUBLIC ${purist_SOURCE_DIR}/third-party/prefix/include/skia)
-target_link_directories(blinking_screen PUBLIC ${purist_SOURCE_DIR}/third-party/prefix/lib-release)
-target_link_libraries(blinking_screen PUBLIC 
-    purist
-    
+
+target_compile_features(purist_graphics_skia PUBLIC cxx_std_17)
+set_property(TARGET purist_graphics_skia PROPERTY POSITION_INDEPENDENT_CODE ON)
+target_include_directories(purist_graphics_skia PUBLIC ${purist_SOURCE_DIR}/include)
+
+target_include_directories(purist_graphics_skia PUBLIC ${purist_SOURCE_DIR}/third-party/prefix/include/skia)
+target_link_directories(purist_graphics_skia PUBLIC ${purist_SOURCE_DIR}/third-party/prefix/lib-release)
+
+target_link_libraries(purist_graphics_skia PUBLIC 
+    purist_graphics
+
     skia
     webpmux
     webpdemux
@@ -75,4 +90,16 @@ target_link_libraries(blinking_screen PUBLIC
     fontconfig
     z
 )
-add_dependencies(blinking_screen purist)
+
+##########################################
+
+add_executable(blinking_screen
+    examples/blinking_screen/blinking_screen.cpp
+)
+#target_include_directories(blinking_screen PUBLIC ${purist_SOURCE_DIR}/include)
+#target_include_directories(blinking_screen PUBLIC ${purist_SOURCE_DIR}/third-party/prefix/include/skia)
+#target_link_directories(blinking_screen PUBLIC ${purist_SOURCE_DIR}/third-party/prefix/lib-release)
+target_link_libraries(blinking_screen PUBLIC 
+    purist_graphics_skia
+)
+add_dependencies(blinking_screen purist_graphics_skia)

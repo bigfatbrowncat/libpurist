@@ -28,7 +28,23 @@
 
 namespace purist::graphics::skia {
 
-class SkiaEGLOverlay {
+class SkiaEGLOverlay;
+class SkiaRasterOverlay;
+
+class SkiaOverlay {
+public:
+	SkiaOverlay() = default;
+	virtual ~SkiaOverlay() = default;
+
+	virtual const sk_sp<SkSurface> getSkiaSurface() const = 0;
+	virtual const sk_sp<GrDirectContext> getSkiaContext() const = 0;
+
+	virtual SkiaEGLOverlay* asEGLOverlay() = 0;
+	virtual SkiaRasterOverlay* asRasterOverlay() = 0;
+};
+
+
+class SkiaEGLOverlay : public SkiaOverlay {
 private:
 	sk_sp<GrDirectContext> sContext = nullptr;
 	sk_sp<SkSurface> sSurface = nullptr;
@@ -37,10 +53,32 @@ public:
 	SkiaEGLOverlay() = default;
 	~SkiaEGLOverlay();
 
-	const sk_sp<SkSurface> getSkiaSurface() const;
-	const sk_sp<GrDirectContext> getSkiaContext() const;
+	const sk_sp<SkSurface> getSkiaSurface() const override;
+	const sk_sp<GrDirectContext> getSkiaContext() const override;
+
+	SkiaEGLOverlay* asEGLOverlay() override { return this; }
+	SkiaRasterOverlay* asRasterOverlay() override { return nullptr; } 
 
 	void updateBuffer(uint32_t w, uint32_t h);
+};
+
+
+class SkiaRasterOverlay : public SkiaOverlay {
+private:
+	sk_sp<GrRecordingContext> sContext = nullptr;
+	sk_sp<SkSurface> sSurface = nullptr;
+
+public:
+	SkiaRasterOverlay() = default;
+	~SkiaRasterOverlay();
+
+	const sk_sp<SkSurface> getSkiaSurface() const override;
+	const sk_sp<GrDirectContext> getSkiaContext() const override;
+
+	SkiaEGLOverlay* asEGLOverlay() override { return nullptr; }
+	SkiaRasterOverlay* asRasterOverlay() override { return this; } 
+
+	void updateBuffer(uint32_t w, uint32_t h, void* pixels);
 };
 
 }

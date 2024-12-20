@@ -1,5 +1,7 @@
 #include <purist/graphics/skia/SkiaEGLOverlay.h>
 
+#include <include/core/SkSurface.h>
+
 #define GL_GLEXT_PROTOTYPES 1
 #include <GLES2/gl2.h>
 
@@ -43,6 +45,7 @@ void SkiaEGLOverlay::updateBuffer(uint32_t w, uint32_t h) {
 
         //(replace line below with this one to enable correct color spaces) sSurface = SkSurfaces::WrapBackendRenderTarget(sContext, backendRenderTarget, kBottomLeft_GrSurfaceOrigin, colorType, SkColorSpace::MakeSRGB(), nullptr).release();
         GrRecordingContext* recContext = sContext.get();//.get());
+
         sSurface = SkSurfaces::WrapBackendRenderTarget(recContext,
             backendRenderTarget,
             kBottomLeft_GrSurfaceOrigin,
@@ -56,4 +59,31 @@ void SkiaEGLOverlay::updateBuffer(uint32_t w, uint32_t h) {
     }
 }
 
+
+SkiaRasterOverlay::~SkiaRasterOverlay() {
+    sSurface = nullptr;
+    sContext = nullptr;
+}
+
+const sk_sp<SkSurface> SkiaRasterOverlay::getSkiaSurface() const {
+    return sSurface;
+}
+
+const sk_sp<GrDirectContext> SkiaRasterOverlay::getSkiaContext() const {
+    return nullptr;
+}
+
+void SkiaRasterOverlay::updateBuffer(uint32_t w, uint32_t h, void* pixels) {
+    // The surface updates each frame, but for a raster backend 
+    // it doesn't look like a serious performance issue.
+
+    SkImageInfo imageInfo = SkImageInfo::MakeN32Premul(w, h);
+    size_t rowBytes = imageInfo.minRowBytes();
+
+    sSurface = SkSurfaces::WrapPixels(imageInfo, pixels, rowBytes);
+
+    if (sSurface == nullptr) {
+        throw std::runtime_error("Can not create Skia surface.");
+    }
+}
 }

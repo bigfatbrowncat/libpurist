@@ -5,7 +5,7 @@
 
 #include "TargetSurfaceBackface.h"
 
-namespace purist::platform {
+namespace purist::graphics {
 
 class DumbBufferTargetSurfaceImpl;
 

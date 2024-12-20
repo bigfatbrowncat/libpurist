@@ -3,8 +3,8 @@
 #include "ModeEncoder.h"
 
 #include <memory>
-#include <purist/platform/exceptions.h>
-#include <purist/platform/interfaces.h>
+#include <purist/exceptions.h>
+#include <purist/graphics/interfaces.h>
 
 #include <cstdint>
 #include <xf86drm.h>
@@ -12,7 +12,7 @@
 #include <cstring>
 #include <cassert>
 
-namespace purist::platform {
+namespace purist::graphics {
 
 static bool modes_equal(const drmModeModeInfo& mode1, const drmModeModeInfo& mode2) {
 	return 

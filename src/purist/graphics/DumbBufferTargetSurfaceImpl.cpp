@@ -1,6 +1,6 @@
 #include "DumbBufferTargetSurfaceImpl.h"
 
-#include <purist/platform/exceptions.h>
+#include <purist/exceptions.h>
 
 #include <EGL/egl.h>
 #include <gbm.h>
@@ -11,7 +11,7 @@
 #include <cerrno>
 #include <string>
 
-namespace purist::platform {
+namespace purist::graphics {
 
 DumbBufferTargetSurfaceImpl::DumbBufferTargetSurfaceImpl(const Card& card) 
 	: card(card), stride(0), size(0), handle(0), width(0), height(0), 

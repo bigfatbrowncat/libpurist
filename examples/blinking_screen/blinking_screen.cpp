@@ -1,5 +1,4 @@
-
-#include <purist/platform/Platform.h>
+#include <purist/Platform.h>
 #include <purist/graphics/skia/SkiaEGLOverlay.h>
 
 #include <map>
@@ -7,15 +6,11 @@
 //#include <cassert>
 
 
-class ColoredScreenDisplayContents : public purist::platform::DisplayContents {
+class ColoredScreenDisplayContents : public purist::graphics::DisplayContents {
 public:
 	uint8_t r, g, b;
 	bool r_up, g_up, b_up;
 	
-	// std::map<std::shared_ptr<purist::platform::TargetSurface>, sk_sp<GrDirectContext>> sContexts;
-	// std::map<std::shared_ptr<purist::platform::TargetSurface>, sk_sp<SkSurface>> sSurfaces;
-		// sk_sp<GrDirectContext> sContext = nullptr;
-		// sk_sp<SkSurface> sSurface = nullptr;
 	std::shared_ptr<purist::graphics::skia::SkiaEGLOverlay> skiaOverlay;
 
 	ColoredScreenDisplayContents(std::shared_ptr<purist::graphics::skia::SkiaEGLOverlay> skiaOverlay) : skiaOverlay(skiaOverlay) {
@@ -45,7 +40,7 @@ public:
 		LEFT_VERTICAL
 	} DisplayOrientation;
 
-    void drawIntoBuffer(std::shared_ptr<purist::platform::Display> display, std::shared_ptr<purist::platform::TargetSurface> target) override {
+    void drawIntoBuffer(std::shared_ptr<purist::graphics::Display> display, std::shared_ptr<purist::graphics::TargetSurface> target) override {
 		//DisplayOrientation orientation = DisplayOrientation::HORIZONTAL;// DisplayOrientation::LEFT_VERTICAL;
 		
 		int w = target->getWidth(), h = target->getHeight();
@@ -118,14 +113,14 @@ public:
     }
 };
 
-class ColoredScreenDisplayContentsFactory : public purist::platform::DisplayContentsFactory {
+class ColoredScreenDisplayContentsFactory : public purist::graphics::DisplayContentsFactory {
 private:
 	std::shared_ptr<purist::graphics::skia::SkiaEGLOverlay> skiaOverlay;
 public:
 	ColoredScreenDisplayContentsFactory() {
 		skiaOverlay = std::make_shared<purist::graphics::skia::SkiaEGLOverlay>();
 	}
-	std::shared_ptr<purist::platform::DisplayContents> createDisplayContents(purist::platform::Display& display) {
+	std::shared_ptr<purist::graphics::DisplayContents> createDisplayContents(purist::graphics::Display& display) {
 		
 		auto contents = std::make_shared<ColoredScreenDisplayContents>(skiaOverlay);
 		contents->r = rand() % 0xff;
@@ -143,14 +138,14 @@ int main(int argc, char **argv)
 	try {
 		bool enableOpenGL = true;
 
-		purist::platform::Platform purist(enableOpenGL);
+		purist::Platform purist(enableOpenGL);
 		auto contentsFactory = std::make_shared<ColoredScreenDisplayContentsFactory>();
 		
 		purist.run(contentsFactory);
 
 		return 0;
 	
-	} catch (const purist::platform::errcode_exception& ex) {
+	} catch (const purist::errcode_exception& ex) {
 		fprintf(stderr, "%s\n", ex.what());
 		return ex.errcode;
 	}

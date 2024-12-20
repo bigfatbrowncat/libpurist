@@ -7,12 +7,12 @@
 #include "ModeCrtc.h"
 
 #include <memory>
-#include <purist/platform/interfaces.h>
+#include <purist/graphics/interfaces.h>
 
 #include <xf86drmMode.h>
 #include <array>
 
-namespace purist::platform {
+namespace purist::graphics {
 
 class DisplayImpl : public Display, public std::enable_shared_from_this<DisplayImpl> {
     // Forbidding object copying

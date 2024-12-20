@@ -25,7 +25,7 @@
 #include "Displays.h"
 #include "DisplayImpl.h"
 #include "ModeResources.h"
-#include <purist/platform/exceptions.h>
+#include <purist/exceptions.h>
 #include <EGL/egl.h>
 #include <cassert>
 #include <cstring>
@@ -38,7 +38,7 @@
 
 #include <vector>
 
-namespace purist::platform {
+namespace purist::graphics {
 
 Card::Card(const fs::path& node, bool enableOpenGL) 
 	: displays(std::make_shared<Displays>(*this, enableOpenGL)), 

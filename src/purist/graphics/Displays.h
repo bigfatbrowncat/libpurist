@@ -3,13 +3,13 @@
 #include "Card.h"
 #include "ModeConnector.h"
 
-#include <purist/platform/interfaces.h>
+#include <purist/graphics/interfaces.h>
 
 #include <memory>
 #include <list>
 #include <xf86drmMode.h>
 
-namespace purist::platform {
+namespace purist::graphics {
 
 class DisplayImpl;
 

@@ -17,35 +17,36 @@ project(purist)
 
 add_library(purist_graphics STATIC
     # Public includes
-    include/purist/platform/Platform.h
-    include/purist/platform/exceptions.h
-    include/purist/platform/interfaces.h
+    include/purist/Platform.h
+    include/purist/exceptions.h
+    include/purist/graphics/interfaces.h
 
     # Private includes/sources
-    src/purist/platform/Card.cpp
-    src/purist/platform/Card.h
-    src/purist/platform/DisplayImpl.cpp
-    src/purist/platform/DisplayImpl.h
-    src/purist/platform/Displays.cpp
-    src/purist/platform/Displays.h
-    src/purist/platform/DumbBufferTargetSurfaceImpl.cpp
-    src/purist/platform/DumbBufferTargetSurfaceImpl.h
-    src/purist/platform/EGLTargetSurfaceImpl.cpp
-    src/purist/platform/EGLTargetSurfaceImpl.h
-    src/purist/platform/Platform.cpp
-    src/purist/platform/DumbBufferMapping.cpp
-    src/purist/platform/DumbBufferMapping.h
-    src/purist/platform/FrameBufferImpl.cpp
-    src/purist/platform/FrameBufferImpl.h
-    src/purist/platform/ModeConnector.cpp
-    src/purist/platform/ModeConnector.h
-    src/purist/platform/ModeCrtc.cpp
-    src/purist/platform/ModeCrtc.h
-    src/purist/platform/ModeEncoder.cpp
-    src/purist/platform/ModeEncoder.h
-    src/purist/platform/ModeResources.cpp
-    src/purist/platform/ModeResources.h
-    src/purist/platform/TargetSurfaceBackface.h
+    src/purist/Platform.cpp
+
+    src/purist/graphics/Card.cpp
+    src/purist/graphics/Card.h
+    src/purist/graphics/DisplayImpl.cpp
+    src/purist/graphics/DisplayImpl.h
+    src/purist/graphics/Displays.cpp
+    src/purist/graphics/Displays.h
+    src/purist/graphics/DumbBufferTargetSurfaceImpl.cpp
+    src/purist/graphics/DumbBufferTargetSurfaceImpl.h
+    src/purist/graphics/EGLTargetSurfaceImpl.cpp
+    src/purist/graphics/EGLTargetSurfaceImpl.h
+    src/purist/graphics/DumbBufferMapping.cpp
+    src/purist/graphics/DumbBufferMapping.h
+    src/purist/graphics/FrameBufferImpl.cpp
+    src/purist/graphics/FrameBufferImpl.h
+    src/purist/graphics/ModeConnector.cpp
+    src/purist/graphics/ModeConnector.h
+    src/purist/graphics/ModeCrtc.cpp
+    src/purist/graphics/ModeCrtc.h
+    src/purist/graphics/ModeEncoder.cpp
+    src/purist/graphics/ModeEncoder.h
+    src/purist/graphics/ModeResources.cpp
+    src/purist/graphics/ModeResources.h
+    src/purist/graphics/TargetSurfaceBackface.h
 )
 
 target_compile_features(purist_graphics PUBLIC cxx_std_17)

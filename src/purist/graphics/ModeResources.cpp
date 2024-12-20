@@ -1,7 +1,7 @@
 #include "ModeResources.h"
-#include <purist/platform/exceptions.h>
+#include <purist/exceptions.h>
 
-namespace purist::platform {
+namespace purist::graphics {
 
 ModeResources::ModeResources(const Card& card) {
 	resources = drmModeGetResources(card.fd);

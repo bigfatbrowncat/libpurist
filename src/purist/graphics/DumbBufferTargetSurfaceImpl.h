@@ -7,7 +7,7 @@
 
 #include <cstdint>
 
-namespace purist::platform {
+namespace purist::graphics {
 
 class DumbBufferMapping;
 

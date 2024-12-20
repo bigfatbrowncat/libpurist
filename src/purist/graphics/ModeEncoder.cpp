@@ -1,8 +1,8 @@
 #include "ModeEncoder.h"
 #include "ModeConnector.h"
-#include <purist/platform/exceptions.h>
+#include <purist/exceptions.h>
 
-namespace purist::platform {
+namespace purist::graphics {
 
 ModeEncoder::ModeEncoder(const ModeConnector& connector) {
 	encoder = drmModeGetEncoder(connector.card.fd, connector.connector->encoder_id);

@@ -3,7 +3,7 @@
 #include <memory>
 #include <cstdint>
 
-namespace purist::platform {
+namespace purist::graphics {
 
 // Implemented on the library side
 

@@ -1,7 +1,7 @@
 #include "ModeCrtc.h"
-#include <purist/platform/exceptions.h>
+#include <purist/exceptions.h>
 
-namespace purist::platform {
+namespace purist::graphics {
 
 ModeCrtc::ModeCrtc(const Card& card, uint32_t crtc_id) {
 	crtc = drmModeGetCrtc(card.fd, crtc_id);

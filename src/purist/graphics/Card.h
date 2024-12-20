@@ -1,6 +1,6 @@
 #pragma once
 
-#include <purist/platform/interfaces.h>
+#include <purist/graphics/interfaces.h>
 
 #include <memory>
 #include <list>
@@ -17,7 +17,7 @@
 
 namespace fs = std::filesystem;
 
-namespace purist::platform {
+namespace purist::graphics {
 
 class Displays;
 

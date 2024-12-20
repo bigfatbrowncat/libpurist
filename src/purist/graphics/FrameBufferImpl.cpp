@@ -1,7 +1,7 @@
 #include "FrameBufferImpl.h"
 #include "DumbBufferTargetSurfaceImpl.h"
 #include "EGLTargetSurfaceImpl.h"
-#include <purist/platform/exceptions.h>
+#include <purist/exceptions.h>
 #include <EGL/egl.h>
 #include <xf86drmMode.h>
 
@@ -9,7 +9,7 @@
 #include <cassert>
 #include <memory>
 
-namespace purist::platform {
+namespace purist::graphics {
 
 std::shared_ptr<TargetSurfaceBackface> FrameBufferImpl::target_for(bool opengl, const Card& card) {
 	if (opengl) {

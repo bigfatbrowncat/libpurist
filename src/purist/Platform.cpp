@@ -1,7 +1,7 @@
-#include <purist/platform/Platform.h>
-#include <purist/platform/exceptions.h>
+#include <purist/Platform.h>
+#include <purist/exceptions.h>
 
-#include "Card.h"
+#include "graphics/Card.h"
 
 #include <cassert>
 #include <cstdio>
@@ -13,21 +13,21 @@
 
 namespace fs = std::filesystem;
 
-namespace purist::platform {
+namespace purist {
 
 Platform::Platform(bool enableOpenGL)
         : enableOpenGL(enableOpenGL) { }
 
-void Platform::run(std::shared_ptr<DisplayContentsFactory> contentsFactory) {
+void Platform::run(std::shared_ptr<graphics::DisplayContentsFactory> contentsFactory) {
     // Probing dri cards
-    std::unique_ptr<Card> ms;
+    std::unique_ptr<graphics::Card> ms;
     fs::path dri_path = "/dev/dri";
     std::string card_path;
     for (const auto & entry : fs::directory_iterator(dri_path)) {
         card_path = entry.path();
         if (card_path.find(std::string(dri_path / "card")) == 0) {
             try {
-                ms = std::make_unique<Card>(card_path, enableOpenGL);
+                ms = std::make_unique<graphics::Card>(card_path, enableOpenGL);
                 ms->initialize();
             } catch (const errcode_exception& ex) {
                 if (ex.errcode == EOPNOTSUPP) {

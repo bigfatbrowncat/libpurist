@@ -1,8 +1,8 @@
 #pragma once
 
-#include <purist/platform/interfaces.h>
+#include <purist/graphics/interfaces.h>
 
-namespace purist::platform {
+namespace purist::graphics {
 
 class TargetSurfaceBackface : public TargetSurface {
 public:

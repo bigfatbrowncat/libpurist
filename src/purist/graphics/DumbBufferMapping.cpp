@@ -1,13 +1,13 @@
 #include "DumbBufferMapping.h"
 #include "DumbBufferTargetSurfaceImpl.h"
-#include <purist/platform/exceptions.h>
+#include <purist/exceptions.h>
 #include <drm.h>
 #include <sys/mman.h>
 #include <xf86drm.h>
 
 #include <cstring>
 
-namespace purist::platform {
+namespace purist::graphics {
 
 DumbBufferMapping::DumbBufferMapping(const Card& card, const DumbBufferTargetSurfaceImpl& dumb)
 		: card(card), /*buf(buf),*/ dumb(dumb), map((uint8_t*)MAP_FAILED) { }

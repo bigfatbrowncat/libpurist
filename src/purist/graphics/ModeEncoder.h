@@ -5,7 +5,7 @@
 
 #include <xf86drmMode.h>
 
-namespace purist::platform {
+namespace purist::graphics {
 
 class ModeEncoder {
     // Forbidding object copying

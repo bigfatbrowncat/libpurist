@@ -3,12 +3,12 @@
 #include "ModeResources.h"
 #include "ModeConnector.h"
 
-#include <purist/platform/exceptions.h>
+#include <purist/exceptions.h>
 
 #include <stdexcept>
 #include <cassert>
 
-namespace purist::platform {
+namespace purist::graphics {
 
 void Displays::addNewlyConnectedToDrawingLoop() {
 	/* redraw all outputs */

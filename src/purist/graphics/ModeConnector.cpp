@@ -1,8 +1,8 @@
 #include "ModeConnector.h"
-#include <purist/platform/exceptions.h>
+#include <purist/exceptions.h>
 #include <cassert>
 
-namespace purist::platform {
+namespace purist::graphics {
 
 ModeConnector::ModeConnector(const Card& card, uint32_t connector_id) : card(card), connector_id(connector_id) {
 	connector = drmModeGetConnector(card.fd, connector_id);

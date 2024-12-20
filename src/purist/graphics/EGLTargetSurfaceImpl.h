@@ -11,7 +11,7 @@
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 
-namespace purist::platform {
+namespace purist::graphics {
 
 class EGLTargetSurfaceImpl : public TargetSurfaceBackface {
 private:

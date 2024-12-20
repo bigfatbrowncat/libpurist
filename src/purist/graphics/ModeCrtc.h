@@ -4,7 +4,7 @@
 
 #include <xf86drmMode.h>
 
-namespace purist::platform {
+namespace purist::graphics {
 
 class ModeCrtc {
 private:

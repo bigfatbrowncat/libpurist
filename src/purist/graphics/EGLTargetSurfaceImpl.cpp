@@ -1,7 +1,7 @@
 #include "EGLTargetSurfaceImpl.h"
 #include "Card.h"
 
-#include <purist/platform/exceptions.h>
+#include <purist/exceptions.h>
 
 #include <cassert>
 #include <cerrno>
@@ -9,7 +9,7 @@
 #include <cstring>
 #include <string>
 
-namespace purist::platform {
+namespace purist::graphics {
 
 EGLTargetSurfaceImpl::EGLTargetSurfaceImpl(const Card& card) 
 	: card(card), width(0), height(0) {

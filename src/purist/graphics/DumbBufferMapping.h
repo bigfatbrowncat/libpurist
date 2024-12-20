@@ -2,7 +2,7 @@
 
 #include "Card.h"
 
-namespace purist::platform {
+namespace purist::graphics {
 
 class DumbBufferTargetSurfaceImpl;
 

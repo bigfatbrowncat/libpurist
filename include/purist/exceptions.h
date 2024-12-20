@@ -2,7 +2,7 @@
 
 #include <stdexcept>
 
-namespace purist::platform {
+namespace purist {
 
 class errcode_exception : public std::runtime_error {
 public:

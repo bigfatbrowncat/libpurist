@@ -13,7 +13,7 @@ set_property(TARGET purist_graphics_skia PROPERTY POSITION_INDEPENDENT_CODE ON)
 target_include_directories(purist_graphics_skia PUBLIC ${purist_graphics_skia_SOURCE_DIR}/include)
 
 target_include_directories(purist_graphics_skia PUBLIC ${purist_third_party}/prefix/include/skia)
-target_link_directories(purist_graphics_skia PUBLIC ${purist_third_party}/prefix/lib-release)
+target_link_directories(purist_graphics_skia PUBLIC ${purist_third_party}/prefix/lib-$<IF:$<CONFIG:Debug>,debug,release>)
 
 target_link_libraries(purist_graphics_skia PUBLIC 
     purist_graphics
@@ -29,3 +29,20 @@ target_link_libraries(purist_graphics_skia PUBLIC
     fontconfig
     z
 )
+
+# Installing the library
+install(TARGETS purist_graphics_skia DESTINATION lib-$<IF:$<CONFIG:Debug>,debug,release>)
+
+# Resolving Skia files
+file (GLOB SKIA_LIBS_DEBUG ${purist_third_party}/prefix/lib-debug/*.a)
+file (GLOB SKIA_LIBS_RELEASE ${purist_third_party}/prefix/lib-release/*.a)
+file (GLOB_RECURSE SKIA_INCLUDES ${purist_third_party}/prefix/include/**/*.h)
+
+set(_files ${SKIA_LIBS_DEBUG} ${SKIA_LIBS_RELEASE} ${SKIA_INCLUDES})
+
+foreach (_file ${_files})
+    get_filename_component(_resolvedFile "${_file}" REALPATH)
+    file(RELATIVE_PATH _resolvedRelFile ${purist_third_party}/prefix ${_file})
+    get_filename_component(_resolvedDirName ${_resolvedRelFile} DIRECTORY)
+    install(FILES ${_resolvedFile} DESTINATION ${_resolvedDirName})
+endforeach()

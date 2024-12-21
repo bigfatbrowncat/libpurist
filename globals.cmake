@@ -9,3 +9,5 @@ add_compile_options(-Wall -Werror)
 
 # Disabling RTTI globally, because Skia is built without it
 add_compile_options(-fno-rtti)
+
+set(LIB_DIR "lib-$<$<CONFIG:Debug>:debug>$<$<CONFIG:Release>:release>")

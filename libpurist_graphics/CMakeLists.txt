@@ -44,3 +44,7 @@ target_link_libraries(purist_graphics PUBLIC
     EGL 
     GL
 )
+
+# Installing the library
+install(TARGETS purist_graphics DESTINATION lib-$<IF:$<CONFIG:Debug>,debug,release>)
+install(DIRECTORY include/ DESTINATION include)

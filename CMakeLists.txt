@@ -97,10 +97,17 @@ target_link_libraries(purist_graphics_skia PUBLIC
 add_executable(blinking_screen
     examples/blinking_screen/blinking_screen.cpp
 )
-#target_include_directories(blinking_screen PUBLIC ${purist_SOURCE_DIR}/include)
-#target_include_directories(blinking_screen PUBLIC ${purist_SOURCE_DIR}/third-party/prefix/include/skia)
-#target_link_directories(blinking_screen PUBLIC ${purist_SOURCE_DIR}/third-party/prefix/lib-release)
 target_link_libraries(blinking_screen PUBLIC 
     purist_graphics_skia
 )
-add_dependencies(blinking_screen purist_graphics_skia)
+add_dependencies(blinking_screen purist_graphics)
+
+##########################################
+
+add_executable(color_rectangle_skia
+    examples/color_rectangle_skia/color_rectangle_skia.cpp
+)
+target_link_libraries(color_rectangle_skia PUBLIC 
+    purist_graphics_skia
+)
+add_dependencies(color_rectangle_skia purist_graphics_skia)

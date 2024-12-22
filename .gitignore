@@ -2,4 +2,3 @@
 /build-*
 /third-party/prefix
 /third-party/skia-world/out
-Linux_DRM_OpenGLES.c

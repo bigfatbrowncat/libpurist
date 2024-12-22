@@ -1,18 +1,21 @@
+// libpurist headers
 #include <purist/Platform.h>
-#include <purist/graphics/skia/SkiaEGLOverlay.h>
+#include <purist/graphics/skia/DisplayContentsSkiaFactory.h>
 
+// Skia headers
+#include <include/core/SkSurface.h>
+
+// std headers
 #include <map>
 #include <memory>
 
+namespace pg = purist::graphics;
+namespace pgs = purist::graphics::skia;
 
-class ColoredScreenDisplayContents : public purist::graphics::DisplayContents {
+class ColoredScreenDisplayContents : public pgs::DisplayContentsSkia {
 public:
 	uint8_t r, g, b;
 	bool r_up, g_up, b_up;
-	
-	std::shared_ptr<purist::graphics::skia::SkiaOverlay> skiaOverlay;
-
-	ColoredScreenDisplayContents(std::shared_ptr<purist::graphics::skia::SkiaOverlay> skiaOverlay) : skiaOverlay(skiaOverlay) { }
 
    /*
     * A short helper function to compute a changing color value. No need to
@@ -37,20 +40,12 @@ public:
 		LEFT_VERTICAL
 	} DisplayOrientation;
 
-    void drawIntoBuffer(std::shared_ptr<purist::graphics::Display> display, std::shared_ptr<purist::graphics::TargetSurface> target) override {
+    void drawIntoSurface(std::shared_ptr<pg::Display> display, sk_sp<SkSurface> surface) override {
+		auto w = surface->width();
+		auto h = surface->height();
+
 		//DisplayOrientation orientation = DisplayOrientation::HORIZONTAL;// DisplayOrientation::LEFT_VERTICAL;
 		
-		int w = target->getWidth(), h = target->getHeight();
-		if (!target->getMappedBuffer()) {
-			auto* eglOverlay = skiaOverlay->asEGLOverlay();
-			eglOverlay->updateBuffer(w, h);
-		} else {
-			auto* rasterOverlay = skiaOverlay->asRasterOverlay();
-			rasterOverlay->updateBuffer(w, h, target->getMappedBuffer());
-		}
-
-		auto sSurface = skiaOverlay->getSkiaSurface();
-
        	r = next_color(&r_up, r, 20);
         g = next_color(&g_up, g, 10);
         b = next_color(&b_up, b, 5);
@@ -69,7 +64,7 @@ public:
 			1.0f });
 		auto paint2 = SkPaint(color2);
 
-		auto* canvas = sSurface->getCanvas();
+		auto* canvas = surface->getCanvas();
 		//canvas->save();
 		// if (orientation == DisplayOrientation::LEFT_VERTICAL) {
 		// 	canvas->translate(w, 0);
@@ -80,43 +75,22 @@ public:
 		SkRect rect = SkRect::MakeLTRB(int(w / 3), int(h / 3), int(2 * w / 3), int(2 * h / 3));
 		canvas->drawRect(rect, paint2);
 
-		auto typeface = skiaOverlay->getTypeface("sans-serif");
+		auto typeface = getSkiaOverlay()->getTypeface("sans-serif");
 		auto font = SkFont(typeface, 20);
 
 		canvas->drawString("Hello", 10, 40, font, paint2);
 		
 		//canvas->restore();
-		auto context = skiaOverlay->getSkiaContext();
-		if (context != nullptr) {
-			context->flushAndSubmit();
-		}
 
-		//unsigned int j, k, off;
-		// uint32_t c = (r << 16) | (g << 8) | b;
-		// for (j = 0; j < h; ++j) {
-		// 	for (k = 0; k < w; ++k) {
-		// 		off = s * j + k * 4;
-		// 		*(uint32_t*)&(target->getMappedBuffer()[off]) = c;
-		// 	}
-		// }
-		//}
     }
 };
 
-class ColoredScreenDisplayContentsFactory : public purist::graphics::DisplayContentsFactory {
-private:
-	std::shared_ptr<purist::graphics::skia::SkiaOverlay> skiaOverlay;
+class ColoredScreenDisplayContentsFactory : public pgs::DisplayContentsSkiaFactory {
 public:
-	ColoredScreenDisplayContentsFactory(bool enableOpenGL) {
-		if (enableOpenGL) {
-			skiaOverlay = std::make_shared<purist::graphics::skia::SkiaEGLOverlay>();
-		} else {
-			skiaOverlay = std::make_shared<purist::graphics::skia::SkiaRasterOverlay>();
-		}
-	}
+	ColoredScreenDisplayContentsFactory(bool enableOpenGL) : DisplayContentsSkiaFactory(enableOpenGL) { }
 
-	std::shared_ptr<purist::graphics::DisplayContents> createDisplayContents(purist::graphics::Display& display) {
-		auto contents = std::make_shared<ColoredScreenDisplayContents>(skiaOverlay);
+	std::shared_ptr<pgs::DisplayContentsSkia> createDisplayContentsSkia(pg::Display& display) {
+		auto contents = std::make_shared<ColoredScreenDisplayContents>();
 		contents->r = rand() % 0xff;
 		contents->g = rand() % 0xff;
 		contents->b = rand() % 0xff;

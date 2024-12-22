@@ -32,8 +32,12 @@ class SkiaEGLOverlay;
 class SkiaRasterOverlay;
 
 class SkiaOverlay {
+private:
+	sk_sp<SkFontMgr> fontMgr;
+	void createFontMgr();
+  
 public:
-	SkiaOverlay() = default;
+	SkiaOverlay();
 	virtual ~SkiaOverlay() = default;
 
 	virtual const sk_sp<SkSurface> getSkiaSurface() const = 0;
@@ -41,6 +45,8 @@ public:
 
 	virtual SkiaEGLOverlay* asEGLOverlay() = 0;
 	virtual SkiaRasterOverlay* asRasterOverlay() = 0;
+
+	sk_sp<SkTypeface> getTypeface(const std::string& name) const;
 };
 
 

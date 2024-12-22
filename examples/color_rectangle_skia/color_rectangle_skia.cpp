@@ -79,6 +79,11 @@ public:
 
 		SkRect rect = SkRect::MakeLTRB(int(w / 3), int(h / 3), int(2 * w / 3), int(2 * h / 3));
 		canvas->drawRect(rect, paint2);
+
+		auto typeface = skiaOverlay->getTypeface("sans-serif");
+		auto font = SkFont(typeface, 20);
+
+		canvas->drawString("Hello", 10, 40, font, paint2);
 		
 		//canvas->restore();
 		auto context = skiaOverlay->getSkiaContext();

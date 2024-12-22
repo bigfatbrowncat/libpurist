@@ -2,10 +2,18 @@ project(purist_graphics_skia)
 
 add_library(purist_graphics_skia STATIC
     # Public includes
-    include/purist/graphics/skia/SkiaEGLOverlay.h
+    include/purist/graphics/skia/SkiaOverlay.h
+    include/purist/graphics/skia/DisplayContentsSkia.h
+    include/purist/graphics/skia/DisplayContentsSkiaFactory.h
 
     # Private includes/sources
+    src/purist/graphics/skia/SkiaOverlay.cpp
+    src/purist/graphics/skia/SkiaRasterOverlay.cpp
+    src/purist/graphics/skia/SkiaRasterOverlay.h
     src/purist/graphics/skia/SkiaEGLOverlay.cpp
+    src/purist/graphics/skia/SkiaEGLOverlay.h
+    src/purist/graphics/skia/DisplayContentsSkia.cpp
+    src/purist/graphics/skia/DisplayContentsSkiaFactory.cpp
 )
 
 target_compile_features(purist_graphics_skia PUBLIC cxx_std_17)

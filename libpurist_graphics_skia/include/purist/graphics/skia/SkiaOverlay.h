@@ -1,3 +1,5 @@
+#pragma once
+
 #define SK_GANESH
 #define SK_GL
 
@@ -47,44 +49,6 @@ public:
 	virtual SkiaRasterOverlay* asRasterOverlay() = 0;
 
 	sk_sp<SkTypeface> getTypeface(const std::string& name) const;
-};
-
-
-class SkiaEGLOverlay : public SkiaOverlay {
-private:
-	sk_sp<GrDirectContext> sContext = nullptr;
-	sk_sp<SkSurface> sSurface = nullptr;
-
-public:
-	SkiaEGLOverlay() = default;
-	~SkiaEGLOverlay();
-
-	const sk_sp<SkSurface> getSkiaSurface() const override;
-	const sk_sp<GrDirectContext> getSkiaContext() const override;
-
-	SkiaEGLOverlay* asEGLOverlay() override { return this; }
-	SkiaRasterOverlay* asRasterOverlay() override { return nullptr; } 
-
-	void updateBuffer(uint32_t w, uint32_t h);
-};
-
-
-class SkiaRasterOverlay : public SkiaOverlay {
-private:
-	sk_sp<GrRecordingContext> sContext = nullptr;
-	sk_sp<SkSurface> sSurface = nullptr;
-
-public:
-	SkiaRasterOverlay() = default;
-	~SkiaRasterOverlay();
-
-	const sk_sp<SkSurface> getSkiaSurface() const override;
-	const sk_sp<GrDirectContext> getSkiaContext() const override;
-
-	SkiaEGLOverlay* asEGLOverlay() override { return nullptr; }
-	SkiaRasterOverlay* asRasterOverlay() override { return this; } 
-
-	void updateBuffer(uint32_t w, uint32_t h, void* pixels);
 };
 
 }

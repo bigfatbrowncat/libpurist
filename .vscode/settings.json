@@ -1,0 +1,9 @@
+{
+    "clangd.path": "/usr/bin/clangd",
+    "clangd.arguments": ["-log=verbose", 
+                         "-pretty", 
+                         "--background-index", 
+                         "--suggest-missing-includes",
+                         //"--query-driver=/bin/arm-buildroot-linux-gnueabihf-g++", //for cross compile usage
+                         "--compile-commands-dir=${workspaceRoot}/build-Debug"]
+}

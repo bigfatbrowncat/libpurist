@@ -5,5 +5,10 @@
                          "--background-index", 
                          "--suggest-missing-includes",
                          //"--query-driver=/bin/arm-buildroot-linux-gnueabihf-g++", //for cross compile usage
-                         "--compile-commands-dir=${workspaceRoot}/build-Debug"]
+                         "--compile-commands-dir=${workspaceRoot}/build-Debug"],
+    "files.watcherExclude": {
+        "**/.git/objects/**": true,
+        "**/.git/subtree-cache/**": true
+    }
+
 }

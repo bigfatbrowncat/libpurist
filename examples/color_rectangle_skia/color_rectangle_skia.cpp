@@ -17,6 +17,9 @@ public:
 	uint8_t r, g, b;
 	bool r_up, g_up, b_up;
 
+	sk_sp<SkTypeface> typeface;
+	std::shared_ptr<SkFont> font;
+
    /*
     * A short helper function to compute a changing color value. No need to
     * understand it.
@@ -35,17 +38,10 @@ public:
         return next;
     }
 
-	typedef enum class DisplayOrientation {
-		HORIZONTAL,
-		LEFT_VERTICAL
-	} DisplayOrientation;
 
-    void drawIntoSurface(std::shared_ptr<pg::Display> display, sk_sp<SkSurface> surface) override {
-		auto w = surface->width();
-		auto h = surface->height();
+    void drawIntoSurface(std::shared_ptr<pg::Display> display, int width, int height, SkCanvas& canvas) override {
+		SkScalar w = width, h = height;
 
-		//DisplayOrientation orientation = DisplayOrientation::HORIZONTAL;// DisplayOrientation::LEFT_VERTICAL;
-		
        	r = next_color(&r_up, r, 20);
         g = next_color(&g_up, g, 10);
         b = next_color(&b_up, b, 5);
@@ -64,24 +60,20 @@ public:
 			1.0f });
 		auto paint2 = SkPaint(color2);
 
-		auto* canvas = surface->getCanvas();
-		//canvas->save();
-		// if (orientation == DisplayOrientation::LEFT_VERTICAL) {
-		// 	canvas->translate(w, 0);
-		// 	canvas->rotate(90);
-		// }
-		canvas->clear(color);
+		canvas.clear(color);
 
-		SkRect rect = SkRect::MakeLTRB(int(w / 3), int(h / 3), int(2 * w / 3), int(2 * h / 3));
-		canvas->drawRect(rect, paint2);
+		SkRect rect = SkRect::MakeLTRB(w / 3, h / 3, 2 * w / 3, 2 * h / 3);
+		canvas.drawRect(rect, paint2);
 
-		auto typeface = getSkiaOverlay()->getTypeface("sans-serif");
-		auto font = SkFont(typeface, 20);
+		if (typeface == nullptr) {
+			typeface = getSkiaOverlay()->getTypeface("sans-serif");
+		}
+		if (font == nullptr) {
+			font = std::make_shared<SkFont>(typeface, h / 10);
+		}
 
-		canvas->drawString("Hello", 10, 40, font, paint2);
+		canvas.drawString("Hello", w / 2, h / 2, *font, paint);
 		
-		//canvas->restore();
-
     }
 };
 

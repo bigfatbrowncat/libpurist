@@ -5,9 +5,16 @@
 
 namespace purist::graphics::skia {
 
+typedef enum class DisplayOrientation {
+    HORIZONTAL,
+    LEFT_VERTICAL
+} DisplayOrientation;
+
+
 class DisplayContentsSkia : public DisplayContents {
 private:
 	std::shared_ptr<SkiaOverlay> skiaOverlay;
+    DisplayOrientation orientation;
 public:
     void setSkiaOverlay(std::shared_ptr<SkiaOverlay> skiaOverlay);
     std::shared_ptr<SkiaOverlay> getSkiaOverlay() const;
@@ -16,7 +23,7 @@ public:
 
     void drawIntoBuffer(std::shared_ptr<Display> display, std::shared_ptr<TargetSurface> target) override;
 
-    virtual void drawIntoSurface(std::shared_ptr<Display> display, sk_sp<SkSurface> surface) = 0;
+    virtual void drawIntoSurface(std::shared_ptr<purist::graphics::Display> display, int width, int height, SkCanvas& canvas) = 0;
 
 };
 

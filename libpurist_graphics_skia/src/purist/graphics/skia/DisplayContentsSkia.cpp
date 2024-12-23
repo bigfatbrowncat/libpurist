@@ -22,8 +22,29 @@ void DisplayContentsSkia::drawIntoBuffer(std::shared_ptr<Display> display, std::
     }
 
     auto sSurface = skiaOverlay->getSkiaSurface();
+
+	//auto w = surface->width();
+	//auto h = surface->height();
+		
+    if (h > w) {
+        // We are assumming that the display is horizontally oriented.
+        // So if some of them has height > width, let's rotate it
+        orientation = DisplayOrientation::LEFT_VERTICAL;
+    }
+
+	auto* canvas = sSurface->getCanvas();
+    canvas->save();
+    if (orientation == DisplayOrientation::LEFT_VERTICAL) {
+        canvas->translate(w, 0);
+        canvas->rotate(90);
+        
+        std::swap(w, h);
+    }
     
-    drawIntoSurface(display, sSurface);
+    drawIntoSurface(display, w, h, *canvas);
+
+    canvas->restore();
+
     
     auto context = skiaOverlay->getSkiaContext();
     if (context != nullptr) {

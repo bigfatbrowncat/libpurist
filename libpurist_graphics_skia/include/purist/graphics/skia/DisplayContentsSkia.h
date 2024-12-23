@@ -7,7 +7,8 @@ namespace purist::graphics::skia {
 
 typedef enum class DisplayOrientation {
     HORIZONTAL,
-    LEFT_VERTICAL
+    LEFT_VERTICAL,
+    RIGHT_VERTICAL
 } DisplayOrientation;
 
 

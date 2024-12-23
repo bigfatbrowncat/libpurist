@@ -46,7 +46,10 @@ void DisplayContentsSkia::drawIntoBuffer(std::shared_ptr<Display> display, std::
     if (orientation == DisplayOrientation::LEFT_VERTICAL) {
         canvas->translate(w, 0);
         canvas->rotate(90);
-        
+        std::swap(w, h);
+    } else if (orientation == DisplayOrientation::RIGHT_VERTICAL) {
+        canvas->translate(0, h);
+        canvas->rotate(-90);
         std::swap(w, h);
     }
     

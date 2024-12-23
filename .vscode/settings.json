@@ -9,6 +9,10 @@
     "files.watcherExclude": {
         "**/.git/objects/**": true,
         "**/.git/subtree-cache/**": true
+    },
+    "cmake.buildDirectory": "${workspaceFolder}/build-${buildType}",
+    "cmake.environment": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "1",
+        "LSAN_OPTIONS": "suppressions=${workspaceFolder}/lsan-suppressions.supp"
     }
-
 }

@@ -15,8 +15,13 @@
             "environment": [ 
                 { 
                     "name": "ASAN_OPTIONS",
-                    "value": "halt_on_error=1:abort_on_error=1" 
+                    "value": "halt_on_error=1:abort_on_error=1"
+                },
+                { 
+                    "name": "LSAN_OPTIONS",
+                    "value": "suppressions=${workspaceFolder}/lsan-suppressions.supp"
                 }
+
             ],
             "MIMode": "gdb",
             "setupCommands": [
@@ -39,6 +44,10 @@
                 { 
                     "name": "ASAN_OPTIONS",
                     "value": "halt_on_error=1:abort_on_error=1" 
+                },
+                { 
+                    "name": "LSAN_OPTIONS",
+                    "value": "suppressions=${workspaceFolder}/lsan-suppressions.supp"
                 }
             ],
             "MIMode": "gdb",

@@ -30,7 +30,8 @@ public:
 class Display {
 public:
     virtual ~Display() = default;
-
+    virtual uint32_t getWidth() const = 0;
+    virtual uint32_t getHeight() const = 0;
     virtual uint32_t getConnectorId() const = 0;
 };
 

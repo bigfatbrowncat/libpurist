@@ -66,6 +66,10 @@ public:
     uint32_t getConnectorId() const override { return connector_id; }
     uint32_t getCrtcId() const { return crtc_id; }
 
+    uint32_t getWidth() const override { return mode->hdisplay; }
+    uint32_t getHeight() const override { return mode->vdisplay; }
+
+
     static void modeset_page_flip_event(int fd, unsigned int frame, unsigned int sec, unsigned int usec, void *data);
 };
 

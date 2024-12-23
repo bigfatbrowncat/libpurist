@@ -11,20 +11,23 @@ void DisplayContentsSkia::setSkiaOverlay(std::shared_ptr<SkiaOverlay> skiaOverla
 std::shared_ptr<SkiaOverlay> DisplayContentsSkia::getSkiaOverlay() const { return skiaOverlay; }
 
 void DisplayContentsSkia::drawIntoBuffer(std::shared_ptr<Display> display, std::shared_ptr<TargetSurface> target) {
-    int w = target->getWidth(), h = target->getHeight();
+    int tw = target->getWidth(), th = target->getHeight();
 
     if (!target->getMappedBuffer()) {
         auto* eglOverlay = skiaOverlay->asEGLOverlay();
-        eglOverlay->updateBuffer(w, h);
+        eglOverlay->updateBuffer(tw, th);
     } else {
         auto* rasterOverlay = skiaOverlay->asRasterOverlay();
-        rasterOverlay->updateBuffer(w, h, target->getMappedBuffer());
+        rasterOverlay->updateBuffer(tw, th, target->getMappedBuffer());
     }
 
     auto sSurface = skiaOverlay->getSkiaSurface();
 
-	//auto w = surface->width();
-	//auto h = surface->height();
+	//w = sSurface->width();
+	//h = sSurface->height();
+
+    uint32_t w = tw;//display->getWidth();
+    uint32_t h = th;//display->getHeight();
 		
     if (h > w) {
         // We are assumming that the display is horizontally oriented.
@@ -34,6 +37,12 @@ void DisplayContentsSkia::drawIntoBuffer(std::shared_ptr<Display> display, std::
 
 	auto* canvas = sSurface->getCanvas();
     canvas->save();
+
+    // With EGL backend SkSurface can be bigger than the Display
+    // (because the surface will have the dimensions of the biggest display connected to the system)
+    // To align the display with the surface, we need this translation
+    canvas->translate(0, sSurface->height() - display->getHeight());
+    
     if (orientation == DisplayOrientation::LEFT_VERTICAL) {
         canvas->translate(w, 0);
         canvas->rotate(90);

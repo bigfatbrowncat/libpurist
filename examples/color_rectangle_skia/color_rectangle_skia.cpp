@@ -4,6 +4,8 @@
 
 // Skia headers
 #include <include/core/SkSurface.h>
+#include <include/core/SkFont.h>
+#include <include/core/SkFontMetrics.h>
 
 // std headers
 #include <map>
@@ -72,8 +74,25 @@ public:
 			font = std::make_shared<SkFont>(typeface, h / 10);
 		}
 
-		canvas.drawString("Hello", w / 2, h / 2, *font, paint);
-		
+		std::string topText { "Top" };
+		SkRect topTextBounds;
+		font->measureText(topText.c_str(), topText.size(), SkTextEncoding::kUTF8, &topTextBounds);
+		SkFontMetrics topTextMetrics;
+		font->getMetrics(&topTextMetrics);
+
+		std::string bottomText { "Bottom" };
+		SkRect bottomTextBounds;
+		font->measureText(bottomText.c_str(), bottomText.size(), SkTextEncoding::kUTF8, &bottomTextBounds);
+		SkFontMetrics bottomTextMetrics;
+		font->getMetrics(&bottomTextMetrics);
+
+	
+		canvas.drawString(topText.c_str(), 0, 0 - topTextMetrics.fAscent, *font, paint2);
+		canvas.drawString(topText.c_str(), w - topTextBounds.fRight, 0 - topTextMetrics.fAscent, *font, paint2);
+
+		canvas.drawString(bottomText.c_str(), 0, h - bottomTextMetrics.fDescent, *font, paint2);
+		canvas.drawString(bottomText.c_str(), w - bottomTextBounds.fRight, h - bottomTextMetrics.fDescent, *font, paint2);
+
     }
 };
 

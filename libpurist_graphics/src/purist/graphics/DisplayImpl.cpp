@@ -14,12 +14,12 @@
 
 namespace purist::graphics {
 
-static bool modes_equal(const drmModeModeInfo& mode1, const drmModeModeInfo& mode2) {
-	return 
-		mode1.vdisplay == mode2.vdisplay &&
-		mode1.hdisplay == mode2.hdisplay &&
-		mode1.clock == mode2.clock;
-}
+// static bool modes_equal(const drmModeModeInfo& mode1, const drmModeModeInfo& mode2) {
+// 	return 
+// 		mode1.vdisplay == mode2.vdisplay &&
+// 		mode1.hdisplay == mode2.hdisplay &&
+// 		mode1.clock == mode2.clock;
+// }
 
 void DisplayImpl::setCrtc(FrameBufferImpl *buf) {
 	assert(state != State::CRTC_SET_SUCCESSFULLY);
@@ -28,12 +28,15 @@ void DisplayImpl::setCrtc(FrameBufferImpl *buf) {
 		saved_crtc = std::make_unique<ModeCrtc>(card, crtc_id);
 	}
 
-	int ret = drmModeSetCrtc(card.fd, crtc_id, buf->framebuffer_id, 0, 0,
-				&connector_id, 1, mode.get());
+	saved_crtc->set(*buf, { connector_id }, *mode);
+
+	//int ret = drmModeSetCrtc(card.fd, crtc_id, buf->framebuffer_id, 0, 0,
+	//			&connector_id, 1, const_cast<drmModeModeInfo*>(mode->info));
+
 	
-	if (ret) {
-		throw errcode_exception(-errno, std::string("cannot assign crtc with framebuffer. ") + strerror(errno));
-	}
+	// if (ret) {
+	// 	throw errcode_exception(-errno, std::string("cannot assign crtc with framebuffer. ") + strerror(errno));
+	// }
 }
 
 
@@ -74,26 +77,26 @@ int DisplayImpl::setup(const ModeResources& res, const ModeConnector& conn) {
 	// mm = mm % conn->count_modes;
 	// fprintf(stderr, "done! %ux%u\n\n", conn->modes[mm].hdisplay, conn->modes[mm].vdisplay);
 
-	drmModeModeInfo& selected_mode = conn.connector->modes[mm];
+	auto selected_mode = std::make_shared<ModeModeInfo>(card, conn, mm);
 
-	auto new_width = selected_mode.hdisplay;
-	auto new_height = selected_mode.vdisplay;
+	auto new_width = selected_mode->getWidth();//hdisplay;
+	auto new_height = selected_mode->getHeight(); //vdisplay;
 
 	if (mode != nullptr) {
 		// This display already has a mode
 
-		if (modes_equal(*mode, selected_mode)) {
+		if (*mode == *selected_mode) {
 
 			// No mode change here
 			return 0;
 
 		} else {
-			uint32_t freq1 = mode->clock * 1000.0f / (mode->htotal * mode->vtotal);
+			uint32_t freq1 = mode->getFreq();//  mode->clock * 1000.0f / (mode->htotal * mode->vtotal);
 			freq1 = (uint32_t)(freq1 * 1000.0f) / 1000.0f;
-			uint32_t freq2 = selected_mode.clock * 1000.0f / (selected_mode.htotal * selected_mode.vtotal);
+			uint32_t freq2 = selected_mode->getFreq();  //.clock * 1000.0f / (selected_mode.htotal * selected_mode.vtotal);
 			freq2 = (uint32_t)(freq2 * 1000.0f) / 1000.0f;
 
-			fprintf(stderr, "changing the mode from %ux%u @ %uHz to %ux%u @ %uHz\n", mode->hdisplay, mode->vdisplay, freq1, 
+			fprintf(stderr, "changing the mode from %ux%u @ %uHz to %ux%u @ %uHz\n", mode->getWidth(), mode->getHeight(), freq1, 
 			                                                                                        new_width, new_height, freq2);
 			for (auto& fb : framebuffers) {
 				fb->removeAndDestroy();
@@ -111,7 +114,7 @@ int DisplayImpl::setup(const ModeResources& res, const ModeConnector& conn) {
 
 	/* copy the mode information into our device structure and into both
 	* buffers */
-	mode = std::make_shared<drmModeModeInfo>(selected_mode);
+	mode = selected_mode;
 
 	if (!updating_mode) {
 		/* find a crtc for this connector */

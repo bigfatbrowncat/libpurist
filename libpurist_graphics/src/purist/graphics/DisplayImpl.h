@@ -4,6 +4,7 @@
 #include "FrameBufferImpl.h"
 #include "ModeResources.h"
 #include "ModeConnector.h"
+#include "ModeModeInfo.h"
 #include "ModeCrtc.h"
 
 #include <memory>
@@ -32,7 +33,7 @@ private:
 	unsigned int current_framebuffer_index = 0;
 	std::array<std::unique_ptr<FrameBufferImpl>, 2> framebuffers;
 
-	std::shared_ptr<drmModeModeInfo> mode = nullptr;
+	std::shared_ptr<ModeModeInfo> mode = nullptr;
 	
     uint32_t crtc_id = 0;
 	std::unique_ptr<ModeCrtc> saved_crtc = nullptr;
@@ -65,9 +66,7 @@ public:
     void updateInDrawingLoop(DisplayContentsFactory& factory);
     uint32_t getConnectorId() const override { return connector_id; }
     uint32_t getCrtcId() const { return crtc_id; }
-
-    uint32_t getWidth() const override { return mode->hdisplay; }
-    uint32_t getHeight() const override { return mode->vdisplay; }
+    const Mode& getMode() const override { return *mode; }
 
 
     static void modeset_page_flip_event(int fd, unsigned int frame, unsigned int sec, unsigned int usec, void *data);

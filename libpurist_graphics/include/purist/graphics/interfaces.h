@@ -7,6 +7,16 @@ namespace purist::graphics {
 
 // Implemented on the library side
 
+class Mode {
+public:
+	virtual ~Mode() = default;
+
+    virtual uint32_t getWidth() const = 0;
+    virtual uint32_t getHeight() const = 0;
+    virtual float getFreq() const = 0;
+};
+
+
 class TargetSurface {
 public:
 	virtual ~TargetSurface() = default;
@@ -30,8 +40,7 @@ public:
 class Display {
 public:
     virtual ~Display() = default;
-    virtual uint32_t getWidth() const = 0;
-    virtual uint32_t getHeight() const = 0;
+    virtual const Mode& getMode() const = 0;
     virtual uint32_t getConnectorId() const = 0;
 };
 

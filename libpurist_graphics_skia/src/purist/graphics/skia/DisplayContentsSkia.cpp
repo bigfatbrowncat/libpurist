@@ -41,7 +41,7 @@ void DisplayContentsSkia::drawIntoBuffer(std::shared_ptr<Display> display, std::
     // With EGL backend SkSurface can be bigger than the Display
     // (because the surface will have the dimensions of the biggest display connected to the system)
     // To align the display with the surface, we need this translation
-    canvas->translate(0, sSurface->height() - display->getHeight());
+    canvas->translate(0, sSurface->height() - display->getMode().getHeight());
     
     if (orientation == DisplayOrientation::LEFT_VERTICAL) {
         canvas->translate(w, 0);

@@ -25,6 +25,8 @@ add_library(purist_graphics STATIC
     src/purist/graphics/FrameBufferImpl.h
     src/purist/graphics/ModeConnector.cpp
     src/purist/graphics/ModeConnector.h
+    src/purist/graphics/ModeModeInfo.cpp
+    src/purist/graphics/ModeModeInfo.h
     src/purist/graphics/ModeCrtc.cpp
     src/purist/graphics/ModeCrtc.h
     src/purist/graphics/ModeEncoder.cpp

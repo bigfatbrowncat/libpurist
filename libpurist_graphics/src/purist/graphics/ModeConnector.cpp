@@ -1,4 +1,6 @@
 #include "ModeConnector.h"
+#include "ModeModeInfo.h"
+#include <memory>
 #include <purist/exceptions.h>
 #include <cassert>
 
@@ -22,6 +24,15 @@ ModeConnector::~ModeConnector() {
 uint32_t ModeConnector::getConnectorId() const { 
 	assert(connector->connector_id == connector_id);
 	return connector->connector_id; 
+}
+
+const std::list<std::shared_ptr<ModeModeInfo>> ModeConnector::getModes() const {
+	std::list<std::shared_ptr<ModeModeInfo>> res;
+	for (int i = 0; i < connector->count_modes; i++) {
+		std::shared_ptr<ModeModeInfo> mode = std::make_shared<ModeModeInfo>(card, *this, i);
+		res.push_back(mode);
+	}
+	return res;
 }
 
 }

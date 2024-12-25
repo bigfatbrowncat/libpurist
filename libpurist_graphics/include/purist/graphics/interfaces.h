@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <cstdint>
+#include <list>
 
 namespace purist::graphics {
 
@@ -51,6 +52,7 @@ class DisplayContents {
 public:
     virtual ~DisplayContents() = default;
 
+    virtual std::list<std::shared_ptr<Mode>>::const_iterator chooseMode(const std::list<std::shared_ptr<Mode>>& modes) = 0;
     virtual void drawIntoBuffer(std::shared_ptr<Display> display, std::shared_ptr<TargetSurface> target) = 0;
 };
 

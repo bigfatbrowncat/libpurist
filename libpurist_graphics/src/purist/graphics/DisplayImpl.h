@@ -63,7 +63,8 @@ public:
 
     int connectDisplayToNotOccupiedCrtc(const ModeResources& res, const ModeConnector& conn);
     int setup(const ModeResources& res, const ModeConnector& conn);
-    void updateInDrawingLoop(DisplayContentsFactory& factory);
+    void createContentsHandler(DisplayContentsFactory& factory);
+    void updateInDrawingLoop();
     uint32_t getConnectorId() const override { return connector_id; }
     uint32_t getCrtcId() const { return crtc_id; }
     const Mode& getMode() const override { return *mode; }

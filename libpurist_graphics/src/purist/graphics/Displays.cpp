@@ -13,7 +13,7 @@ namespace purist::graphics {
 void Displays::addNewlyConnectedToDrawingLoop() {
 	/* redraw all outputs */
 	for (auto& iter : *this) {
-		iter->updateInDrawingLoop(*this->displayContentsFactory);
+		iter->updateInDrawingLoop();
 	}
 }
 
@@ -59,6 +59,7 @@ int Displays::updateHardwareConfiguration()
 				// create a new display
 				auto cid = modeConnector.getConnectorId(); // connector->connector_id;
 				display = std::make_shared<DisplayImpl>(card, *this, cid, opengl);
+				display->createContentsHandler(*displayContentsFactory);
 				new_display_connected = true;
 			}
 

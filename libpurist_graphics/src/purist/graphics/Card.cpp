@@ -259,6 +259,7 @@ void Card::runDrawingLoop()
 	ev.version = 2;
 	ev.page_flip_handler = DisplayImpl::modeset_page_flip_event; //  unsigned int frame, unsigned int sec, unsigned int usec, void *data
 
+	//displays->createContentsForAll();
 
 	/* prepare all connectors and CRTCs */
 	ret = displays->updateHardwareConfiguration();
@@ -289,11 +290,11 @@ void Card::runDrawingLoop()
 			drmHandleEvent(fd, &ev);
 
 			if (counter % redraws_between_updates == 0) {
+				//displays->createContentsForAll();
 				ret = displays->updateHardwareConfiguration();
 				if (ret) {
 					throw errcode_exception(ret, "Displays::updateHardwareConfiguration() failed");
 				}
-
 				displays->addNewlyConnectedToDrawingLoop();
 			}
 			counter ++;

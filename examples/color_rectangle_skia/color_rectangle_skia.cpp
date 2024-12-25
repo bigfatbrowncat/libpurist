@@ -10,6 +10,7 @@
 // std headers
 #include <map>
 #include <memory>
+#include <iostream>
 
 namespace pg = purist::graphics;
 namespace pgs = purist::graphics::skia;
@@ -39,6 +40,24 @@ public:
 
         return next;
     }
+	
+	int i = 0;
+	bool top = true;
+    std::list<std::shared_ptr<pg::Mode>>::const_iterator chooseMode(const std::list<std::shared_ptr<pg::Mode>>& modes) override {
+		
+		i = (i + 1) % 5;
+
+		if (i == 0) top = !top;
+
+		if (top) {
+			auto res = modes.end();  //.begin();
+			res--;
+			return res;
+		} else {
+			auto res = modes.begin();
+			return res;
+		}
+	}
 
 
     void drawIntoSurface(std::shared_ptr<pg::Display> display, int width, int height, SkCanvas& canvas) override {
@@ -71,7 +90,7 @@ public:
 			typeface = getSkiaOverlay()->getTypeface("sans-serif");
 		}
 		if (font == nullptr) {
-			font = std::make_shared<SkFont>(typeface, h / 10);
+			font = std::make_shared<SkFont>(typeface, 50);
 		}
 
 		std::string topText { "Top" };

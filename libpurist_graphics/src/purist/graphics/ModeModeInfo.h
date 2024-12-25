@@ -21,7 +21,7 @@ public:
     uint32_t getHeight() const override { return info.vdisplay; }
     float getFreq() const override { return info.clock * 1000.0f / (info.htotal * info.vtotal); }
 
-	ModeModeInfo(const Card& card, const ModeConnector& conn, size_t index);
+	ModeModeInfo(const Card& card, const purist::graphics::ModeConnector& conn, size_t index);
 	virtual ~ModeModeInfo();
 
 };

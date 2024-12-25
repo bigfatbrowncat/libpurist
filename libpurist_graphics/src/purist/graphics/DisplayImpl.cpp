@@ -2,6 +2,7 @@
 #include "Displays.h"
 #include "ModeEncoder.h"
 
+#include <iterator>
 #include <memory>
 #include <purist/exceptions.h>
 #include <purist/graphics/interfaces.h>
@@ -66,7 +67,7 @@ int DisplayImpl::setup(const ModeResources& res, const ModeConnector& conn) {
 
 	bool updating_mode = false;
 
-	int mm = 0;
+	//int mm = 0;
 	// for (mm = 0; mm < conn->count_modes; mm++) {
 	// 	fprintf(stderr, "probing %ux%u\n", conn->modes[mm].hdisplay, conn->modes[mm].vdisplay);
 	// 	if ((conn->modes[mm].hdisplay == 720 && 
@@ -77,7 +78,18 @@ int DisplayImpl::setup(const ModeResources& res, const ModeConnector& conn) {
 	// mm = mm % conn->count_modes;
 	// fprintf(stderr, "done! %ux%u\n\n", conn->modes[mm].hdisplay, conn->modes[mm].vdisplay);
 
-	auto selected_mode = std::make_shared<ModeModeInfo>(card, conn, mm);
+	auto modes = conn.getModes();
+	std::list<std::shared_ptr<Mode>> modeBaseList(modes.begin(), modes.end());
+
+	
+	std::list<std::shared_ptr<ModeModeInfo>>::iterator derivedIter = modes.begin();
+	if (this->contents != nullptr) {
+		std::advance(derivedIter, std::distance(modeBaseList.cbegin(), this->contents->chooseMode(modeBaseList)));
+	}
+	auto selected_mode = *derivedIter;
+
+
+	//auto selected_mode = std::make_shared<ModeModeInfo>(card, conn, mm);
 
 	auto new_width = selected_mode->getWidth();//hdisplay;
 	auto new_height = selected_mode->getHeight(); //vdisplay;
@@ -226,13 +238,16 @@ void DisplayImpl::modeset_page_flip_event(int fd, unsigned int frame,
 	}
 }
 
-void DisplayImpl::updateInDrawingLoop(DisplayContentsFactory& factory) {
+void DisplayImpl::createContentsHandler(DisplayContentsFactory& factory) {
+	if (contents == nullptr) {
+		contents = factory.createDisplayContents(*this);
+	}
+}
+
+void DisplayImpl::updateInDrawingLoop() {
 	if (state == State::CRTC_SET_SUCCESSFULLY) { //crtc_set_successfully && !is_in_drawing_loop) {
 		state = State::IN_DRAWING_LOOP; //is_in_drawing_loop = true;
 		printf("display initialized at connector: %d\n", connector_id); fflush(stdout);
-		if (contents == nullptr) {
-			contents = factory.createDisplayContents(*this);
-		}
 		draw();
 	}
 }

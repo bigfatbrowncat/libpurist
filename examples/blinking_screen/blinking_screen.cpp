@@ -4,7 +4,9 @@
 #include <memory>
 #include <cassert>
 
-class ColoredScreenDisplayContents : public purist::graphics::DisplayContents {
+namespace pg = purist::graphics;
+
+class ColoredScreenDisplayContents : public pg::DisplayContents {
 private:
 	bool enableOpenGL;
 
@@ -32,13 +34,11 @@ public:
         return next;
     }
 
-	typedef enum class DisplayOrientation {
-		HORIZONTAL,
-		LEFT_VERTICAL
-	} DisplayOrientation;
+    std::list<std::shared_ptr<pg::Mode>>::const_iterator chooseMode(const std::list<std::shared_ptr<pg::Mode>>& modes) override {
+		return modes.cbegin();
+	}
 
-    void drawIntoBuffer(std::shared_ptr<purist::graphics::Display> display, std::shared_ptr<purist::graphics::TargetSurface> target) override {
-		//DisplayOrientation orientation = DisplayOrientation::HORIZONTAL;// DisplayOrientation::LEFT_VERTICAL;
+    void drawIntoBuffer(std::shared_ptr<pg::Display> display, std::shared_ptr<pg::TargetSurface> target) override {
 		
 		int w = target->getWidth(), h = target->getHeight();
 
@@ -69,14 +69,14 @@ public:
     }
 };
 
-class ColoredScreenDisplayContentsFactory : public purist::graphics::DisplayContentsFactory {
+class ColoredScreenDisplayContentsFactory : public pg::DisplayContentsFactory {
 private:
 	bool enableOpenGL;
 
 public:
 	ColoredScreenDisplayContentsFactory(bool enableOpenGL) : enableOpenGL(enableOpenGL) { }
 
-	std::shared_ptr<purist::graphics::DisplayContents> createDisplayContents(purist::graphics::Display& display) {
+	std::shared_ptr<pg::DisplayContents> createDisplayContents(pg::Display& display) {
 		auto contents = std::make_shared<ColoredScreenDisplayContents>(enableOpenGL);
 		contents->r = rand() % 0xff;
 		contents->g = rand() % 0xff;

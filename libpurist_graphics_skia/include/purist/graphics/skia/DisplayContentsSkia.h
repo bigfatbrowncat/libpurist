@@ -4,7 +4,6 @@
 #include <purist/graphics/interfaces.h>
 
 #include <memory>
-#include <list>
 
 namespace purist::graphics::skia {
 

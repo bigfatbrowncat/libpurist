@@ -34,13 +34,32 @@ add_library(purist_graphics STATIC
     src/purist/graphics/ModeResources.cpp
     src/purist/graphics/ModeResources.h
     src/purist/graphics/TargetSurfaceBackface.h
+    
+    src/purist/input/Keyboard.cpp
+    src/purist/input/Keyboard.h
 )
+
+find_package(PkgConfig REQUIRED)
+pkg_search_module(EVDEV REQUIRED libevdev)
+pkg_search_module(DRM REQUIRED libdrm)
+pkg_search_module(GBM REQUIRED gbm)
+pkg_search_module(XKB_COMMON REQUIRED xkbcommon)
 
 target_compile_features(purist_graphics PUBLIC cxx_std_17)
 set_property(TARGET purist_graphics PROPERTY POSITION_INDEPENDENT_CODE ON)
-target_include_directories(purist_graphics PRIVATE /usr/include/libdrm)
+target_include_directories(purist_graphics PRIVATE ${DRM_INCLUDE_DIRS})
+target_include_directories(purist_graphics PRIVATE ${GBM_INCLUDE_DIRS})
+target_include_directories(purist_graphics PRIVATE ${EVDEV_INCLUDE_DIRS})
+target_include_directories(purist_graphics PRIVATE ${XKB_COMMON_INCLUDE_DIRS})
+
+target_include_directories(purist_graphics PUBLIC ${purist_third_party}/evdevw/include)
 target_include_directories(purist_graphics PUBLIC ${purist_graphics_SOURCE_DIR}/include)
+
+
 target_link_libraries(purist_graphics PUBLIC 
+    evdev
+    xkbcommon
+
     drm 
     gbm 
     EGL 

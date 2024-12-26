@@ -9,6 +9,7 @@
 #include <climits>
 
 #include <iostream>
+#include <xkbcommon/xkbcommon.h>
 
 namespace purist::input {
 
@@ -52,14 +53,19 @@ Keyboard::~Keyboard() {
     if (fd >= 0) {
         close(fd);
     }
+    if (state) {
+        xkb_state_unref(state);
+    }
 }
 
 
 bool Keyboard::initializeAndProbe(xkb_keymap *keymap, xkb_compose_table *compose_table) { 
     //int ret;
     //char *path;
+
     struct xkb_state *state;
     struct xkb_compose_state *compose_state = NULL;
+
     //struct keyboard *kbd;
 
     fd = open(node.c_str(), O_NONBLOCK | O_CLOEXEC | O_RDONLY);

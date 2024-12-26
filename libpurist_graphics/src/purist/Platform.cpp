@@ -3,6 +3,7 @@
 
 #include "graphics/Card.h"
 #include "input/Keyboard.h"
+#include "input/Keyboards.h"
 
 #include <xkbcommon/xkbcommon.h>
 
@@ -51,114 +52,17 @@ static std::unique_ptr<graphics::Card> probeCard(bool enableOpenGL) {
     return card;
 }
 
-static std::unique_ptr<input::Keyboard> probeKeyboard(xkb_context *ctx) {
 
-
-
-    const char *keymap_path = NULL;
-    struct xkb_keymap *keymap = NULL;
-    if (keymap_path) {
-        FILE *file = fopen(keymap_path, "rb");
-        if (!file) {
-            fprintf(stderr, "Couldn't open '%s': %s\n",
-                    keymap_path, strerror(errno));
-            throw std::runtime_error("ERROR");  // TODO fix message
-        }
-        keymap = xkb_keymap_new_from_file(ctx, file,
-                                          XKB_KEYMAP_FORMAT_TEXT_V1,
-                                          XKB_KEYMAP_COMPILE_NO_FLAGS);
-        fclose(file);
-    }
-    else {
-        // const char *rules = NULL;
-        // const char *model = "pc105";
-        // const char *layout = "us";
-        // const char *variant = "altgr-intl";
-        // const char *options = "grp:alt_shift_toggle";
-
-        // struct xkb_rule_names rmlvo = {
-        //     .rules = (rules == NULL || rules[0] == '\0') ? NULL : rules,
-        //     .model = (model == NULL || model[0] == '\0') ? NULL : model,
-        //     .layout = (layout == NULL || layout[0] == '\0') ? NULL : layout,
-        //     .variant = (variant == NULL || variant[0] == '\0') ? NULL : variant,
-        //     .options = (options == NULL || options[0] == '\0') ? NULL : options
-        // };
-
-        // if (!rules && !model && !layout && !variant && !options)
-        //     keymap = xkb_keymap_new_from_names(ctx, NULL, XKB_KEYMAP_COMPILE_NO_FLAGS);
-        // else
-
-        struct xkb_rule_names rmlvo = {
-            .rules = "evdev",
-            .model = "pc105",
-            .layout = "us",
-            .variant = "qwerty",
-            .options = "grp:alt_shift_toggle"
-        };
-        keymap = xkb_keymap_new_from_names(ctx, NULL, XKB_KEYMAP_COMPILE_NO_FLAGS);
-         //xkb_keymap_new_from_names(ctx, &rmlvo, XKB_KEYMAP_COMPILE_NO_FLAGS);
-
-        if (!keymap) {
-            fprintf(stderr,
-                    "Failed to compile RMLVO: '%s', '%s', '%s', '%s', '%s'\n",
-                    rmlvo.rules, rmlvo.model, rmlvo.layout, rmlvo.variant, rmlvo.options);
-            throw std::runtime_error("ERROR");  // TODO fix message
-        }
-    }
-
-
-    // Probing keyboards
-    std::unique_ptr<input::Keyboard> keyboard;
-    fs::path dri_path = "/dev/input";
-    std::string card_path;
-    for (const auto & entry : fs::directory_iterator(dri_path)) {
-        card_path = entry.path();
-        if (card_path.find(std::string(dri_path / "event")) == 0) {
-            keyboard = std::make_unique<input::Keyboard>(card_path);
-            if (keyboard->initializeAndProbe(keymap, nullptr)) {
-                break;  // Success
-            }
-            keyboard = nullptr;
-        }
-    }
-    if (keyboard == nullptr) {
-        throw std::runtime_error("Can't find a keyboard.");
-    }
-    std::cout << "Using keyboard device: " << card_path << std::endl;
-    return keyboard;
-}
 
 void Platform::run(std::shared_ptr<graphics::DisplayContentsFactory> contentsFactory) {
     
     auto card = probeCard(enableOpenGL);
 
-    xkb_context* ctx = xkb_context_new(XKB_CONTEXT_NO_DEFAULT_INCLUDES);
-    if (!ctx) {
-        throw errcode_exception(-1, "Couldn't create xkb context");
-    }
-
-    const char *includes[64];
-    size_t num_includes = 0;
-    bool verbose = false;
-    if (verbose) {
-        xkb_context_set_log_level(ctx, XKB_LOG_LEVEL_DEBUG);
-        xkb_context_set_log_verbosity(ctx, 10);
-    }
-
-    #define DEFAULT_INCLUDE_PATH_PLACEHOLDER "__defaults__"
-    if (num_includes == 0)
-        includes[num_includes++] = DEFAULT_INCLUDE_PATH_PLACEHOLDER;
-
-    for (size_t i = 0; i < num_includes; i++) {
-        const char *include = includes[i];
-        if (strcmp(include, DEFAULT_INCLUDE_PATH_PLACEHOLDER) == 0)
-            xkb_context_include_path_append_default(ctx);
-        else
-            xkb_context_include_path_append(ctx, include);
-    }
+    auto keyboards = std::make_shared<purist::input::Keyboards>();
+    keyboards->initialize();
 
     // Probing keyboards
-    auto kbd = probeKeyboard(ctx);
+    //auto kbd = probeKeyboard(ctx);
 
     card->setDisplayContentsFactory(contentsFactory);
     card->runDrawingLoop();

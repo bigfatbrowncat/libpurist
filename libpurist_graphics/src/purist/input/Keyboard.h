@@ -1,7 +1,5 @@
 #pragma once
 
-//#include <evdevw.hpp>
-
 #include <xkbcommon/xkbcommon.h>
 #include <xkbcommon/xkbcommon-compose.h>
 
@@ -22,8 +20,8 @@ private:
 
     fs::path node;
     int fd;
-    struct xkb_state *state;
-    struct xkb_compose_state *compose_state;
+    struct xkb_state *state = nullptr;
+    struct xkb_compose_state *compose_state = nullptr;
 
     static bool evdev_bit_is_set(const unsigned long *array, int bit);
 

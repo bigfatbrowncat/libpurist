@@ -37,6 +37,8 @@ add_library(purist_graphics STATIC
     
     src/purist/input/Keyboard.cpp
     src/purist/input/Keyboard.h
+    src/purist/input/Keyboards.cpp
+    src/purist/input/Keyboards.h
 )
 
 find_package(PkgConfig REQUIRED)

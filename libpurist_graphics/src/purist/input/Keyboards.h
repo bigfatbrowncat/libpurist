@@ -1,9 +1,14 @@
 #pragma once
 
+#include "Keyboard.h"
+
+
 #include <xkbcommon/xkbcommon.h>
 #include <xkbcommon/xkbcommon-compose.h>
 
-#include "Keyboard.h"
+#include <poll.h>
+
+#include <vector>
 
 namespace purist::input {
 
@@ -22,6 +27,8 @@ public:
     Keyboards();
     void initialize();
     int loop();
+    std::vector<pollfd> getFds();
+    void processFd(std::vector<pollfd>::iterator fds_iter);
     virtual ~Keyboards();
 
 };

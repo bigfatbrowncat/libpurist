@@ -6,7 +6,6 @@
 #include <vector>
 #include <cstring>
 #include <iostream>
-#include <sys/poll.h>
 #include <xkbcommon/xkbcommon.h>
 
 namespace purist::input {
@@ -135,22 +134,10 @@ void Keyboards::initialize() {
     }
 }
 
-int Keyboards::loop()
-{
-    int ret = -1;
-    //struct keyboard *kbd;
-    nfds_t nfds;//, i;
-    //struct pollfd *fds = NULL;
-
-    //for (kbd = kbds, nfds = 0; kbd; kbd = kbd->next, nfds++) {}
-    nfds = this->size();
+std::vector<pollfd> Keyboards::getFds() {
+    nfds_t nfds = this->size();
 
     std::vector<pollfd> fds(nfds);
-    // fds = calloc(nfds, sizeof(*fds));
-    // if (fds == NULL) {
-    //     fprintf(stderr, "Out of memory");
-    //     goto out;
-    // }
 
     auto fds_iter = fds.begin();
     for (auto& kbd : *this) {
@@ -158,28 +145,26 @@ int Keyboards::loop()
         fds_iter->events = POLLIN;
         fds_iter++;
     }
+    return fds;
+}
 
-    bool terminate = false;
-    while (!terminate) {
-        ret = poll(fds.data(), nfds, -1);
-        if (ret < 0) {
-            if (errno == EINTR)
-                continue;
-            // fprintf(stderr, "Couldn't poll for events: %s\n",
-            //         strerror(errno));
-            //goto out;
-            throw errcode_exception(-errno, "Couldn't poll for events");
-        }
-
-        auto fds_iter = fds.begin();
-        for (auto& kbd : *this) {
-            if (fds_iter->revents != 0) {
-                kbd->read_keyboard(with_compose);
-            }
-            fds_iter++;
+void Keyboards::processFd(std::vector<pollfd>::iterator fds_iter)
+{
+    std::shared_ptr<Keyboard> found_kbd = nullptr;
+    for (auto& kbd : *this) {
+        if (kbd->getFd() == fds_iter->fd) {
+            found_kbd = kbd;
+            break;
         }
     }
-    return 0;
+
+    if (found_kbd == nullptr) {
+        throw errcode_exception(-1, std::string("Can't find a keyboard with fd = ") + std::to_string(fds_iter->fd));
+    }
+    
+    if (fds_iter->revents != 0) {
+        found_kbd->read_keyboard(with_compose);
+    }
 }
 
 }

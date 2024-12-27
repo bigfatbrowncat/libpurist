@@ -58,7 +58,29 @@ void Platform::run(std::shared_ptr<graphics::DisplayContentsFactory> contentsFac
     
     auto keyboards = std::make_shared<purist::input::Keyboards>();
     keyboards->initialize();
-    keyboards->loop();
+
+    auto fds = keyboards->getFds();
+    bool terminate = false;
+    while (!terminate) {
+        int ret = poll(fds.data(), fds.size(), -1);
+        if (ret < 0) {
+            if (errno == EINTR)
+                continue;
+            throw errcode_exception(-errno, "Couldn't poll for events");
+        }
+
+        for (auto fds_iter = fds.begin(); fds_iter != fds.end(); fds_iter++) {
+            keyboards->processFd(fds_iter);
+        }
+
+        // for (auto& kbd : *this) {
+        //     if (fds_iter->revents != 0) {
+        //         kbd->read_keyboard(with_compose);
+        //     }
+        //     fds_iter++;
+        // }
+    }
+
 
     // Probing keyboards
     //auto kbd = probeKeyboard(ctx);

@@ -143,6 +143,8 @@ std::vector<pollfd> Keyboards::getFds() {
     for (auto& kbd : *this) {
         fds_iter->fd = kbd->getFd();
         fds_iter->events = POLLIN;
+        fds_iter->revents = 0;
+        
         fds_iter++;
     }
     return fds;

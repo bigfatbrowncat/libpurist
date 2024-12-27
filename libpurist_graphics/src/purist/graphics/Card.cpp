@@ -45,7 +45,7 @@ Card::Card(const fs::path& node, bool enableOpenGL)
 	  fd(-1), enableOpenGL(enableOpenGL), node(node) { }
 
 
-void Card::initialize()
+void Card::initialize(std::shared_ptr<DisplayContentsFactory> factory)
 {
 	int ret;
 	uint64_t has_dumb;
@@ -75,6 +75,20 @@ void Card::initialize()
 			throw errcode_exception(-EOPNOTSUPP, "drm device '" + std::string(node) + "' does not support dumb buffers");
 		}
 	}
+
+	if (enableOpenGL) {
+		initGL();
+	}
+
+	displays->setDisplayContentsFactory(factory);
+
+	/* prepare all connectors and CRTCs */
+	ret = displays->updateHardwareConfiguration();
+	if (ret) {
+		throw errcode_exception(ret, "modeset::prepare failed");
+	}
+	
+	displays->addNewlyConnectedToDrawingLoop();
 
 }
 
@@ -237,74 +251,100 @@ Card::~Card() {
  * (you need to press RETURN after each keyboard input to make this work).
  */
 
-void Card::runDrawingLoop()
+void Card::processFd(std::vector<pollfd>::iterator fds_iter)
 {
-	int ret;
-	fd_set fds;
-	time_t start, cur;
-	struct timeval v;
 	drmEventContext ev;
 
-	if (enableOpenGL) {
-		initGL();
-	}
-
 	/* init variables */
+	time_t start;
 	srand(time(&start));
-	FD_ZERO(&fds);
-	memset(&v, 0, sizeof(v));
+	//FD_ZERO(&fds);
+	//memset(&v, 0, sizeof(v));
 	memset(&ev, 0, sizeof(ev));
 	/* Set this to only the latest version you support. Version 2
 	 * introduced the page_flip_handler, so we use that. */
 	ev.version = 2;
 	ev.page_flip_handler = DisplayImpl::modeset_page_flip_event; //  unsigned int frame, unsigned int sec, unsigned int usec, void *data
 
-	//displays->createContentsForAll();
-
-	/* prepare all connectors and CRTCs */
-	ret = displays->updateHardwareConfiguration();
-	if (ret) {
-		throw errcode_exception(ret, "modeset::prepare failed");
-	}
-	
-	displays->addNewlyConnectedToDrawingLoop();
 
 	// We update the displays list each 100 event readings. That has to be frequent enough
-	int counter = 0, redraws_between_updates = 100;
+	int redraws_between_updates = 100;
 
-	int seconds = 600;
-	/* wait 5s for VBLANK or input events */
-	while (time(&cur) < start + seconds) {
-		FD_SET(0, &fds);
-		FD_SET(fd, &fds);
-		v.tv_sec = start + seconds - cur;
+    if (fds_iter->fd != fd) throw errcode_exception(-1, "The fd is not the videocard's fd");
 
-		ret = select(fd + 1, &fds, NULL, NULL, &v);
-		if (ret < 0) {
-			fprintf(stderr, "select() failed with %d: %m\n", errno);
-			break;
-		} else if (FD_ISSET(0, &fds)) {
-			fprintf(stderr, "exit due to user-input\n");
-			break;
-		} else if (FD_ISSET(fd, &fds)) {
-			drmHandleEvent(fd, &ev);
+    if (fds_iter->revents != 0) {
+        drmHandleEvent(fd, &ev);
 
-			if (counter % redraws_between_updates == 0) {
-				//displays->createContentsForAll();
-				ret = displays->updateHardwareConfiguration();
-				if (ret) {
-					throw errcode_exception(ret, "Displays::updateHardwareConfiguration() failed");
-				}
-				displays->addNewlyConnectedToDrawingLoop();
+		if (counter % redraws_between_updates == 0) {
+			//displays->createContentsForAll();
+			int ret = displays->updateHardwareConfiguration();
+			if (ret) {
+				throw errcode_exception(ret, "Displays::updateHardwareConfiguration() failed");
 			}
-			counter ++;
+			displays->addNewlyConnectedToDrawingLoop();
 		}
-	}
+		counter ++;
+    }
 }
 
-void Card::setDisplayContentsFactory(std::shared_ptr<DisplayContentsFactory> factory) {
-	displays->setDisplayContentsFactory(factory);
-}
+// void Card::runDrawingLoop()
+// {
+// 	int ret;
+// 	fd_set fds;
+// 	time_t start, cur;
+// 	struct timeval v;
+// 	drmEventContext ev;
+
+// 	if (enableOpenGL) {
+// 		initGL();
+// 	}
+
+// 	/* init variables */
+// 	srand(time(&start));
+// 	FD_ZERO(&fds);
+// 	memset(&v, 0, sizeof(v));
+// 	memset(&ev, 0, sizeof(ev));
+// 	/* Set this to only the latest version you support. Version 2
+// 	 * introduced the page_flip_handler, so we use that. */
+// 	ev.version = 2;
+// 	ev.page_flip_handler = DisplayImpl::modeset_page_flip_event; //  unsigned int frame, unsigned int sec, unsigned int usec, void *data
+
+// 	//displays->createContentsForAll();
+
+// 	/* prepare all connectors and CRTCs */
+// 	ret = displays->updateHardwareConfiguration();
+// 	if (ret) {
+// 		throw errcode_exception(ret, "modeset::prepare failed");
+// 	}
+	
+// 	displays->addNewlyConnectedToDrawingLoop();
+
+// 	// We update the displays list each 100 event readings. That has to be frequent enough
+// 	int counter = 0, redraws_between_updates = 100;
+
+// 	int seconds = 600;
+// 	/* wait 5s for VBLANK or input events */
+// 	while (time(&cur) < start + seconds) {
+// 		FD_SET(0, &fds);
+// 		FD_SET(fd, &fds);
+// 		v.tv_sec = start + seconds - cur;
+
+// 		ret = select(fd + 1, &fds, NULL, NULL, &v);
+// 		if (ret < 0) {
+// 			fprintf(stderr, "select() failed with %d: %m\n", errno);
+// 			break;
+// 		} else if (FD_ISSET(0, &fds)) {
+// 			fprintf(stderr, "exit due to user-input\n");
+// 			break;
+// 		} else if (FD_ISSET(fd, &fds)) {
+// 			// process
+// 		}
+// 	}
+// }
+
+// void Card::setDisplayContentsFactory(std::shared_ptr<DisplayContentsFactory> factory) {
+// 	displays->setDisplayContentsFactory(factory);
+// }
 
 
 /*

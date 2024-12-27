@@ -4,10 +4,12 @@
 
 #include <memory>
 #include <list>
+#include <vector>
 #include <set>
 #include <filesystem>
 
 #include <gbm.h>
+#include <poll.h>
 
 #define GL_GLEXT_PROTOTYPES 1
 #include <GLES2/gl2.h>
@@ -29,9 +31,11 @@ private:
 
     gbm_device *gbmDevice = nullptr;
     std::shared_ptr<Displays> displays;
+    int counter = 0;
 
     int initGBM(int fd, uint32_t width, uint32_t height);
     int initGL();
+
 
 public:
     EGLDisplay glDisplay;
@@ -43,15 +47,16 @@ public:
     const fs::path node;
 
     Card(const fs::path& node, bool enableOpenGL);
-    void initialize();
+    void initialize(std::shared_ptr<DisplayContentsFactory> factory);
 
     virtual ~Card();
 
-    void runDrawingLoop();
+    //void runDrawingLoop();
+    void processFd(std::vector<pollfd>::iterator fds_iter);
 
     gbm_device* getGBMDevice() const { return gbmDevice; }
 
-    void setDisplayContentsFactory(std::shared_ptr<DisplayContentsFactory> factory);
+    //void setDisplayContentsFactory(std::shared_ptr<DisplayContentsFactory> factory);
 
 };
 

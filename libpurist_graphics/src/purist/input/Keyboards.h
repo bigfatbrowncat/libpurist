@@ -15,15 +15,15 @@ private:
 
     xkb_context* ctx = nullptr;
     const char *keymap_path = nullptr;
-    struct xkb_keymap *keymap = nullptr;
-
+    xkb_keymap *keymap = nullptr;
+    xkb_compose_table *compose_table = NULL;
+    bool with_compose = true;
 public:
     Keyboards();
     void initialize();
-
+    int loop();
     virtual ~Keyboards();
 
-    void runDrawingLoop() { }
 };
 
 }

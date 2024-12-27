@@ -1,8 +1,12 @@
 #include "Keyboards.h"
+#include "Keyboard.h"
+#include <cerrno>
 #include <purist/exceptions.h>
 
+#include <vector>
 #include <cstring>
 #include <iostream>
+#include <sys/poll.h>
 #include <xkbcommon/xkbcommon.h>
 
 namespace purist::input {
@@ -21,6 +25,7 @@ Keyboards::~Keyboards() {
 }
 
 void Keyboards::initialize() {
+
     ctx = xkb_context_new(XKB_CONTEXT_NO_DEFAULT_INCLUDES);
     if (!ctx) {
         throw errcode_exception(-1, "Couldn't create xkb context");
@@ -98,24 +103,83 @@ void Keyboards::initialize() {
         }
     }
 
+    if (!keymap) {
+        throw std::runtime_error("Couldn't create xkb keymap");
+    }
+
+    if (with_compose) {
+        char* locale = setlocale(LC_CTYPE, NULL);
+        compose_table =
+            xkb_compose_table_new_from_locale(ctx, locale,
+                                              XKB_COMPOSE_COMPILE_NO_FLAGS);
+        if (!compose_table) {
+            throw std::runtime_error("Couldn't create compose from locale");
+        }
+    }
 
     // Probing keyboards
     std::shared_ptr<input::Keyboard> keyboard;
-    fs::path dri_path = "/dev/input";
-    std::string card_path;
-    for (const auto & entry : fs::directory_iterator(dri_path)) {
-        card_path = entry.path();
-        if (card_path.find(std::string(dri_path / "event")) == 0) {
-            keyboard = std::make_unique<input::Keyboard>(card_path);
-            if (keyboard->initializeAndProbe(keymap, nullptr)) {
-                std::cout << "Adding found keyboard: " << card_path << std::endl;
+    fs::path input_path = "/dev/input";
+    std::string device_path;
+    for (const auto & entry : fs::directory_iterator(input_path)) {
+        device_path = entry.path();
+        if (device_path.find(std::string(input_path / "event")) == 0) {
+            keyboard = std::make_unique<input::Keyboard>(device_path);
+            if (keyboard->initializeAndProbe(keymap, compose_table)) {
+                std::cout << "Adding found keyboard: " << device_path << std::endl;
                 this->push_back(keyboard);
-                break;  // Success
+                //break;  // Success
             }
-            keyboard = nullptr;
+            //keyboard = nullptr;
         }
     }
 }
 
+int Keyboards::loop()
+{
+    int ret = -1;
+    //struct keyboard *kbd;
+    nfds_t nfds;//, i;
+    //struct pollfd *fds = NULL;
+
+    //for (kbd = kbds, nfds = 0; kbd; kbd = kbd->next, nfds++) {}
+    nfds = this->size();
+
+    std::vector<pollfd> fds(nfds);
+    // fds = calloc(nfds, sizeof(*fds));
+    // if (fds == NULL) {
+    //     fprintf(stderr, "Out of memory");
+    //     goto out;
+    // }
+
+    auto fds_iter = fds.begin();
+    for (auto& kbd : *this) {
+        fds_iter->fd = kbd->getFd();
+        fds_iter->events = POLLIN;
+        fds_iter++;
+    }
+
+    bool terminate = false;
+    while (!terminate) {
+        ret = poll(fds.data(), nfds, -1);
+        if (ret < 0) {
+            if (errno == EINTR)
+                continue;
+            // fprintf(stderr, "Couldn't poll for events: %s\n",
+            //         strerror(errno));
+            //goto out;
+            throw errcode_exception(-errno, "Couldn't poll for events");
+        }
+
+        auto fds_iter = fds.begin();
+        for (auto& kbd : *this) {
+            if (fds_iter->revents != 0) {
+                kbd->read_keyboard(with_compose);
+            }
+            fds_iter++;
+        }
+    }
+    return 0;
+}
 
 }

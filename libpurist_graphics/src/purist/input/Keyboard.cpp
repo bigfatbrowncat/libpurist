@@ -7,9 +7,11 @@
 
 #include <unistd.h>
 #include <climits>
+#include <cstring>
 
 #include <iostream>
 #include <xkbcommon/xkbcommon.h>
+#include <xkbcommon/xkbcommon-compose.h>
 
 namespace purist::input {
 
@@ -48,6 +50,7 @@ bool Keyboard::is_keyboard(int fd)
 
 Keyboard::Keyboard(const fs::path& node) : node(node), fd(-1) { 
 }
+
 
 Keyboard::~Keyboard() {
     if (fd >= 0) {
@@ -111,37 +114,222 @@ bool Keyboard::initializeAndProbe(xkb_keymap *keymap, xkb_compose_table *compose
     this->compose_state = compose_state;
     return true;
 
-//err_compose_state:
-    //xkb_compose_state_unref(compose_state);
-//err_state:
-//    xkb_state_unref(state);
-//err_fd:
-//    close(fd);
-//err_path:
-    // free(path);
-    //return ret;
-
-
-    // std::cout << "Input device name: \"" << evdev->get_name() << "\"" << std::endl;
-
-    // std::cout << "Input device ID: bus " << evdev->get_id_bustype()
-    //           << " vendor "  << evdev->get_id_vendor()
-    //           << " product " << evdev->get_id_product()
-    //           << std::endl;
-    
-    // if (evdev->has_event_type<evdevw::event::Key>() &&
-    //     evdev->has_event_code(evdevw::event::KeyCode::A)) {
-    //         std::cerr << "This device looks like a keyboard" << std::endl;
-    //     throw evdevw::Exception(-1);
-    // } else if (evdev->has_event_type<evdevw::event::Relative>() &&
-    //            evdev->has_event_code(evdevw::event::KeyCode::ButtonLeft)) {
-    //         std::cerr << "This device looks like a mouse" << std::endl;
-    //     throw evdevw::Exception(-1);
-    // } else {
-    //     throw evdevw::Exception(-1);
-    // }
-
 }
+
+static void
+print_keycode(struct xkb_keymap *keymap, const char* prefix,
+              xkb_keycode_t keycode, const char *suffix) {
+    const char *keyname = xkb_keymap_key_get_name(keymap, keycode);
+    if (keyname) {
+        printf("%s%-4s%s", prefix, keyname, suffix);
+    } else {
+        printf("%s%-4d%s", prefix, keycode, suffix);
+    }
+}
+
+void Keyboard::tools_print_keycode_state(const char *prefix,
+                          struct xkb_state *state,
+                          struct xkb_compose_state *compose_state,
+                          xkb_keycode_t keycode,
+                          enum xkb_consumed_mode consumed_mode)
+{
+    struct xkb_keymap *keymap;
+
+    xkb_keysym_t sym;
+    const xkb_keysym_t *syms;
+    int nsyms;
+    
+    const int XKB_COMPOSE_MAX_STRING_SIZE = 256;
+    const int XKB_KEYSYM_NAME_MAX_SIZE = 27;
+
+    char s[std::max(XKB_COMPOSE_MAX_STRING_SIZE, XKB_KEYSYM_NAME_MAX_SIZE)];
+    xkb_layout_index_t layout;
+    enum xkb_compose_status status;
+
+    keymap = xkb_state_get_keymap(state);
+
+    nsyms = xkb_state_key_get_syms(state, keycode, &syms);
+
+    if (nsyms <= 0)
+        return;
+
+    status = XKB_COMPOSE_NOTHING;
+    if (compose_state)
+        status = xkb_compose_state_get_status(compose_state);
+
+    if (status == XKB_COMPOSE_COMPOSING || status == XKB_COMPOSE_CANCELLED)
+        return;
+
+    if (status == XKB_COMPOSE_COMPOSED) {
+        sym = xkb_compose_state_get_one_sym(compose_state);
+        syms = &sym;
+        nsyms = 1;
+    }
+    else if (nsyms == 1) {
+        sym = xkb_state_key_get_one_sym(state, keycode);
+        syms = &sym;
+    }
+
+    if (prefix)
+        printf("%s", prefix);
+
+    print_keycode(keymap, "keycode [ ", keycode, " ] ");
+
+#ifdef ENABLE_PRIVATE_APIS
+    if (fields & PRINT_MODMAPS) {
+        print_key_modmaps(keymap, keycode);
+    }
+#endif
+
+    printf("keysyms [ ");
+    for (int i = 0; i < nsyms; i++) {
+        xkb_keysym_get_name(syms[i], s, sizeof(s));
+        printf("%-*s ", XKB_KEYSYM_NAME_MAX_SIZE, s);
+    }
+    printf("] ");
+
+    if (/*fields & PRINT_UNICODE*/ true) {
+        if (status == XKB_COMPOSE_COMPOSED)
+            xkb_compose_state_get_utf8(compose_state, s, sizeof(s));
+        else
+            xkb_state_key_get_utf8(state, keycode, s, sizeof(s));
+        /* HACK: escape single control characters from C0 set using the
+        * Unicode codepoint convention. Ideally we would like to escape
+        * any non-printable character in the string.
+        */
+        if (!*s) {
+            printf("unicode [   ] ");
+        } else if (strlen(s) == 1 && (*s <= 0x1F || *s == 0x7F)) {
+            printf("unicode [ U+%04hX ] ", *s);
+        } else {
+            printf("unicode [ %s ] ", s);
+        }
+    }
+
+    layout = xkb_state_key_get_layout(state, keycode);
+    if (/*fields & PRINT_LAYOUT*/true) {
+        printf("layout [ %s (%d) ] ",
+               xkb_keymap_layout_get_name(keymap, layout), layout);
+    }
+
+    printf("level [ %d ] ",
+           xkb_state_key_get_level(state, keycode, layout));
+
+    printf("mods [ ");
+    for (xkb_mod_index_t mod = 0; mod < xkb_keymap_num_mods(keymap); mod++) {
+        if (xkb_state_mod_index_is_active(state, mod,
+                                          XKB_STATE_MODS_EFFECTIVE) <= 0)
+            continue;
+        if (xkb_state_mod_index_is_consumed2(state, keycode, mod,
+                                             consumed_mode))
+            printf("-%s ", xkb_keymap_mod_get_name(keymap, mod));
+        else
+            printf("%s ", xkb_keymap_mod_get_name(keymap, mod));
+    }
+    printf("] ");
+
+    printf("leds [ ");
+    for (xkb_led_index_t led = 0; led < xkb_keymap_num_leds(keymap); led++) {
+        if (xkb_state_led_index_is_active(state, led) <= 0)
+            continue;
+        printf("%s ", xkb_keymap_led_get_name(keymap, led));
+    }
+    printf("] ");
+
+    printf("\n");
+}
+
+void Keyboard::tools_print_state_changes(enum xkb_state_component changed)
+{
+    if (changed == 0)
+        return;
+
+    printf("changed [ ");
+    if (changed & XKB_STATE_LAYOUT_EFFECTIVE)
+        printf("effective-layout ");
+    if (changed & XKB_STATE_LAYOUT_DEPRESSED)
+        printf("depressed-layout ");
+    if (changed & XKB_STATE_LAYOUT_LATCHED)
+        printf("latched-layout ");
+    if (changed & XKB_STATE_LAYOUT_LOCKED)
+        printf("locked-layout ");
+    if (changed & XKB_STATE_MODS_EFFECTIVE)
+        printf("effective-mods ");
+    if (changed & XKB_STATE_MODS_DEPRESSED)
+        printf("depressed-mods ");
+    if (changed & XKB_STATE_MODS_LATCHED)
+        printf("latched-mods ");
+    if (changed & XKB_STATE_MODS_LOCKED)
+        printf("locked-mods ");
+    if (changed & XKB_STATE_LEDS)
+        printf("leds ");
+    printf("]\n");
+}
+
+void Keyboard::process_event(uint16_t type, uint16_t code, int32_t value, bool with_compose)
+{
+   
+    xkb_keycode_t keycode;
+    struct xkb_keymap *keymap;
+    enum xkb_state_component changed;
+    enum xkb_compose_status status;
+
+    if (type != EV_KEY)
+        return;
+
+    keycode = evdev_offset + code;
+    keymap = xkb_state_get_keymap(this->state);
+
+    if (value == KEY_STATE_REPEAT && !xkb_keymap_key_repeats(keymap, keycode))
+        return;
+
+    if (with_compose && value != KEY_STATE_RELEASE) {
+        xkb_keysym_t keysym = xkb_state_key_get_one_sym(this->state, keycode);
+        xkb_compose_state_feed(this->compose_state, keysym);
+    }
+
+    if (value != KEY_STATE_RELEASE) {
+        tools_print_keycode_state(
+            NULL, this->state, this->compose_state, keycode,
+            this->consumed_mode//, print_fields
+        );
+    }
+
+    if (with_compose) {
+        status = xkb_compose_state_get_status(this->compose_state);
+        if (status == XKB_COMPOSE_CANCELLED || status == XKB_COMPOSE_COMPOSED)
+            xkb_compose_state_reset(this->compose_state);
+    }
+
+    if (value == KEY_STATE_RELEASE)
+        changed = xkb_state_update_key(this->state, keycode, XKB_KEY_UP);
+    else
+        changed = xkb_state_update_key(this->state, keycode, XKB_KEY_DOWN);
+
+    if (/*report_state_changes*/true)
+        tools_print_state_changes(changed);
+}
+
+int Keyboard::read_keyboard(bool with_compose)
+{
+    ssize_t len;
+    struct input_event evs[16];
+
+    /* No fancy error checking here. */
+    while ((len = read(this->fd, &evs, sizeof(evs))) > 0) {
+        const size_t nevs = len / sizeof(struct input_event);
+        for (size_t i = 0; i < nevs; i++)
+            process_event(evs[i].type, evs[i].code, evs[i].value, with_compose);
+    }
+
+    if (len < 0 && errno != EWOULDBLOCK) {
+        fprintf(stderr, "Couldn't read: %s\n", /*this->path,*/ strerror(errno));
+        return 1;
+    }
+
+    return 0;
+}
+
 
 
 }

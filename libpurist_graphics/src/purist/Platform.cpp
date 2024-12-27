@@ -56,14 +56,14 @@ static std::unique_ptr<graphics::Card> probeCard(bool enableOpenGL) {
 
 void Platform::run(std::shared_ptr<graphics::DisplayContentsFactory> contentsFactory) {
     
-    auto card = probeCard(enableOpenGL);
-
     auto keyboards = std::make_shared<purist::input::Keyboards>();
     keyboards->initialize();
+    keyboards->loop();
 
     // Probing keyboards
     //auto kbd = probeKeyboard(ctx);
 
+    auto card = probeCard(enableOpenGL);
     card->setDisplayContentsFactory(contentsFactory);
     card->runDrawingLoop();
 

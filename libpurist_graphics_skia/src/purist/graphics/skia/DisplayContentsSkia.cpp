@@ -5,6 +5,14 @@
 
 namespace purist::graphics::skia {
 
+DisplayContentsSkia::DisplayContentsSkia(bool enableOpenGL) /*: enableOpenGL(enableOpenGL)*/ {
+    if (enableOpenGL) {
+        skiaOverlay = std::make_shared<purist::graphics::skia::SkiaEGLOverlay>();
+    } else {
+        skiaOverlay = std::make_shared<purist::graphics::skia::SkiaRasterOverlay>();
+    }
+}
+
 void DisplayContentsSkia::setSkiaOverlay(std::shared_ptr<SkiaOverlay> skiaOverlay) {
     this->skiaOverlay = skiaOverlay;
 }

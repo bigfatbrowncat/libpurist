@@ -47,7 +47,7 @@ public:
     const fs::path node;
 
     Card(const fs::path& node, bool enableOpenGL);
-    void initialize(std::shared_ptr<DisplayContentsFactory> factory);
+    void initialize(std::shared_ptr<DisplayContents> factory);
 
     virtual ~Card();
 
@@ -55,8 +55,6 @@ public:
     void processFd(std::vector<pollfd>::iterator fds_iter);
 
     gbm_device* getGBMDevice() const { return gbmDevice; }
-
-    //void setDisplayContentsFactory(std::shared_ptr<DisplayContentsFactory> factory);
 
 };
 

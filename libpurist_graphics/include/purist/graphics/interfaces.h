@@ -56,11 +56,4 @@ public:
     virtual void drawIntoBuffer(std::shared_ptr<Display> display, std::shared_ptr<TargetSurface> target) = 0;
 };
 
-class DisplayContentsFactory {
-public:
-    virtual ~DisplayContentsFactory() = default;
-
-    virtual std::shared_ptr<DisplayContents> createDisplayContents(Display& display) = 0;
-};
-
 }

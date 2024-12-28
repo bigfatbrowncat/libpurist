@@ -238,10 +238,8 @@ void DisplayImpl::modeset_page_flip_event(int fd, unsigned int frame,
 	}
 }
 
-void DisplayImpl::createContentsHandler(DisplayContentsFactory& factory) {
-	if (contents == nullptr) {
-		contents = factory.createDisplayContents(*this);
-	}
+void DisplayImpl::setContentsHandler(std::shared_ptr<DisplayContents> contents) {
+	this->contents = contents;
 }
 
 void DisplayImpl::updateInDrawingLoop() {

@@ -20,7 +20,7 @@ class Displays : protected std::list<std::shared_ptr<DisplayImpl>> {
 
 private:
     const Card& card;
-    std::shared_ptr<DisplayContentsFactory> displayContentsFactory;
+    std::shared_ptr<DisplayContents> displayContents;
     bool opengl;
     Displays::iterator findDisplayOnConnector(const ModeConnector& conn);
 
@@ -28,7 +28,7 @@ public:
     Displays(const Card& card, bool opengl) : card(card), opengl(opengl) { }
     bool empty() const;
     void clear();
-    void setDisplayContentsFactory(std::shared_ptr<DisplayContentsFactory> factory);
+    void setDisplayContents(std::shared_ptr<DisplayContents> contents);
     void addNewlyConnectedToDrawingLoop();
 
     int updateHardwareConfiguration();

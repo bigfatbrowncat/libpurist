@@ -18,10 +18,12 @@ class DisplayContentsSkia : public DisplayContents {
 private:
 	std::shared_ptr<SkiaOverlay> skiaOverlay;
     DisplayOrientation orientation;
+    //bool enableOpenGL;
 public:
     void setSkiaOverlay(std::shared_ptr<SkiaOverlay> skiaOverlay);
     std::shared_ptr<SkiaOverlay> getSkiaOverlay() const;
 
+    DisplayContentsSkia(bool enableOpenGL);
     virtual ~DisplayContentsSkia() = default;
 
     void drawIntoBuffer(std::shared_ptr<Display> display, std::shared_ptr<TargetSurface> target) override;

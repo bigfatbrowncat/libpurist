@@ -45,7 +45,7 @@ Card::Card(const fs::path& node, bool enableOpenGL)
 	  fd(-1), enableOpenGL(enableOpenGL), node(node) { }
 
 
-void Card::initialize(std::shared_ptr<DisplayContentsFactory> factory)
+void Card::initialize(std::shared_ptr<DisplayContents> contents)
 {
 	int ret;
 	uint64_t has_dumb;
@@ -80,7 +80,7 @@ void Card::initialize(std::shared_ptr<DisplayContentsFactory> factory)
 		initGL();
 	}
 
-	displays->setDisplayContentsFactory(factory);
+	displays->setDisplayContents(contents);
 
 	/* prepare all connectors and CRTCs */
 	ret = displays->updateHardwareConfiguration();

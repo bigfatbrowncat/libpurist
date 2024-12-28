@@ -59,7 +59,7 @@ int Displays::updateHardwareConfiguration()
 				// create a new display
 				auto cid = modeConnector.getConnectorId(); // connector->connector_id;
 				display = std::make_shared<DisplayImpl>(card, *this, cid, opengl);
-				display->createContentsHandler(*displayContentsFactory);
+				display->setContentsHandler(displayContents);
 				new_display_connected = true;
 			}
 
@@ -104,8 +104,8 @@ void Displays::clear() {
 }
 
 
-void Displays::setDisplayContentsFactory(std::shared_ptr<DisplayContentsFactory> factory) {
-	this->displayContentsFactory = factory;
+void Displays::setDisplayContents(std::shared_ptr<DisplayContents> contents) {
+	this->displayContents = contents;
 }
 
 

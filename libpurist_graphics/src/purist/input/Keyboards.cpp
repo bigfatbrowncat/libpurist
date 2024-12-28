@@ -23,7 +23,7 @@ Keyboards::~Keyboards() {
     }
 }
 
-void Keyboards::initialize() {
+void Keyboards::initialize(std::shared_ptr<input::KeyboardHandler> keyboardHandler) {
 
     ctx = xkb_context_new(XKB_CONTEXT_NO_DEFAULT_INCLUDES);
     if (!ctx) {
@@ -84,20 +84,22 @@ void Keyboards::initialize() {
         //     keymap = xkb_keymap_new_from_names(ctx, NULL, XKB_KEYMAP_COMPILE_NO_FLAGS);
         // else
 
-        struct xkb_rule_names rmlvo = {
-            .rules = "evdev",
-            .model = "pc105",
-            .layout = "us",
-            .variant = "qwerty",
-            .options = "grp:alt_shift_toggle"
-        };
+        // struct xkb_rule_names rmlvo = {
+        //     .rules = "evdev",
+        //     .model = "pc105",
+        //     .layout = "us",
+        //     .variant = "qwerty",
+        //     .options = "grp:alt_shift_toggle"
+        // };
+
         keymap = xkb_keymap_new_from_names(ctx, NULL, XKB_KEYMAP_COMPILE_NO_FLAGS);
+
          //xkb_keymap_new_from_names(ctx, &rmlvo, XKB_KEYMAP_COMPILE_NO_FLAGS);
 
         if (!keymap) {
-            fprintf(stderr,
-                    "Failed to compile RMLVO: '%s', '%s', '%s', '%s', '%s'\n",
-                    rmlvo.rules, rmlvo.model, rmlvo.layout, rmlvo.variant, rmlvo.options);
+            // fprintf(stderr,
+            //         "Failed to compile RMLVO: '%s', '%s', '%s', '%s', '%s'\n",
+            //         rmlvo.rules, rmlvo.model, rmlvo.layout, rmlvo.variant, rmlvo.options);
             throw std::runtime_error("ERROR");  // TODO fix message
         }
     }
@@ -124,7 +126,7 @@ void Keyboards::initialize() {
         device_path = entry.path();
         if (device_path.find(std::string(input_path / "event")) == 0) {
             keyboard = std::make_unique<input::Keyboard>(device_path);
-            if (keyboard->initializeAndProbe(keymap, compose_table)) {
+            if (keyboard->initializeAndProbe(keymap, compose_table, keyboardHandler)) {
                 std::cout << "Adding found keyboard: " << device_path << std::endl;
                 this->push_back(keyboard);
                 //break;  // Success

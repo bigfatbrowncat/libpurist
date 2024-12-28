@@ -25,7 +25,7 @@ private:
     bool with_compose = true;
 public:
     Keyboards();
-    void initialize();
+    void initialize(std::shared_ptr<input::KeyboardHandler> keyboardHandler);
     int loop();
     std::vector<pollfd> getFds();
     void processFd(std::vector<pollfd>::iterator fds_iter);

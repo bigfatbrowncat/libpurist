@@ -1,4 +1,5 @@
 // libpurist headers
+#include "purist/input/interfaces.h"
 #include <purist/Platform.h>
 #include <purist/graphics/skia/DisplayContentsSkiaFactory.h>
 
@@ -13,6 +14,7 @@
 #include <iostream>
 
 namespace pg = purist::graphics;
+namespace pi = purist::input;
 namespace pgs = purist::graphics::skia;
 
 class ColoredScreenDisplayContents : public pgs::DisplayContentsSkia {
@@ -115,9 +117,9 @@ public:
     }
 };
 
-class ColoredScreenDisplayContentsFactory : public pgs::DisplayContentsSkiaFactory {
+class ColoredScreenDisplayApp : public pgs::DisplayContentsSkiaFactory, public pi::KeyboardHandler {
 public:
-	ColoredScreenDisplayContentsFactory(bool enableOpenGL) : DisplayContentsSkiaFactory(enableOpenGL) { }
+	ColoredScreenDisplayApp(bool enableOpenGL) : DisplayContentsSkiaFactory(enableOpenGL) { }
 
 	std::shared_ptr<pgs::DisplayContentsSkia> createDisplayContentsSkia(pg::Display& display) {
 		auto contents = std::make_shared<ColoredScreenDisplayContents>();
@@ -127,6 +129,12 @@ public:
 		contents->r_up = contents->g_up = contents->b_up = true;
 		return contents;
 	}
+
+    virtual void onCharacter(pi::Keyboard& kbd, uint32_t utf8CharCode) { }
+    virtual void onKeyPress(pi::Keyboard& kbd, uint32_t keyCode, pi::Modifiers mods, pi::Leds leds) { }
+    virtual void onKeyRepeat(pi::Keyboard& kbd, uint32_t keyCode, pi::Modifiers mods, pi::Leds leds) { }
+    virtual void onKeyRelease(pi::Keyboard& kbd, uint32_t keyCode, pi::Modifiers mods, pi::Leds leds) { }
+
 };
 
 
@@ -136,9 +144,9 @@ int main(int argc, char **argv)
 		bool enableOpenGL = true;
 
 		purist::Platform purist(enableOpenGL);
-		auto contentsFactory = std::make_shared<ColoredScreenDisplayContentsFactory>(enableOpenGL);
+		auto contentsFactory = std::make_shared<ColoredScreenDisplayApp>(enableOpenGL);
 		
-		purist.run(contentsFactory);
+		purist.run(contentsFactory, contentsFactory);
 
 		return 0;
 	

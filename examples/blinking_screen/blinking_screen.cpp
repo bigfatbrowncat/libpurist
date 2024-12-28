@@ -5,6 +5,7 @@
 #include <cassert>
 
 namespace pg = purist::graphics;
+namespace pi = purist::input;
 
 class ColoredScreenDisplayContents : public pg::DisplayContents {
 private:
@@ -69,12 +70,12 @@ public:
     }
 };
 
-class ColoredScreenDisplayContentsFactory : public pg::DisplayContentsFactory {
+class ColoredScreenDisplayApp : public pg::DisplayContentsFactory, public pi::KeyboardHandler {
 private:
 	bool enableOpenGL;
 
 public:
-	ColoredScreenDisplayContentsFactory(bool enableOpenGL) : enableOpenGL(enableOpenGL) { }
+	ColoredScreenDisplayApp(bool enableOpenGL) : enableOpenGL(enableOpenGL) { }
 
 	std::shared_ptr<pg::DisplayContents> createDisplayContents(pg::Display& display) {
 		auto contents = std::make_shared<ColoredScreenDisplayContents>(enableOpenGL);
@@ -84,6 +85,12 @@ public:
 		contents->r_up = contents->g_up = contents->b_up = true;
 		return contents;
 	}
+
+    virtual void onCharacter(pi::Keyboard& kbd, uint32_t utf8CharCode) { }
+    virtual void onKeyPress(pi::Keyboard& kbd, uint32_t keyCode, pi::Modifiers mods, pi::Leds leds) { }
+    virtual void onKeyRepeat(pi::Keyboard& kbd, uint32_t keyCode, pi::Modifiers mods, pi::Leds leds) { }
+    virtual void onKeyRelease(pi::Keyboard& kbd, uint32_t keyCode, pi::Modifiers mods, pi::Leds leds) { }
+
 };
 
 
@@ -93,9 +100,9 @@ int main(int argc, char **argv)
 		bool enableOpenGL = true;
 
 		purist::Platform purist(enableOpenGL);
-		auto contentsFactory = std::make_shared<ColoredScreenDisplayContentsFactory>(enableOpenGL);
+		auto contentsFactory = std::make_shared<ColoredScreenDisplayApp>(enableOpenGL);
 		
-		purist.run(contentsFactory);
+		purist.run(contentsFactory, contentsFactory);
 
 		return 0;
 	

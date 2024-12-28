@@ -5,6 +5,7 @@
 #include <linux/input.h>
 #include <fcntl.h>
 
+#include <stdexcept>
 #include <unistd.h>
 #include <climits>
 #include <cstring>
@@ -62,7 +63,7 @@ Keyboard::~Keyboard() {
 }
 
 
-bool Keyboard::initializeAndProbe(xkb_keymap *keymap, xkb_compose_table *compose_table) { 
+bool Keyboard::initializeAndProbe(xkb_keymap *keymap, xkb_compose_table *compose_table, std::shared_ptr<KeyboardHandler> keyboardHandler) { 
     //int ret;
     //char *path;
 
@@ -82,6 +83,8 @@ bool Keyboard::initializeAndProbe(xkb_keymap *keymap, xkb_compose_table *compose
         //goto err_fd;
         return false;
     }
+
+    this->keyboardHandler = keyboardHandler;
 
     // Cleaning up the keyboard input buffer
     int bytesread;
@@ -189,10 +192,14 @@ void Keyboard::tools_print_keycode_state(const char *prefix,
     printf("] ");
 
     if (/*fields & PRINT_UNICODE*/ true) {
-        if (status == XKB_COMPOSE_COMPOSED)
+        if (status == XKB_COMPOSE_COMPOSED) {
             xkb_compose_state_get_utf8(compose_state, s, sizeof(s));
-        else
+            if (keyboardHandler != nullptr) { 
+                keyboardHandler->onCharacter(*this, *s);
+            }
+        } else {
             xkb_state_key_get_utf8(state, keycode, s, sizeof(s));
+        }
         /* HACK: escape single control characters from C0 set using the
         * Unicode codepoint convention. Ideally we would like to escape
         * any non-printable character in the string.
@@ -280,9 +287,11 @@ void Keyboard::process_event(uint16_t type, uint16_t code, int32_t value, bool w
     keycode = evdev_offset + code;
     keymap = xkb_state_get_keymap(this->state);
 
+    // Processing the key in sequence
+
     if (value == KEY_STATE_REPEAT && !xkb_keymap_key_repeats(keymap, keycode))
         return;
-
+    
     if (with_compose && value != KEY_STATE_RELEASE) {
         xkb_keysym_t keysym = xkb_state_key_get_one_sym(this->state, keycode);
         xkb_compose_state_feed(this->compose_state, keysym);
@@ -308,6 +317,27 @@ void Keyboard::process_event(uint16_t type, uint16_t code, int32_t value, bool w
 
     if (/*report_state_changes*/true)
         tools_print_state_changes(changed);
+
+        
+    Modifiers mods = modifiersFromKeymap(keymap, state, keycode, consumed_mode);
+    Leds leds = ledsFromKeymap(keymap, state);
+
+    if (value == KEY_STATE_REPEAT) {
+        if (keyboardHandler != nullptr) {
+            keyboardHandler->onKeyRepeat(*this, keycode, mods, leds);
+        }
+    } else if (value == KEY_STATE_PRESS) {
+        if (keyboardHandler != nullptr) {
+            keyboardHandler->onKeyPress(*this, keycode, mods, leds);
+        }
+    } else if (value == KEY_STATE_RELEASE) {
+        if (keyboardHandler != nullptr) {
+            keyboardHandler->onKeyRelease(*this, keycode, mods, leds);
+        }
+    } else {
+        throw std::runtime_error("Impossible case");
+    }
+
 }
 
 int Keyboard::read_keyboard(bool with_compose)

@@ -13,6 +13,8 @@
 #include <map>
 #include <memory>
 #include <iostream>
+#include <iomanip>
+#include <sstream>
 
 namespace pg = purist::graphics;
 namespace pi = purist::input;
@@ -25,6 +27,8 @@ public:
 
 	sk_sp<SkTypeface> typeface;
 	std::shared_ptr<SkFont> font;
+
+	std::string letter;
 
    /*
     * A short helper function to compute a changing color value. No need to
@@ -59,14 +63,18 @@ public:
 
 		if (i == 0) top = !top;
 
+		auto res = modes.begin();
 		if (top) {
 			auto res = modes.end();  //.begin();
 			res--;
-			return res;
-		} else {
-			auto res = modes.begin();
-			return res;
 		}
+
+		if (typeface == nullptr) {
+			typeface = getSkiaOverlay()->getTypeface("sans-serif");
+		}
+		font = std::make_shared<SkFont>(typeface, (*res)->getHeight() / 4);
+
+		return res;
 	}
 
 
@@ -93,38 +101,31 @@ public:
 
 		canvas.clear(color);
 
-		SkRect rect = SkRect::MakeLTRB(w / 3, h / 3, 2 * w / 3, 2 * h / 3);
+		SkRect rect = SkRect::MakeLTRB(w / 5, h / 5, 4 * w / 5, 4 * h / 5);
 		canvas.drawRect(rect, paint2);
 
-		if (typeface == nullptr) {
-			typeface = getSkiaOverlay()->getTypeface("sans-serif");
-		}
-		if (font == nullptr) {
-			font = std::make_shared<SkFont>(typeface, 50);
-		}
 
-		std::string topText { "Top" };
-		SkRect topTextBounds;
-		font->measureText(topText.c_str(), topText.size(), SkTextEncoding::kUTF8, &topTextBounds);
-		SkFontMetrics topTextMetrics;
-		font->getMetrics(&topTextMetrics);
+		//std::string topText { "Top" };
+		SkRect letterBounds;
+		font->measureText(letter.c_str(), letter.size(), SkTextEncoding::kUTF8, &letterBounds);
+		SkFontMetrics letterMetrics;
+		font->getMetrics(&letterMetrics);
 
-		std::string bottomText { "Bottom" };
-		SkRect bottomTextBounds;
-		font->measureText(bottomText.c_str(), bottomText.size(), SkTextEncoding::kUTF8, &bottomTextBounds);
-		SkFontMetrics bottomTextMetrics;
-		font->getMetrics(&bottomTextMetrics);
-
-	
-		canvas.drawString(topText.c_str(), 0, 0 - topTextMetrics.fAscent, *font, paint2);
-		canvas.drawString(topText.c_str(), w - topTextBounds.fRight, 0 - topTextMetrics.fAscent, *font, paint2);
-
-		canvas.drawString(bottomText.c_str(), 0, h - bottomTextMetrics.fDescent, *font, paint2);
-		canvas.drawString(bottomText.c_str(), w - bottomTextBounds.fRight, h - bottomTextMetrics.fDescent, *font, paint2);
-
+		canvas.drawString(letter.c_str(), 
+				w / 2 - letterBounds.centerX(), //.width() / 2, 
+				h / 2 - (letterMetrics.fAscent + letterMetrics.fDescent) / 2, *font, paint);
     }
 
-    void onCharacter(pi::Keyboard& kbd, uint32_t utf8CharCode) override { }
+    void onCharacter(pi::Keyboard& kbd, uint32_t utf8CharCode) override { 
+		if (utf8CharCode <= 0x1F || utf8CharCode == 0x7F) {
+			std::stringstream ss;
+			ss << "0x" << std::setfill ('0') << std::setw(2) << std::hex << utf8CharCode;
+			letter = ss.str();
+		} else {
+			letter = " ";
+			letter[0] = (uint8_t)utf8CharCode;
+		}
+	}
     void onKeyPress(pi::Keyboard& kbd, uint32_t keyCode, pi::Modifiers mods, pi::Leds leds) override { }
     void onKeyRepeat(pi::Keyboard& kbd, uint32_t keyCode, pi::Modifiers mods, pi::Leds leds) override { }
     void onKeyRelease(pi::Keyboard& kbd, uint32_t keyCode, pi::Modifiers mods, pi::Leds leds) override { }

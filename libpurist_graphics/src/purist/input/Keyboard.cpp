@@ -194,12 +194,14 @@ void Keyboard::tools_print_keycode_state(const char *prefix,
     if (/*fields & PRINT_UNICODE*/ true) {
         if (status == XKB_COMPOSE_COMPOSED) {
             xkb_compose_state_get_utf8(compose_state, s, sizeof(s));
-            if (keyboardHandler != nullptr) { 
-                keyboardHandler->onCharacter(*this, *s);
-            }
         } else {
             xkb_state_key_get_utf8(state, keycode, s, sizeof(s));
         }
+
+        if (*s != 0 && keyboardHandler != nullptr) { 
+            keyboardHandler->onCharacter(*this, *s);
+        }
+
         /* HACK: escape single control characters from C0 set using the
         * Unicode codepoint convention. Ideally we would like to escape
         * any non-printable character in the string.

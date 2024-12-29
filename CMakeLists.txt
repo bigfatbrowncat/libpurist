@@ -6,6 +6,9 @@ project(purist)
 
 set(purist_third_party "${purist_SOURCE_DIR}/third-party")
 
+include_directories(${purist_third_party}/embed-resource)
+add_subdirectory(${purist_third_party}/embed-resource)
+
 add_subdirectory(libpurist_graphics)
 add_subdirectory(libpurist_graphics_skia)
 

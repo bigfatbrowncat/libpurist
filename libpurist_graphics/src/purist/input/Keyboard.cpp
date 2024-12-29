@@ -202,7 +202,7 @@ void Keyboard::tools_print_keycode_state(const char *prefix,
         }
 
         if (*s != 0 && keyboardHandler != nullptr) { 
-            keyboardHandler->onCharacter(*this, *s);
+            keyboardHandler->onCharacter(*this, s);
         }
 
         /* HACK: escape single control characters from C0 set using the

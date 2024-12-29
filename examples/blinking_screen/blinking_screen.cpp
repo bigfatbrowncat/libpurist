@@ -83,7 +83,7 @@ public:
 
     }
 	
-	void onCharacter(pi::Keyboard& kbd, uint32_t utf8CharCode) override { 
+	void onCharacter(pi::Keyboard& kbd, char utf8CharCode[4]) override { 
 		platform.lock()->stop();
 	}
 

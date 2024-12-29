@@ -5,12 +5,15 @@
 #include <purist/input/KeyboardHandler.h>
 #include <purist/Platform.h>
 
+#include <Resource.h>
+
 // Skia headers
 #include <include/core/SkCanvas.h>
 #include <include/core/SkSurface.h>
 #include <include/core/SkImage.h>
 #include <include/core/SkPaint.h>
 #include <include/core/SkFont.h>
+#include <include/core/SkData.h>
 #include <include/core/SkFontMetrics.h>
 
 #include <xkbcommon/xkbcommon-keysyms.h>
@@ -79,7 +82,8 @@ public:
 		}
 
 		if (typeface == nullptr) {
-			typeface = skiaOverlay->getTypeface("sans-serif");
+			skiaOverlay->createFontMgr(LOAD_RESOURCE(fonts_noto_sans_NotoSans_Regular_ttf));
+			typeface = skiaOverlay->getTypeface("Noto Sans");
 		}
 		font = std::make_shared<SkFont>(typeface, (*res)->getHeight() / 4);
 
@@ -95,6 +99,17 @@ public:
 			return pgs::DisplayOrientation::HORIZONTAL;
 		}
 	}
+
+	// static std::map<std::string, sk_sp<SkTypeface>> fontFiles;
+	// static void addFontFile(std::string fontName, std::vector<char> fontFile) {
+	// 	std::cout << "Adding font file" << std::endl;
+	// 	sk_sp<SkData> data = SkData::MakeFromMalloc(fontFile.data(), fontFile.size());
+	// 	auto typeface = SkTypeface:  // MakeFromData(data);
+	// 	fontFiles[fontName] = typeface;
+	// 	if(typeface == nullptr){
+	// 	std::cout << "Typeface is null" << std::endl;
+	// 	}
+	// }
 
     void drawIntoSurface(std::shared_ptr<pg::Display> display, std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, int width, int height, SkCanvas& canvas) override {
 		SkScalar w = width, h = height;
@@ -134,14 +149,14 @@ public:
 				h / 2 - (letterMetrics.fAscent + letterMetrics.fDescent) / 2, *font, paint);
     }
 
-    void onCharacter(pi::Keyboard& kbd, uint32_t utf8CharCode) override { 
-		if (utf8CharCode <= 0x1F || utf8CharCode == 0x7F) {
+    void onCharacter(pi::Keyboard& kbd, char utf8CharCode[4]) override { 
+		if (utf8CharCode[0] <= 0x1F || utf8CharCode[0] == 0x7F) {
 			std::stringstream ss;
-			ss << "0x" << std::setfill ('0') << std::setw(2) << std::hex << utf8CharCode;
+			uint32_t code = reinterpret_cast<uint8_t&>(utf8CharCode[0]);
+			ss << "0x" << std::setfill ('0') << std::setw(2) << std::hex << code;
 			letter = ss.str();
 		} else {
-			letter = " ";
-			letter[0] = (uint8_t)utf8CharCode;
+			letter = utf8CharCode;
 		}
 	}
     void onKeyPress(pi::Keyboard& kbd, uint32_t keysym, pi::Modifiers mods, pi::Leds leds, bool repeat) override { 

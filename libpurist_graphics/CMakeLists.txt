@@ -4,7 +4,11 @@ add_library(purist_graphics STATIC
     # Public includes
     include/purist/Platform.h
     include/purist/exceptions.h
-    include/purist/graphics/interfaces.h
+    include/purist/graphics/Display.h
+    include/purist/graphics/DisplayContentsHandler.h
+    include/purist/graphics/FrameBuffer.h
+    include/purist/graphics/Mode.h
+    include/purist/graphics/TargetSurface.h
 
     # Private includes/sources
     src/purist/Platform.cpp

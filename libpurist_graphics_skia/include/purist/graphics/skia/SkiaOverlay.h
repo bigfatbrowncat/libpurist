@@ -3,6 +3,8 @@
 #define SK_GANESH
 #define SK_GL
 
+#include <Resource.h>
+
 #include <include/gpu/ganesh/gl/GrGLDirectContext.h>
 #include <include/core/SkSurface.h>
 #include <include/core/SkFontMgr.h>
@@ -15,8 +17,7 @@ class SkiaRasterOverlay;
 class SkiaOverlay {
 private:
 	sk_sp<SkFontMgr> fontMgr;
-	void createFontMgr();
-  
+
 public:
 	SkiaOverlay();
 	virtual ~SkiaOverlay() = default;
@@ -27,6 +28,7 @@ public:
 	virtual SkiaEGLOverlay* asEGLOverlay() = 0;
 	virtual SkiaRasterOverlay* asRasterOverlay() = 0;
 
+	void createFontMgr(const Resource& res);
 	sk_sp<SkTypeface> getTypeface(const std::string& name) const;
 };
 

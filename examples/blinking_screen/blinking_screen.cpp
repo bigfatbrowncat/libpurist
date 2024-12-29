@@ -1,4 +1,8 @@
 #include <purist/Platform.h>
+#include <purist/graphics/TargetSurface.h>
+
+#define GL_GLEXT_PROTOTYPES 1
+#include <GLES2/gl2.h>
 
 #include <map>
 #include <memory>
@@ -58,7 +62,9 @@ public:
 		if (enableOpenGL) {
 			assert(target->getMappedBuffer() == nullptr);
 
-			glClearColor(1.0f/256*r, 1.0f/256*g, 1.0f/256*b, 1.0f);
+			glClearColor(1.0f / 256 * r, 
+			             1.0f / 256 * g, 
+						 1.0f / 256 * b, 1.0f);
 			glClear(GL_COLOR_BUFFER_BIT);
 			
 		} else {
@@ -84,23 +90,6 @@ public:
     void onKeyPress(pi::Keyboard& kbd, uint32_t keyCode, pi::Modifiers mods, pi::Leds leds, bool repeat) override { }
     void onKeyRelease(pi::Keyboard& kbd, uint32_t keyCode, pi::Modifiers mods, pi::Leds leds) override { }
 };
-
-// class ColoredScreenDisplayApp : public pg::DisplayContents, public pi::KeyboardHandler {
-// private:
-// 	bool enableOpenGL;
-
-// public:
-// 	ColoredScreenDisplayApp(bool enableOpenGL) : enableOpenGL(enableOpenGL) { }
-
-// 	std::shared_ptr<pg::DisplayContents> createDisplayContents(pg::Display& display) {
-// 		auto contents = std::make_shared<ColoredScreenDisplayContents>(enableOpenGL);
-
-// 		return contents;
-// 	}
-
-
-
-// };
 
 
 int main(int argc, char **argv)

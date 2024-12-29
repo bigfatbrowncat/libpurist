@@ -1,6 +1,8 @@
 // libpurist headers
-#include "purist/graphics/skia/DisplayContentsSkia.h"
-#include "purist/input/interfaces.h"
+#include <purist/graphics/skia/DisplayContentsSkia.h>
+#include <purist/graphics/Display.h>
+#include <purist/graphics/Mode.h>
+#include <purist/input/interfaces.h>
 #include <purist/Platform.h>
 
 // Skia headers

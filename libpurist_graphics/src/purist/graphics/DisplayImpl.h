@@ -7,11 +7,11 @@
 #include "ModeModeInfo.h"
 #include "ModeCrtc.h"
 
-#include <memory>
-#include <purist/graphics/interfaces.h>
+#include <purist/graphics/Display.h>
 
 #include <xf86drmMode.h>
 #include <array>
+#include <memory>
 
 namespace purist::graphics {
 

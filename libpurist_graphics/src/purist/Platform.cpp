@@ -1,6 +1,6 @@
 #include <purist/Platform.h>
 #include <purist/exceptions.h>
-#include <purist/graphics/interfaces.h>
+#include <purist/graphics/DisplayContentsHandler.h>
 
 #include "graphics/Card.h"
 #include "input/Keyboard.h"

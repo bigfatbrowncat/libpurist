@@ -2,25 +2,17 @@
 #include "Displays.h"
 #include "ModeEncoder.h"
 
-#include <iterator>
-#include <memory>
 #include <purist/exceptions.h>
-#include <purist/graphics/interfaces.h>
 
-#include <cstdint>
 #include <xf86drm.h>
 
+#include <iterator>
+#include <memory>
+#include <cstdint>
 #include <cstring>
 #include <cassert>
 
 namespace purist::graphics {
-
-// static bool modes_equal(const drmModeModeInfo& mode1, const drmModeModeInfo& mode2) {
-// 	return 
-// 		mode1.vdisplay == mode2.vdisplay &&
-// 		mode1.hdisplay == mode2.hdisplay &&
-// 		mode1.clock == mode2.clock;
-// }
 
 void DisplayImpl::setCrtc(FrameBufferImpl *buf) {
 	assert(state != State::CRTC_SET_SUCCESSFULLY);
@@ -30,14 +22,6 @@ void DisplayImpl::setCrtc(FrameBufferImpl *buf) {
 	}
 
 	saved_crtc->set(*buf, { connector_id }, *mode);
-
-	//int ret = drmModeSetCrtc(card.fd, crtc_id, buf->framebuffer_id, 0, 0,
-	//			&connector_id, 1, const_cast<drmModeModeInfo*>(mode->info));
-
-	
-	// if (ret) {
-	// 	throw errcode_exception(-errno, std::string("cannot assign crtc with framebuffer. ") + strerror(errno));
-	// }
 }
 
 
@@ -67,17 +51,6 @@ int DisplayImpl::setup(const ModeResources& res, const ModeConnector& conn) {
 
 	bool updating_mode = false;
 
-	//int mm = 0;
-	// for (mm = 0; mm < conn->count_modes; mm++) {
-	// 	fprintf(stderr, "probing %ux%u\n", conn->modes[mm].hdisplay, conn->modes[mm].vdisplay);
-	// 	if ((conn->modes[mm].hdisplay == 720 && 
-	// 	    conn->modes[mm].vdisplay == 480) ||
-	// 		(conn->modes[mm].vdisplay == 720 && 
-	// 	    conn->modes[mm].hdisplay == 480)) break;
-	// }
-	// mm = mm % conn->count_modes;
-	// fprintf(stderr, "done! %ux%u\n\n", conn->modes[mm].hdisplay, conn->modes[mm].vdisplay);
-
 	auto modes = conn.getModes();
 	std::list<std::shared_ptr<Mode>> modeBaseList(modes.begin(), modes.end());
 
@@ -87,9 +60,6 @@ int DisplayImpl::setup(const ModeResources& res, const ModeConnector& conn) {
 		std::advance(derivedIter, std::distance(modeBaseList.cbegin(), this->contents->chooseMode(modeBaseList)));
 	}
 	auto selected_mode = *derivedIter;
-
-
-	//auto selected_mode = std::make_shared<ModeModeInfo>(card, conn, mm);
 
 	auto new_width = selected_mode->getWidth();//hdisplay;
 	auto new_height = selected_mode->getHeight(); //vdisplay;
@@ -124,8 +94,7 @@ int DisplayImpl::setup(const ModeResources& res, const ModeConnector& conn) {
 		fprintf(stderr, "mode for connector %u is %ux%u\n", conn.connector->connector_id, new_width, new_height);
 	}
 
-	/* copy the mode information into our device structure and into both
-	* buffers */
+	/* copy the mode information into our device structure and into both buffers */
 	mode = selected_mode;
 
 	if (!updating_mode) {

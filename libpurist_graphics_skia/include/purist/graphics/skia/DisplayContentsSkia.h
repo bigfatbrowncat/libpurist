@@ -1,7 +1,7 @@
 #pragma once
 
 #include <purist/graphics/skia/SkiaOverlay.h>
-#include <purist/graphics/interfaces.h>
+#include <purist/graphics/DisplayContentsHandler.h>
 
 #include <memory>
 

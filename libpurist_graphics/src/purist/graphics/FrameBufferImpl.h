@@ -1,5 +1,7 @@
 #pragma once
 
+#include <purist/graphics/FrameBuffer.h>
+
 #include "Card.h"
 #include "DumbBufferTargetSurfaceImpl.h"
 

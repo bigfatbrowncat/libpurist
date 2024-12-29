@@ -1,6 +1,6 @@
 #pragma once
 
-#include <purist/graphics/interfaces.h>
+#include <purist/graphics/TargetSurface.h>
 
 namespace purist::graphics {
 

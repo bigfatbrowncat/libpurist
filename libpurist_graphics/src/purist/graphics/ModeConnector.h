@@ -4,8 +4,6 @@
 //#include "ModeModeInfo.h"
 #include "ModeResources.h"
 
-#include <purist/graphics/interfaces.h>
-
 #include <xf86drmMode.h>
 
 namespace purist::graphics {

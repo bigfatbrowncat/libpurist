@@ -2,7 +2,7 @@
 
 #include "Card.h"
 #include "ModeConnector.h"
-#include <purist/graphics/interfaces.h>
+#include <purist/graphics/Mode.h>
 
 #include <xf86drmMode.h>
 

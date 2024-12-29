@@ -4,7 +4,6 @@
 #include "ModeConnector.h"
 #include "ModeModeInfo.h"
 #include "FrameBufferImpl.h"
-#include <purist/graphics/interfaces.h>
 
 #include <xf86drmMode.h>
 

@@ -1,4 +1,7 @@
 #include <purist/graphics/skia/DisplayContentsSkia.h>
+#include <purist/graphics/TargetSurface.h>
+#include <purist/graphics/Display.h>
+#include <purist/graphics/Mode.h>
 
 #include "SkiaRasterOverlay.h"
 #include "SkiaEGLOverlay.h"

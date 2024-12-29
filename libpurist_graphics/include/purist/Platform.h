@@ -2,13 +2,10 @@
 
 #include "exceptions.h"
 
-#include "graphics/interfaces.h"
-#include "input/interfaces.h"
+#include <purist/graphics/DisplayContentsHandler.h>
+#include <purist/input/interfaces.h>
 
 #include <memory>
-
-#define GL_GLEXT_PROTOTYPES 1
-#include <GLES2/gl2.h>
 
 namespace purist {
 
@@ -22,13 +19,13 @@ private:
     bool stopPending = false;
 public:
     Platform(bool enableOpenGL = true);
+    virtual ~Platform();
 
     void run(
         std::shared_ptr<graphics::DisplayContentsHandler> contents, 
         std::shared_ptr<input::KeyboardHandler> keyboardHandler);
     
     void stop();
-    ~Platform();
 };
 
 }

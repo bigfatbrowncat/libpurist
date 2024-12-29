@@ -1,6 +1,6 @@
 #pragma once
 
-#include <purist/graphics/interfaces.h>
+#include <purist/graphics/DisplayContentsHandler.h>
 
 #include <memory>
 #include <list>

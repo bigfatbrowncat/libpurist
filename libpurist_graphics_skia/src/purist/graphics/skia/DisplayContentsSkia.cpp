@@ -6,6 +6,8 @@
 #include "SkiaRasterOverlay.h"
 #include "SkiaEGLOverlay.h"
 
+#include <include/core/SkCanvas.h>
+
 namespace purist::graphics::skia {
 
 DisplayContentsHandlerForSkia::DisplayContentsHandlerForSkia(std::shared_ptr<SkiaDisplayContentsHandler> userContentsHandler, bool enableOpenGL)
@@ -36,12 +38,6 @@ void DisplayContentsHandlerForSkia::drawIntoBuffer(std::shared_ptr<Display> disp
 
     auto sSurface = skiaOverlay->getSkiaSurface();
 
-	//w = sSurface->width();
-	//h = sSurface->height();
-
-    uint32_t w = tw;//display->getWidth();
-    uint32_t h = th;//display->getHeight();
-		
     DisplayOrientation orientation = userContentsHandler->chooseOrientation(display, skiaOverlay);
 
 
@@ -54,16 +50,16 @@ void DisplayContentsHandlerForSkia::drawIntoBuffer(std::shared_ptr<Display> disp
     canvas->translate(0, sSurface->height() - display->getMode().getHeight());
     
     if (orientation == DisplayOrientation::LEFT_VERTICAL) {
-        canvas->translate(w, 0);
+        canvas->translate(tw, 0);
         canvas->rotate(90);
-        std::swap(w, h);
+        std::swap(tw, th);
     } else if (orientation == DisplayOrientation::RIGHT_VERTICAL) {
-        canvas->translate(0, h);
+        canvas->translate(0, th);
         canvas->rotate(-90);
-        std::swap(w, h);
+        std::swap(tw, th);
     }
     
-    userContentsHandler->drawIntoSurface(display, skiaOverlay, w, h, *canvas);
+    userContentsHandler->drawIntoSurface(display, skiaOverlay, tw, th, *canvas);
 
     canvas->restore();
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <purist/input/interfaces.h>
+#include <purist/input/KeyboardHandler.h>
 
 #include <xkbcommon/xkbcommon.h>
 #include <xkbcommon/xkbcommon-compose.h>

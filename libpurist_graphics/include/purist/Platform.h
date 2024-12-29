@@ -3,7 +3,7 @@
 #include "exceptions.h"
 
 #include <purist/graphics/DisplayContentsHandler.h>
-#include <purist/input/interfaces.h>
+#include <purist/input/KeyboardHandler.h>
 
 #include <memory>
 

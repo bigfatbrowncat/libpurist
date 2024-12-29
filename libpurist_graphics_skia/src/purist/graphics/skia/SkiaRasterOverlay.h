@@ -2,6 +2,8 @@
 
 #include <purist/graphics/skia/SkiaOverlay.h>
 
+#include <include/gpu/ganesh/GrDirectContext.h>
+
 namespace purist::graphics::skia {
 
 class SkiaRasterOverlay : public SkiaOverlay {

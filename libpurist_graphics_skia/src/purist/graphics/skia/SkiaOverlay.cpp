@@ -1,6 +1,14 @@
 #include <purist/graphics/skia/SkiaOverlay.h>
 
 #include <include/core/SkSurface.h>
+#include <include/core/SkFontStyle.h>
+#include <include/core/SkTypeface.h>
+
+#ifdef __APPLE__
+#  include <include/ports/SkFontMgr_mac_ct.h>
+#else
+#  include <include/ports/SkFontMgr_fontconfig.h>
+#endif
 
 #define GL_GLEXT_PROTOTYPES 1
 #include <GLES2/gl2.h>

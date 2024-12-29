@@ -1,6 +1,15 @@
 #include "SkiaEGLOverlay.h"
 
+#include <include/core/SkColorSpace.h>
 #include <include/core/SkSurface.h>
+#include <include/gpu/ganesh/GrDirectContext.h>
+#include <include/gpu/ganesh/GrBackendSurface.h>
+#include <include/gpu/ganesh/SkSurfaceGanesh.h>
+#include <include/gpu/ganesh/gl/GrGLTypes.h>
+#include <include/gpu/ganesh/gl/GrGLInterface.h>
+#include <include/gpu/ganesh/gl/GrGLBackendSurface.h>
+#include <include/gpu/ganesh/gl/egl/GrGLMakeEGLInterface.h>
+#include <src/gpu/ganesh/gl/GrGLDefines.h>
 
 #define GL_GLEXT_PROTOTYPES 1
 #include <GLES2/gl2.h>

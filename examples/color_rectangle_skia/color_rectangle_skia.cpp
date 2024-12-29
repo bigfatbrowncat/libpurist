@@ -2,11 +2,14 @@
 #include <purist/graphics/skia/DisplayContentsSkia.h>
 #include <purist/graphics/Display.h>
 #include <purist/graphics/Mode.h>
-#include <purist/input/interfaces.h>
+#include <purist/input/KeyboardHandler.h>
 #include <purist/Platform.h>
 
 // Skia headers
+#include <include/core/SkCanvas.h>
 #include <include/core/SkSurface.h>
+#include <include/core/SkImage.h>
+#include <include/core/SkPaint.h>
 #include <include/core/SkFont.h>
 #include <include/core/SkFontMetrics.h>
 

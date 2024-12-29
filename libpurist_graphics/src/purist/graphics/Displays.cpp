@@ -104,7 +104,7 @@ void Displays::clear() {
 }
 
 
-void Displays::setDisplayContents(std::shared_ptr<DisplayContents> contents) {
+void Displays::setDisplayContents(std::shared_ptr<DisplayContentsHandler> contents) {
 	this->displayContents = contents;
 }
 

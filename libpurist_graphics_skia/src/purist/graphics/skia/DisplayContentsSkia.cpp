@@ -5,7 +5,9 @@
 
 namespace purist::graphics::skia {
 
-DisplayContentsSkia::DisplayContentsSkia(bool enableOpenGL) /*: enableOpenGL(enableOpenGL)*/ {
+DisplayContentsHandlerForSkia::DisplayContentsHandlerForSkia(std::shared_ptr<SkiaDisplayContentsHandler> userContentsHandler, bool enableOpenGL)
+        : userContentsHandler(userContentsHandler) {
+    
     if (enableOpenGL) {
         skiaOverlay = std::make_shared<purist::graphics::skia::SkiaEGLOverlay>();
     } else {
@@ -13,12 +15,12 @@ DisplayContentsSkia::DisplayContentsSkia(bool enableOpenGL) /*: enableOpenGL(ena
     }
 }
 
-void DisplayContentsSkia::setSkiaOverlay(std::shared_ptr<SkiaOverlay> skiaOverlay) {
+void DisplayContentsHandlerForSkia::setSkiaOverlay(std::shared_ptr<SkiaOverlay> skiaOverlay) {
     this->skiaOverlay = skiaOverlay;
 }
-std::shared_ptr<SkiaOverlay> DisplayContentsSkia::getSkiaOverlay() const { return skiaOverlay; }
+std::shared_ptr<SkiaOverlay> DisplayContentsHandlerForSkia::getSkiaOverlay() const { return skiaOverlay; }
 
-void DisplayContentsSkia::drawIntoBuffer(std::shared_ptr<Display> display, std::shared_ptr<TargetSurface> target) {
+void DisplayContentsHandlerForSkia::drawIntoBuffer(std::shared_ptr<Display> display, std::shared_ptr<TargetSurface> target) {
     int tw = target->getWidth(), th = target->getHeight();
 
     if (!target->getMappedBuffer()) {
@@ -37,11 +39,8 @@ void DisplayContentsSkia::drawIntoBuffer(std::shared_ptr<Display> display, std::
     uint32_t w = tw;//display->getWidth();
     uint32_t h = th;//display->getHeight();
 		
-    if (h > w) {
-        // We are assumming that the display is horizontally oriented.
-        // So if some of them has height > width, let's rotate it
-        orientation = DisplayOrientation::LEFT_VERTICAL;
-    }
+    DisplayOrientation orientation = userContentsHandler->chooseOrientation(display, skiaOverlay);
+
 
 	auto* canvas = sSurface->getCanvas();
     canvas->save();
@@ -61,7 +60,7 @@ void DisplayContentsSkia::drawIntoBuffer(std::shared_ptr<Display> display, std::
         std::swap(w, h);
     }
     
-    drawIntoSurface(display, w, h, *canvas);
+    userContentsHandler->drawIntoSurface(display, skiaOverlay, w, h, *canvas);
 
     canvas->restore();
 
@@ -70,6 +69,10 @@ void DisplayContentsSkia::drawIntoBuffer(std::shared_ptr<Display> display, std::
     if (context != nullptr) {
         context->flushAndSubmit();
     }
+}
+
+std::list<std::shared_ptr<Mode>>::const_iterator DisplayContentsHandlerForSkia::chooseMode(const std::list<std::shared_ptr<Mode>>& modes) { 
+    return userContentsHandler->chooseMode(skiaOverlay, modes);
 }
 
 }

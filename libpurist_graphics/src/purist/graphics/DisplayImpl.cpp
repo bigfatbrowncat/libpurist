@@ -238,7 +238,7 @@ void DisplayImpl::modeset_page_flip_event(int fd, unsigned int frame,
 	}
 }
 
-void DisplayImpl::setContentsHandler(std::shared_ptr<DisplayContents> contents) {
+void DisplayImpl::setContentsHandler(std::shared_ptr<DisplayContentsHandler> contents) {
 	this->contents = contents;
 }
 

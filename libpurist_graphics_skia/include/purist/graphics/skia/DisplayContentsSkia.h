@@ -14,21 +14,37 @@ typedef enum class DisplayOrientation {
 } DisplayOrientation;
 
 
-class DisplayContentsSkia : public DisplayContents {
+class SkiaDisplayContentsHandler {
+public:
+    virtual ~SkiaDisplayContentsHandler() = default;
+
+    virtual std::list<std::shared_ptr<Mode>>::const_iterator chooseMode(
+        std::shared_ptr<SkiaOverlay> skiaOverlay,
+        const std::list<std::shared_ptr<Mode>>& modes) { return modes.begin(); }
+
+    virtual DisplayOrientation chooseOrientation(
+        std::shared_ptr<purist::graphics::Display> display,
+        std::shared_ptr<SkiaOverlay> skiaOverlay) { return DisplayOrientation::HORIZONTAL; }
+
+    virtual void drawIntoSurface(
+        std::shared_ptr<purist::graphics::Display> display, 
+        std::shared_ptr<SkiaOverlay> skiaOverlay,
+        int width, int height, SkCanvas& canvas) = 0;
+};
+
+class DisplayContentsHandlerForSkia final : public DisplayContentsHandler {
 private:
 	std::shared_ptr<SkiaOverlay> skiaOverlay;
-    DisplayOrientation orientation;
-    //bool enableOpenGL;
+    std::shared_ptr<SkiaDisplayContentsHandler> userContentsHandler;
 public:
+    DisplayContentsHandlerForSkia(std::shared_ptr<SkiaDisplayContentsHandler> userContentsHandler, bool enableOpenGL);
+    virtual ~DisplayContentsHandlerForSkia() = default;
+
     void setSkiaOverlay(std::shared_ptr<SkiaOverlay> skiaOverlay);
     std::shared_ptr<SkiaOverlay> getSkiaOverlay() const;
 
-    DisplayContentsSkia(bool enableOpenGL);
-    virtual ~DisplayContentsSkia() = default;
-
     void drawIntoBuffer(std::shared_ptr<Display> display, std::shared_ptr<TargetSurface> target) override;
-
-    virtual void drawIntoSurface(std::shared_ptr<purist::graphics::Display> display, int width, int height, SkCanvas& canvas) = 0;
+    std::list<std::shared_ptr<Mode>>::const_iterator chooseMode(const std::list<std::shared_ptr<Mode>>& modes) override;
 
 };
 

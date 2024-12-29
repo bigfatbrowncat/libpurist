@@ -45,7 +45,7 @@ Card::Card(const fs::path& node, bool enableOpenGL)
 	  fd(-1), enableOpenGL(enableOpenGL), node(node) { }
 
 
-void Card::initialize(std::shared_ptr<DisplayContents> contents)
+void Card::initialize(std::shared_ptr<DisplayContentsHandler> contents)
 {
 	int ret;
 	uint64_t has_dumb;

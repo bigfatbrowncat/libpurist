@@ -24,7 +24,7 @@ public:
     Platform(bool enableOpenGL = true);
 
     void run(
-        std::shared_ptr<graphics::DisplayContents> contents, 
+        std::shared_ptr<graphics::DisplayContentsHandler> contents, 
         std::shared_ptr<input::KeyboardHandler> keyboardHandler);
     
     void stop();

@@ -38,7 +38,7 @@ private:
     uint32_t crtc_id = 0;
 	std::unique_ptr<ModeCrtc> saved_crtc = nullptr;
 
-    std::shared_ptr<DisplayContents> contents = nullptr;
+    std::shared_ptr<DisplayContentsHandler> contents = nullptr;
 
 	int page_flips_pending = 0;
 
@@ -63,7 +63,7 @@ public:
 
     int connectDisplayToNotOccupiedCrtc(const ModeResources& res, const ModeConnector& conn);
     int setup(const ModeResources& res, const ModeConnector& conn);
-    void setContentsHandler(std::shared_ptr<DisplayContents> contents);
+    void setContentsHandler(std::shared_ptr<DisplayContentsHandler> contents);
     void updateInDrawingLoop();
     uint32_t getConnectorId() const override { return connector_id; }
     uint32_t getCrtcId() const { return crtc_id; }

@@ -47,7 +47,7 @@ public:
     const fs::path node;
 
     Card(const fs::path& node, bool enableOpenGL);
-    void initialize(std::shared_ptr<DisplayContents> factory);
+    void initialize(std::shared_ptr<DisplayContentsHandler> factory);
 
     virtual ~Card();
 

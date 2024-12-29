@@ -2,7 +2,6 @@
 #include "purist/graphics/skia/DisplayContentsSkia.h"
 #include "purist/input/interfaces.h"
 #include <purist/Platform.h>
-#include <purist/graphics/skia/DisplayContentsSkiaFactory.h>
 
 // Skia headers
 #include <include/core/SkSurface.h>
@@ -23,7 +22,7 @@ namespace pg = purist::graphics;
 namespace pi = purist::input;
 namespace pgs = purist::graphics::skia;
 
-class ColoredScreenDisplayContents : public pgs::DisplayContentsSkia, public pi::KeyboardHandler  {
+class ColoredScreenDisplayContents : public pgs::SkiaDisplayContentsHandler, public pi::KeyboardHandler {
 public:
 	std::weak_ptr<p::Platform> platform;
 
@@ -53,8 +52,7 @@ public:
         return next;
     }
 
-	ColoredScreenDisplayContents(std::weak_ptr<p::Platform> platform, bool enableOpenGL) 
-			: pgs::DisplayContentsSkia(enableOpenGL), platform(platform) {
+	ColoredScreenDisplayContents(std::weak_ptr<p::Platform> platform) : platform(platform) {
 		r = rand() % 0xff;
 		g = rand() % 0xff;
 		b = rand() % 0xff;
@@ -63,7 +61,7 @@ public:
 	
 	int i = 0;
 	bool top = true;
-    std::list<std::shared_ptr<pg::Mode>>::const_iterator chooseMode(const std::list<std::shared_ptr<pg::Mode>>& modes) override {
+    std::list<std::shared_ptr<pg::Mode>>::const_iterator chooseMode(std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, const std::list<std::shared_ptr<pg::Mode>>& modes) override {
 		
 		i = (i + 1) % 5;
 
@@ -76,15 +74,24 @@ public:
 		}
 
 		if (typeface == nullptr) {
-			typeface = getSkiaOverlay()->getTypeface("sans-serif");
+			typeface = skiaOverlay->getTypeface("sans-serif");
 		}
 		font = std::make_shared<SkFont>(typeface, (*res)->getHeight() / 4);
 
 		return res;
 	}
 
+	pgs::DisplayOrientation chooseOrientation(std::shared_ptr<pg::Display> display, std::shared_ptr<pgs::SkiaOverlay> skiaOverlay) override {
+		if (display->getMode().getHeight() > display->getMode().getWidth()) {
+			// We are assumming that the display is horizontally oriented.
+			// So if some of them has height > width, let's rotate it
+			return pgs::DisplayOrientation::LEFT_VERTICAL;
+		} else {
+			return pgs::DisplayOrientation::HORIZONTAL;
+		}
+	}
 
-    void drawIntoSurface(std::shared_ptr<pg::Display> display, int width, int height, SkCanvas& canvas) override {
+    void drawIntoSurface(std::shared_ptr<pg::Display> display, std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, int width, int height, SkCanvas& canvas) override {
 		SkScalar w = width, h = height;
 
        	r = next_color(&r_up, r, 20);
@@ -146,10 +153,12 @@ int main(int argc, char **argv)
 	try {
 		bool enableOpenGL = true;
 
-		auto purist = std::make_shared<purist::Platform>(enableOpenGL);
-		auto contentsFactory = std::make_shared<ColoredScreenDisplayContents>(purist, enableOpenGL);
+		auto purist = std::make_shared<p::Platform>(enableOpenGL);
 		
-		purist->run(contentsFactory, contentsFactory);
+		auto contents = std::make_shared<ColoredScreenDisplayContents>(purist);
+		auto contents_handler_for_skia = std::make_shared<pgs::DisplayContentsHandlerForSkia>(contents, enableOpenGL);
+		
+		purist->run(contents_handler_for_skia, contents);
 
 		return 0;
 	

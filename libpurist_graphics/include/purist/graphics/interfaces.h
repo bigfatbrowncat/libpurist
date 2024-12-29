@@ -48,11 +48,11 @@ public:
 
 // Implemented on the user side
 
-class DisplayContents {
+class DisplayContentsHandler {
 public:
-    virtual ~DisplayContents() = default;
+    virtual ~DisplayContentsHandler() = default;
 
-    virtual std::list<std::shared_ptr<Mode>>::const_iterator chooseMode(const std::list<std::shared_ptr<Mode>>& modes) = 0;
+    virtual std::list<std::shared_ptr<Mode>>::const_iterator chooseMode(const std::list<std::shared_ptr<Mode>>& modes) { return modes.begin(); }
     virtual void drawIntoBuffer(std::shared_ptr<Display> display, std::shared_ptr<TargetSurface> target) = 0;
 };
 

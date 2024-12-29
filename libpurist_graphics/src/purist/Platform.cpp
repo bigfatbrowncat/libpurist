@@ -23,7 +23,7 @@ namespace purist {
 Platform::Platform(bool enableOpenGL)
         : enableOpenGL(enableOpenGL) { }
 
-static std::unique_ptr<graphics::Card> probeCard(std::shared_ptr<graphics::DisplayContents> contents, bool enableOpenGL) {
+static std::unique_ptr<graphics::Card> probeCard(std::shared_ptr<graphics::DisplayContentsHandler> contents, bool enableOpenGL) {
     // Probing dri cards
     std::unique_ptr<graphics::Card> card;
     fs::path dri_path = "/dev/dri";
@@ -55,7 +55,7 @@ static std::unique_ptr<graphics::Card> probeCard(std::shared_ptr<graphics::Displ
 
 
 
-void Platform::run(std::shared_ptr<graphics::DisplayContents> contentsFactory, 
+void Platform::run(std::shared_ptr<graphics::DisplayContentsHandler> contentsFactory, 
                    std::shared_ptr<input::KeyboardHandler> keyboardHandler) {
     
     auto keyboards = std::make_shared<purist::input::Keyboards>();

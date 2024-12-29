@@ -8,7 +8,7 @@ namespace p = purist;
 namespace pg = purist::graphics;
 namespace pi = purist::input;
 
-class ColoredScreenDisplayContents : public pg::DisplayContents, public pi::KeyboardHandler {
+class ColoredScreenDisplayContents : public pg::DisplayContentsHandler, public pi::KeyboardHandler {
 private:
 	std::weak_ptr<p::Platform> platform;
 	bool enableOpenGL;

@@ -4,18 +4,20 @@
 #include <memory>
 #include <cassert>
 
+namespace p = purist;
 namespace pg = purist::graphics;
 namespace pi = purist::input;
 
 class ColoredScreenDisplayContents : public pg::DisplayContents, public pi::KeyboardHandler {
 private:
+	std::weak_ptr<p::Platform> platform;
 	bool enableOpenGL;
 
 public:
 	uint8_t r, g, b;
 	bool r_up, g_up, b_up;
 	
-	ColoredScreenDisplayContents(bool enableOpenGL) : enableOpenGL(enableOpenGL) { 
+	ColoredScreenDisplayContents(std::weak_ptr<p::Platform> platform, bool enableOpenGL) : platform(platform), enableOpenGL(enableOpenGL) { 
 		r = rand() % 0xff;
 		g = rand() % 0xff;
 		b = rand() % 0xff;
@@ -75,9 +77,11 @@ public:
 
     }
 	
-	void onCharacter(pi::Keyboard& kbd, uint32_t utf8CharCode) override { }
-    void onKeyPress(pi::Keyboard& kbd, uint32_t keyCode, pi::Modifiers mods, pi::Leds leds) override { }
-    void onKeyRepeat(pi::Keyboard& kbd, uint32_t keyCode, pi::Modifiers mods, pi::Leds leds) override { }
+	void onCharacter(pi::Keyboard& kbd, uint32_t utf8CharCode) override { 
+		platform.lock()->stop();
+	}
+
+    void onKeyPress(pi::Keyboard& kbd, uint32_t keyCode, pi::Modifiers mods, pi::Leds leds, bool repeat) override { }
     void onKeyRelease(pi::Keyboard& kbd, uint32_t keyCode, pi::Modifiers mods, pi::Leds leds) override { }
 };
 
@@ -104,14 +108,14 @@ int main(int argc, char **argv)
 	try {
 		bool enableOpenGL = true;
 
-		purist::Platform purist(enableOpenGL);
-		auto contentsFactory = std::make_shared<ColoredScreenDisplayContents>(enableOpenGL);
+		std::shared_ptr<p::Platform> purist = std::make_shared<p::Platform>(enableOpenGL);
+		auto contentsFactory = std::make_shared<ColoredScreenDisplayContents>(purist, enableOpenGL);
 		
-		purist.run(contentsFactory, contentsFactory);
+		purist->run(contentsFactory, contentsFactory);
 
 		return 0;
 	
-	} catch (const purist::errcode_exception& ex) {
+	} catch (const p::errcode_exception& ex) {
 		fprintf(stderr, "%s\n", ex.what());
 		return ex.errcode;
 	}

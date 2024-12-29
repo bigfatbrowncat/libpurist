@@ -73,8 +73,7 @@ void Platform::run(std::shared_ptr<graphics::DisplayContents> contentsFactory,
     });
 
 
-    bool terminate = false;
-    while (!terminate) {
+    while (!stopPending) {
         int ret = poll(fds.data(), fds.size(), -1);
         if (ret < 0) {
             if (errno == EINTR)
@@ -99,6 +98,10 @@ void Platform::run(std::shared_ptr<graphics::DisplayContents> contentsFactory,
     //card->runDrawingLoop();
 
     printf("exiting\n");
+}
+
+void Platform::stop() {
+    stopPending = true;
 }
 
 Platform::~Platform() {

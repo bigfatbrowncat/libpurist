@@ -9,6 +9,8 @@
 #include <include/core/SkFont.h>
 #include <include/core/SkFontMetrics.h>
 
+#include <xkbcommon/xkbcommon-keysyms.h>
+
 // std headers
 #include <map>
 #include <memory>
@@ -16,12 +18,15 @@
 #include <iomanip>
 #include <sstream>
 
+namespace p = purist;
 namespace pg = purist::graphics;
 namespace pi = purist::input;
 namespace pgs = purist::graphics::skia;
 
 class ColoredScreenDisplayContents : public pgs::DisplayContentsSkia, public pi::KeyboardHandler  {
 public:
+	std::weak_ptr<p::Platform> platform;
+
 	uint8_t r, g, b;
 	bool r_up, g_up, b_up;
 
@@ -48,7 +53,8 @@ public:
         return next;
     }
 
-	ColoredScreenDisplayContents(bool enableOpenGL) : pgs::DisplayContentsSkia(enableOpenGL) {
+	ColoredScreenDisplayContents(std::weak_ptr<p::Platform> platform, bool enableOpenGL) 
+			: pgs::DisplayContentsSkia(enableOpenGL), platform(platform) {
 		r = rand() % 0xff;
 		g = rand() % 0xff;
 		b = rand() % 0xff;
@@ -126,27 +132,13 @@ public:
 			letter[0] = (uint8_t)utf8CharCode;
 		}
 	}
-    void onKeyPress(pi::Keyboard& kbd, uint32_t keyCode, pi::Modifiers mods, pi::Leds leds) override { }
-    void onKeyRepeat(pi::Keyboard& kbd, uint32_t keyCode, pi::Modifiers mods, pi::Leds leds) override { }
-    void onKeyRelease(pi::Keyboard& kbd, uint32_t keyCode, pi::Modifiers mods, pi::Leds leds) override { }
+    void onKeyPress(pi::Keyboard& kbd, uint32_t keysym, pi::Modifiers mods, pi::Leds leds, bool repeat) override { 
+		if (keysym == XKB_KEY_Escape) {
+			platform.lock()->stop();
+		}
+	}
+    void onKeyRelease(pi::Keyboard& kbd, uint32_t keysym, pi::Modifiers mods, pi::Leds leds) override { }
 };
-
-// class ColoredScreenDisplayApp : public pgs::DisplayContentsSkia, public pi::KeyboardHandler {
-// public:
-// 	ColoredScreenDisplayApp(bool enableOpenGL) : DisplayContentsSkia(enableOpenGL) { }
-
-// 	std::shared_ptr<pgs::DisplayContentsSkia> createDisplayContentsSkia(pg::Display& display) {
-// 		auto contents = std::make_shared<ColoredScreenDisplayContents>();
-// 		contents->r = rand() % 0xff;
-// 		contents->g = rand() % 0xff;
-// 		contents->b = rand() % 0xff;
-// 		contents->r_up = contents->g_up = contents->b_up = true;
-// 		return contents;
-// 	}
-
-
-
-// };
 
 
 int main(int argc, char **argv)
@@ -154,10 +146,10 @@ int main(int argc, char **argv)
 	try {
 		bool enableOpenGL = true;
 
-		purist::Platform purist(enableOpenGL);
-		auto contentsFactory = std::make_shared<ColoredScreenDisplayContents>(enableOpenGL);
+		auto purist = std::make_shared<purist::Platform>(enableOpenGL);
+		auto contentsFactory = std::make_shared<ColoredScreenDisplayContents>(purist, enableOpenGL);
 		
-		purist.run(contentsFactory, contentsFactory);
+		purist->run(contentsFactory, contentsFactory);
 
 		return 0;
 	

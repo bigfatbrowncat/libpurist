@@ -19,13 +19,15 @@ private:
     Platform& operator = (const Platform& other) = delete;
 
     bool enableOpenGL;
-
+    bool stopPending = false;
 public:
     Platform(bool enableOpenGL = true);
 
     void run(
         std::shared_ptr<graphics::DisplayContents> contents, 
         std::shared_ptr<input::KeyboardHandler> keyboardHandler);
+    
+    void stop();
     ~Platform();
 };
 

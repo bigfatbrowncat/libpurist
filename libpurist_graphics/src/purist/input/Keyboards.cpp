@@ -21,6 +21,9 @@ Keyboards::~Keyboards() {
     if (keymap) {
         xkb_keymap_unref(keymap);
     }
+    if (compose_table) {
+        xkb_compose_table_unref(compose_table);
+    }
 }
 
 void Keyboards::initialize(std::shared_ptr<input::KeyboardHandler> keyboardHandler) {

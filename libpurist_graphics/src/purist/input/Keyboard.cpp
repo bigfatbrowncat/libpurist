@@ -60,6 +60,9 @@ Keyboard::~Keyboard() {
     if (state) {
         xkb_state_unref(state);
     }
+    if (compose_state) {
+        xkb_compose_state_unref(compose_state);
+    }
 }
 
 
@@ -294,8 +297,8 @@ void Keyboard::process_event(uint16_t type, uint16_t code, int32_t value, bool w
     if (value == KEY_STATE_REPEAT && !xkb_keymap_key_repeats(keymap, keycode))
         return;
     
+    xkb_keysym_t keysym = xkb_state_key_get_one_sym(this->state, keycode);
     if (with_compose && value != KEY_STATE_RELEASE) {
-        xkb_keysym_t keysym = xkb_state_key_get_one_sym(this->state, keycode);
         xkb_compose_state_feed(this->compose_state, keysym);
     }
 
@@ -326,15 +329,15 @@ void Keyboard::process_event(uint16_t type, uint16_t code, int32_t value, bool w
 
     if (value == KEY_STATE_REPEAT) {
         if (keyboardHandler != nullptr) {
-            keyboardHandler->onKeyRepeat(*this, keycode, mods, leds);
+            keyboardHandler->onKeyPress(*this, keysym, mods, leds, true);
         }
     } else if (value == KEY_STATE_PRESS) {
         if (keyboardHandler != nullptr) {
-            keyboardHandler->onKeyPress(*this, keycode, mods, leds);
+            keyboardHandler->onKeyPress(*this, keysym, mods, leds, false);
         }
     } else if (value == KEY_STATE_RELEASE) {
         if (keyboardHandler != nullptr) {
-            keyboardHandler->onKeyRelease(*this, keycode, mods, leds);
+            keyboardHandler->onKeyRelease(*this, keysym, mods, leds);
         }
     } else {
         throw std::runtime_error("Impossible case");

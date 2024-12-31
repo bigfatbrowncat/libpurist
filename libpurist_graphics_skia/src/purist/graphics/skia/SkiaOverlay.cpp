@@ -1,3 +1,4 @@
+#include "include/core/SkTypeface.h"
 #include <purist/graphics/skia/SkiaOverlay.h>
 
 #include <include/core/SkSurface.h>
@@ -21,6 +22,7 @@
 
 #include <string>
 #include <iostream>
+#include <list>
 
 namespace purist::graphics::skia {
 
@@ -46,7 +48,7 @@ SkiaOverlay::SkiaOverlay() {
   //createFontMgr(fontDirectory);
 }
 
-sk_sp<SkTypeface> SkiaOverlay::getTypeface(const std::string& name) const {
+sk_sp<SkTypeface> SkiaOverlay::getTypefaceByName(const std::string& name) const {
   //auto tf = SkFontMgr::RefEmpty()->makeFromFile("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 0);  //ToolUtils::CreatePortableTypeface("serif", SkFontStyle());
   //auto tf = fontMgr->makeFromFile("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 0);  //ToolUtils::CreatePortableTypeface("serif", SkFontStyle());
   auto tf = fontMgr->matchFamilyStyle(name.c_str(), SkFontStyle());
@@ -55,5 +57,29 @@ sk_sp<SkTypeface> SkiaOverlay::getTypeface(const std::string& name) const {
   }
   return tf;
 }
+//skia::textlayout::TextStyle
+std::list<SkString> SkiaOverlay::getAllFontFamilyNames() const {
+  // Listing the families
+  std::list<SkString> familyNames;
+  for (size_t i = 0; i < fontMgr->countFamilies(); i++) {
+    SkString name;
+    fontMgr->getFamilyName(i, &name);
+    familyNames.push_back(name);
+  }
+  return familyNames;
+}
+
+sk_sp<SkTypeface> SkiaOverlay::getTypefaceForCharacter(SkUnichar unichar, const std::vector<SkString>& fontFamilies, const SkFontStyle& style) const {
+  // Looking for a typeface suporting this character
+  for (const SkString& fn : fontFamilies) {
+    sk_sp<SkTypeface> tf = fontMgr->matchFamilyStyle(fn.c_str(), style);
+    SkGlyphID gi = tf->unicharToGlyph(unichar);
+    if (gi != 0) {
+      return tf;
+    }
+  }
+  return nullptr;
+}
+
 
 }

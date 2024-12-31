@@ -10,6 +10,7 @@
 #include <include/core/SkFontMgr.h>
 
 #include <vector>
+#include <list>
 
 namespace purist::graphics::skia {
 
@@ -32,7 +33,10 @@ public:
 
 	void createFontMgr(const std::vector<Resource>& res);
 	sk_sp<SkFontMgr> getFontMgr() const { return fontMgr; }
-	sk_sp<SkTypeface> getTypeface(const std::string& name) const;
+	sk_sp<SkTypeface> getTypefaceByName(const std::string& name) const;
+	std::list<SkString> getAllFontFamilyNames() const;
+	sk_sp<SkTypeface> getTypefaceForCharacter(SkUnichar unichar, const std::vector<SkString>& fontFamilies, const SkFontStyle& style) const;
+
 };
 
 }

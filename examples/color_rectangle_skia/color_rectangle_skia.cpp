@@ -49,7 +49,7 @@ public:
 	uint8_t r, g, b;
 	bool r_up, g_up, b_up;
 
-	sk_sp<SkTypeface> typeface;
+	//sk_sp<SkTypeface> typeface;
 
 	std::string letter;
 
@@ -92,12 +92,11 @@ public:
 			res--;
 		}
 
-		if (typeface == nullptr) {
+		if (skiaOverlay->getFontMgr() == nullptr) {
 			skiaOverlay->createFontMgr({
-				//LOAD_RESOURCE(fonts_noto_sans_NotoSans_Regular_ttf),
+				LOAD_RESOURCE(fonts_noto_sans_NotoSans_Regular_ttf),
 				LOAD_RESOURCE(fonts_noto_sans_NotoSansHebrew_Regular_ttf)
 			});
-			typeface = skiaOverlay->getTypeface("Noto Sans Hebrew");
 		}
 
 		return res;
@@ -140,17 +139,19 @@ public:
 		canvas.drawRect(rect, paint2);
 
 		int sz = (int)(h / sqrt(4 * fmax(1, letter.size())));
-		auto font = std::make_shared<SkFont>(typeface, sz);
+		//auto font = std::make_shared<SkFont>(typeface, sz);
 
-		SkRect letterBounds;
-		font->measureText(letter.c_str(), letter.size(), SkTextEncoding::kUTF8, &letterBounds);
-		SkFontMetrics letterMetrics;
-		font->getMetrics(&letterMetrics);
+		// SkRect letterBounds;
+		// font->measureText(letter.c_str(), letter.size(), SkTextEncoding::kUTF8, &letterBounds);
+		// SkFontMetrics letterMetrics;
+		// font->getMetrics(&letterMetrics);
+
+		std::vector<SkString> fontFamilies { SkString("Noto Sans"), SkString("Noto Sans Hebrew") };
 
 		skia::textlayout::TextStyle style;
         style.setBackgroundColor(paint2);
         style.setForegroundColor(paint);
-        style.setFontFamilies({ SkString("Noto Hebrew Sans") });
+        style.setFontFamilies(fontFamilies);
         style.setFontSize(sz);
 		
 		skia::textlayout::ParagraphStyle paraStyle;

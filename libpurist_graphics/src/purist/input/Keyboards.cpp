@@ -99,7 +99,7 @@ void Keyboards::initialize(std::shared_ptr<input::KeyboardHandler> keyboardHandl
         struct xkb_rule_names rmlvo = {
             .rules = nullptr,
             .model = nullptr,//"pc105",
-            .layout = "us,ru",
+            .layout = "us,ru,il",
             .variant = nullptr,
             .options = "grp:alt_shift_toggle"
         };

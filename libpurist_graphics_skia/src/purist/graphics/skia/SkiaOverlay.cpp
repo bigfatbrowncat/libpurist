@@ -16,20 +16,22 @@
 //#include <include/ports/SkFontMgr_directory.h>
 #include <include/ports/SkFontMgr_data.h>
 
-
 #define GL_GLEXT_PROTOTYPES 1
 #include <GLES2/gl2.h>
 
 #include <string>
 #include <iostream>
-#include <vector>
 
 namespace purist::graphics::skia {
 
-void SkiaOverlay::createFontMgr(const Resource& res) {
+void SkiaOverlay::createFontMgr(const std::vector<Resource>& res) {
   //Resource text = LOAD_RESOURCE(frag_glsl);
-  auto data = SkData::MakeFromMalloc(res.data(), res.size()); //MakeFromFileName("fonts/noto-sans/NotoSans-Regular.ttf");
-  std::vector<sk_sp<SkData>> dataVec { data };
+  
+  for (size_t i = 0; i < res.size(); i++) {
+    auto data = SkData::MakeFromMalloc(res[i].data(), res[i].size()); //MakeFromFileName("fonts/noto-sans/NotoSans-Regular.ttf");
+    dataVec.push_back(data);
+  }
+
   SkSpan<sk_sp<SkData>> dataSpan(dataVec);
 
   fontMgr = SkFontMgr_New_Custom_Data(dataSpan); //SkFontMgr_New_FontConfig(nullptr);

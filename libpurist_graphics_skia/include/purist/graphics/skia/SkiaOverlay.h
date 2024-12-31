@@ -9,6 +9,8 @@
 #include <include/core/SkSurface.h>
 #include <include/core/SkFontMgr.h>
 
+#include <vector>
+
 namespace purist::graphics::skia {
 
 class SkiaEGLOverlay;
@@ -17,7 +19,7 @@ class SkiaRasterOverlay;
 class SkiaOverlay {
 private:
 	sk_sp<SkFontMgr> fontMgr;
-
+	std::vector<sk_sp<SkData>> dataVec;
 public:
 	SkiaOverlay();
 	virtual ~SkiaOverlay() = default;
@@ -28,7 +30,8 @@ public:
 	virtual SkiaEGLOverlay* asEGLOverlay() = 0;
 	virtual SkiaRasterOverlay* asRasterOverlay() = 0;
 
-	void createFontMgr(const Resource& res);
+	void createFontMgr(const std::vector<Resource>& res);
+	sk_sp<SkFontMgr> getFontMgr() const { return fontMgr; }
 	sk_sp<SkTypeface> getTypeface(const std::string& name) const;
 };
 

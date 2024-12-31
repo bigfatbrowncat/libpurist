@@ -1,4 +1,5 @@
 // libpurist headers
+#include "modules/skparagraph/include/ParagraphBuilder.h"
 #include <purist/graphics/skia/DisplayContentsSkia.h>
 #include <purist/graphics/Display.h>
 #include <purist/graphics/Mode.h>
@@ -16,6 +17,17 @@
 #include <include/core/SkData.h>
 #include <include/core/SkFontMetrics.h>
 
+//#include <modules/skparagraph/include/ParagraphBuilder.h>
+#include <modules/skparagraph/src/ParagraphBuilderImpl.h>
+#include <modules/skparagraph/include/FontCollection.h>
+#include <modules/skparagraph/include/TextStyle.h>
+
+//#include <icu/source/common/unicode/urename.h>
+#define U_DISABLE_VERSION_SUFFIX	1
+#include <icu/source/common/unicode/utf8.h>
+
+
+//#include <unicode/utf8.h>
 #include <xkbcommon/xkbcommon-keysyms.h>
 
 // std headers
@@ -38,7 +50,6 @@ public:
 	bool r_up, g_up, b_up;
 
 	sk_sp<SkTypeface> typeface;
-	std::shared_ptr<SkFont> font;
 
 	std::string letter;
 
@@ -82,10 +93,12 @@ public:
 		}
 
 		if (typeface == nullptr) {
-			skiaOverlay->createFontMgr(LOAD_RESOURCE(fonts_noto_sans_NotoSans_Regular_ttf));
-			typeface = skiaOverlay->getTypeface("Noto Sans");
+			skiaOverlay->createFontMgr({
+				//LOAD_RESOURCE(fonts_noto_sans_NotoSans_Regular_ttf),
+				LOAD_RESOURCE(fonts_noto_sans_NotoSansHebrew_Regular_ttf)
+			});
+			typeface = skiaOverlay->getTypeface("Noto Sans Hebrew");
 		}
-		font = std::make_shared<SkFont>(typeface, (*res)->getHeight() / 4);
 
 		return res;
 	}
@@ -99,17 +112,6 @@ public:
 			return pgs::DisplayOrientation::HORIZONTAL;
 		}
 	}
-
-	// static std::map<std::string, sk_sp<SkTypeface>> fontFiles;
-	// static void addFontFile(std::string fontName, std::vector<char> fontFile) {
-	// 	std::cout << "Adding font file" << std::endl;
-	// 	sk_sp<SkData> data = SkData::MakeFromMalloc(fontFile.data(), fontFile.size());
-	// 	auto typeface = SkTypeface:  // MakeFromData(data);
-	// 	fontFiles[fontName] = typeface;
-	// 	if(typeface == nullptr){
-	// 	std::cout << "Typeface is null" << std::endl;
-	// 	}
-	// }
 
     void drawIntoSurface(std::shared_ptr<pg::Display> display, std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, int width, int height, SkCanvas& canvas) override {
 		SkScalar w = width, h = height;
@@ -137,16 +139,35 @@ public:
 		SkRect rect = SkRect::MakeLTRB(w / 5, h / 5, 4 * w / 5, 4 * h / 5);
 		canvas.drawRect(rect, paint2);
 
+		int sz = (int)(h / sqrt(4 * fmax(1, letter.size())));
+		auto font = std::make_shared<SkFont>(typeface, sz);
 
-		//std::string topText { "Top" };
 		SkRect letterBounds;
 		font->measureText(letter.c_str(), letter.size(), SkTextEncoding::kUTF8, &letterBounds);
 		SkFontMetrics letterMetrics;
 		font->getMetrics(&letterMetrics);
 
-		canvas.drawString(letter.c_str(), 
-				w / 2 - letterBounds.centerX(), //.width() / 2, 
-				h / 2 - (letterMetrics.fAscent + letterMetrics.fDescent) / 2, *font, paint);
+		skia::textlayout::TextStyle style;
+        style.setBackgroundColor(paint2);
+        style.setForegroundColor(paint);
+        style.setFontFamilies({ SkString("Noto Hebrew Sans") });
+        style.setFontSize(sz);
+		
+		skia::textlayout::ParagraphStyle paraStyle;
+		paraStyle.setHeight(sz);
+        paraStyle.setTextStyle(style);
+        paraStyle.setTextAlign(skia::textlayout::TextAlign::kCenter);
+		auto fontCollection = sk_make_sp<skia::textlayout::FontCollection>();
+        fontCollection->setDefaultFontManager(skiaOverlay->getFontMgr());
+		skia::textlayout::ParagraphBuilderImpl builder(paraStyle, fontCollection);
+		builder.addText(letter.c_str(), letter.size());
+		auto paragraph = builder.Build();
+		paragraph->layout(3 * w / 5);
+		paragraph->paint(&canvas, w / 5, h / 2 - paragraph->getHeight() / 2);// - (letterMetrics.fAscent + letterMetrics.fDescent) / 2);
+
+		// canvas.drawString(letter.c_str(), 
+		// 		w / 2 - letterBounds.centerX(), //.width() / 2, 
+		// 		h / 2 - (letterMetrics.fAscent + letterMetrics.fDescent) / 2, *font, paint);
     }
 
     void onCharacter(pi::Keyboard& kbd, char utf8CharCode[4]) override { 
@@ -154,14 +175,22 @@ public:
 			std::stringstream ss;
 			uint32_t code = reinterpret_cast<uint8_t&>(utf8CharCode[0]);
 			ss << "0x" << std::setfill ('0') << std::setw(2) << std::hex << code;
-			letter = ss.str();
+			//letter = ss.str();
 		} else {
-			letter = utf8CharCode;
+			letter += utf8CharCode;
 		}
 	}
     void onKeyPress(pi::Keyboard& kbd, uint32_t keysym, pi::Modifiers mods, pi::Leds leds, bool repeat) override { 
 		if (keysym == XKB_KEY_Escape) {
 			platform.lock()->stop();
+
+		} else if (keysym == XKB_KEY_BackSpace) {
+			if (letter.size() > 0) {
+				int32_t pos = letter.size();
+				U8_BACK_1((uint8_t*)letter.c_str(), 0, pos);
+
+				letter = letter.substr(0, pos);
+			}
 		}
 	}
     void onKeyRelease(pi::Keyboard& kbd, uint32_t keysym, pi::Modifiers mods, pi::Leds leds) override { }

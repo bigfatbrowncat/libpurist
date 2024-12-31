@@ -44,3 +44,10 @@ find modules -name *.h \
 find src -name *.h \
          -exec echo "Symlinking {} to prefix/include/skia/{}" \; \
          -exec bash -c 'cp_dir "{}" "../../prefix/include/skia/{}"' \;
+
+cd third_party/externals
+find icu -name *.h \
+         -exec echo "Symlinking {} to prefix/include/{}" \; \
+         -exec bash -c 'cp_dir "{}" "../../../../prefix/include/skia/{}"' \;
+
+#third-party/skia-world/skia/third_party/externals/icu/source/common/unicode/stringpiece.h

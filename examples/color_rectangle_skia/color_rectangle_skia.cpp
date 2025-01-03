@@ -1,6 +1,6 @@
 // libpurist headers
+#include "include/core/SkColor.h"
 #include "modules/skparagraph/include/ParagraphBuilder.h"
-#include <cmath>
 #include <purist/graphics/skia/DisplayContentsSkia.h>
 #include <purist/graphics/Display.h>
 #include <purist/graphics/Mode.h>
@@ -40,6 +40,7 @@
 #include <iostream>
 #include <iomanip>
 #include <sstream>
+#include <cmath>
 
 namespace p = purist;
 namespace pg = purist::graphics;
@@ -54,6 +55,8 @@ public:
 	bool r_up, g_up, b_up;
 
 	uint32_t cursor_phase = 0;
+	uint32_t hue_phase = 0;
+	uint32_t value_phase = 0;
 	//sk_sp<SkTypeface> typeface;
 
 	//std::string letter;
@@ -118,30 +121,44 @@ public:
 		}
 	}
 
+	static float squareFunctionHarmonics(float x, int count) {
+		float y = 0;
+		for (uint32_t i = 0; i < count; i++) {
+			auto n = 2 * i - 1;
+			y += 1.0/n * sin(n * 2 * M_PI * x);
+		}
+		return y;
+	}
+
     void drawIntoSurface(std::shared_ptr<pg::Display> display, std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, int width, int height, SkCanvas& canvas) override {
 		SkScalar w = width, h = height;
 
-       	r = next_color(&r_up, r, 20);
-        g = next_color(&g_up, g, 10);
-        b = next_color(&b_up, b, 5);
+		uint32_t hue_period = 1597;  // prime
+		uint32_t value_period = 4211; // prime
 
-		auto color = SkColor4f({ 
-			1.0f/256 * r,
-			1.0f/256 * g,
-			1.0f/256 * b,				
-			1.0f });
+		hue_phase = (hue_phase + 1) % hue_period;
+		value_phase = (value_phase + 1) % value_period;
+		
+		float float_hue_phase = (float)hue_phase / hue_period;
+		float float_value_phase = (float)value_phase / value_period;
+
+		SkScalar hue = float_hue_phase * 360.0;
+		SkScalar saturation = 0.6;
+		SkScalar value = 0.3 * squareFunctionHarmonics(float_value_phase, 5) + 0.5;
+		
+		const SkScalar color_hsv[] { hue, saturation, 0.9f * value };
+		auto color = SkColor4f::FromColor(SkHSVToColor(255, color_hsv));
+		
+		auto hue2 = hue + 180; if (hue2 > 360) hue2 -= 360;
+		const SkScalar color2_hsv[] { hue2, saturation, 0.9f * (1.0f - value) };
+		auto color2 = SkColor4f::FromColor(SkHSVToColor(255, color2_hsv));
+
 		auto paint = SkPaint(color);
-
-		auto color2 = SkColor4f({ 
-			1.0f - 1.0f/256 * r,
-			1.0f - 1.0f/256 * g,
-			1.0f - 1.0f/256 * b,				
-			1.0f });
 		auto paint2 = SkPaint(color2);
 
-		uint32_t cursor_loop_len = 60;
+		uint32_t cursor_loop_len = 30;
 		cursor_phase = (cursor_phase + 1) % cursor_loop_len;
-		float cursor_alpha = sin(2 * M_PI * (float)cursor_phase / cursor_loop_len);
+		float cursor_alpha = 0.5 * sin(2 * M_PI * (float)cursor_phase / cursor_loop_len) + 0.5;
 		auto cursor_color = SkColor4f({ 
 			color.fR,
 			color.fG,
@@ -151,10 +168,12 @@ public:
 
 		canvas.clear(color);
 
-		SkRect rect = SkRect::MakeLTRB(w / 5, h / 5, 4 * w / 5, 4 * h / 5);
+		SkRect rect = SkRect::MakeLTRB(
+			w * 0.9 / 5, h / 5, 
+			w * 4.1 / 5, 4 * h / 5);
 		canvas.drawRect(rect, paint2);
 
-		int sz = (int)(h / sqrt(4 * fmax(1, letterUS.countChar32())));
+		int sz = (int)(0.8 * h / sqrt(4 * fmax(1, letterUS.countChar32() - 2)));
 
 		std::vector<SkString> fontFamilies { SkString("Noto Sans"), SkString("Noto Sans Hebrew") };
 
@@ -172,8 +191,17 @@ public:
         fontCollection->setDefaultFontManager(skiaOverlay->getFontMgr());
 		skia::textlayout::ParagraphBuilderImpl builder(paraStyle, fontCollection);
 
+		auto letterUSWithSpace = letterUS;
+
 		const icu::UnicodeString emptySpace = u"\u200B";
-		auto letterUSWithSpace = letterUS + emptySpace;
+		
+		if (letterUS.isEmpty() || 
+		    letterUS.endsWith(u"\u000A")) {   // Adding empty space to the end in case of a newline
+
+			letterUSWithSpace = letterUS + emptySpace;
+		} else {
+			letterUSWithSpace = letterUS;
+		}
 
 		std::string letterU8;
 		letterU8 = letterUSWithSpace.toUTF8String(letterU8);
@@ -201,7 +229,7 @@ public:
 		
 
 		if (letterU8.size() > 0) {
-			uint32_t text_len = letterUS.countChar32();
+			uint32_t text_len = letterUSWithSpace.countChar32();
 			std::vector<skia::textlayout::TextBox> boxes = paragraph->getRectsForRange(text_len - 1, text_len,//prev_pos, letter.size(),
 													skia::textlayout::RectHeightStyle::kMax,
 													skia::textlayout::RectWidthStyle::kTight);
@@ -248,7 +276,8 @@ public:
     void onKeyPress(pi::Keyboard& kbd, uint32_t keysym, pi::Modifiers mods, pi::Leds leds, bool repeat) override { 
 		if (keysym == XKB_KEY_Escape) {
 			platform.lock()->stop();
-
+		} else if (keysym == XKB_KEY_Return) {
+			letterUS += u"\u000A"; // Carriage return
 		} else if (keysym == XKB_KEY_BackSpace) {
 			auto sz = letterUS.countChar32();
 			if (sz > 0) {

@@ -133,6 +133,13 @@ public:
 			1.0f });
 		auto paint2 = SkPaint(color2);
 
+		auto cursor_color = SkColor4f({ 
+			1.0f,
+			1.0f,
+			1.0f,
+			0.5f });
+		auto cursor_paint = SkPaint(cursor_color);
+
 		canvas.clear(color);
 
 		SkRect rect = SkRect::MakeLTRB(w / 5, h / 5, 4 * w / 5, 4 * h / 5);
@@ -164,7 +171,29 @@ public:
 		builder.addText(letter.c_str(), letter.size());
 		auto paragraph = builder.Build();
 		paragraph->layout(3 * w / 5);
-		paragraph->paint(&canvas, w / 5, h / 2 - paragraph->getHeight() / 2);// - (letterMetrics.fAscent + letterMetrics.fDescent) / 2);
+		auto text_center_x = w / 5;
+		auto text_center_y = h / 2 - paragraph->getHeight() / 2;
+
+		if (letter.size() > 0) {
+			int text_len = 0;
+			for (int32_t prev_pos = letter.size(); prev_pos > 0; text_len++) { 
+				U8_BACK_1((uint8_t*)letter.c_str(), 0, prev_pos);
+			}
+			//std::cout << letter.size() << " -> " << prev_pos << std::endl;
+
+			std::vector<skia::textlayout::TextBox> boxes = paragraph->getRectsForRange(text_len - 1, text_len,//prev_pos, letter.size(),
+													skia::textlayout::RectHeightStyle::kMax,
+													skia::textlayout::RectWidthStyle::kTight);
+			paragraph->paint(&canvas, text_center_x, text_center_y);
+
+			if (boxes.size() > 0) {
+				auto& box = *boxes.begin();
+				auto rect = box.rect;
+				rect.offset(text_center_x, text_center_y);
+				canvas.drawRect(rect, cursor_paint);
+			}
+		}
+
 
 		// canvas.drawString(letter.c_str(), 
 		// 		w / 2 - letterBounds.centerX(), //.width() / 2, 

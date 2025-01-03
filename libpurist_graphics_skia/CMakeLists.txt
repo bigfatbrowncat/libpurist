@@ -19,6 +19,8 @@ set_property(TARGET purist_graphics_skia PROPERTY POSITION_INDEPENDENT_CODE ON)
 target_include_directories(purist_graphics_skia PUBLIC ${purist_graphics_skia_SOURCE_DIR}/include)
 
 target_include_directories(purist_graphics_skia PUBLIC ${purist_third_party}/prefix/include/skia)
+target_include_directories(purist_graphics_skia PUBLIC ${purist_third_party}/prefix/include/skia/icu/source/common)
+
 target_link_directories(purist_graphics_skia PUBLIC ${purist_third_party}/prefix/lib-$<IF:$<CONFIG:Debug>,debug,release>)
 
 target_link_libraries(purist_graphics_skia PUBLIC 

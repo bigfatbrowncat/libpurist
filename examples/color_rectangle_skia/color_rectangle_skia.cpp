@@ -24,10 +24,13 @@
 
 //#include <icu/source/common/unicode/urename.h>
 #define U_DISABLE_VERSION_SUFFIX	1
+#define U_DISABLE_RENAMING			1
+#include <icu/source/common/unicode/uversion.h>
 #include <icu/source/common/unicode/utf8.h>
+#include <icu/source/common/unicode/unistr.h>
+#include <icu/source/common/unicode/schriter.h>
+#include <icu/source/common/unicode/rep.h>
 
-
-//#include <unicode/utf8.h>
 #include <xkbcommon/xkbcommon-keysyms.h>
 
 // std headers
@@ -51,7 +54,8 @@ public:
 
 	//sk_sp<SkTypeface> typeface;
 
-	std::string letter;
+	//std::string letter;
+	icu::UnicodeString letterUS;
 
    /*
     * A short helper function to compute a changing color value. No need to
@@ -145,13 +149,14 @@ public:
 		SkRect rect = SkRect::MakeLTRB(w / 5, h / 5, 4 * w / 5, 4 * h / 5);
 		canvas.drawRect(rect, paint2);
 
-		int sz = (int)(h / sqrt(4 * fmax(1, letter.size())));
+		int sz = (int)(h / sqrt(4 * fmax(1, letterUS.countChar32())));
 		//auto font = std::make_shared<SkFont>(typeface, sz);
 
 		// SkRect letterBounds;
 		// font->measureText(letter.c_str(), letter.size(), SkTextEncoding::kUTF8, &letterBounds);
 		// SkFontMetrics letterMetrics;
 		// font->getMetrics(&letterMetrics);
+
 
 		std::vector<SkString> fontFamilies { SkString("Noto Sans"), SkString("Noto Sans Hebrew") };
 
@@ -168,18 +173,20 @@ public:
 		auto fontCollection = sk_make_sp<skia::textlayout::FontCollection>();
         fontCollection->setDefaultFontManager(skiaOverlay->getFontMgr());
 		skia::textlayout::ParagraphBuilderImpl builder(paraStyle, fontCollection);
-		builder.addText(letter.c_str(), letter.size());
+
+		std::string letterU8;
+		letterU8 = letterUS.toUTF8String(letterU8);
+		builder.addText(letterU8.c_str(), letterU8.size());
+		
 		auto paragraph = builder.Build();
 		paragraph->layout(3 * w / 5);
 		auto text_center_x = w / 5;
 		auto text_center_y = h / 2 - paragraph->getHeight() / 2;
 
-		if (letter.size() > 0) {
-			int text_len = 0;
-			for (int32_t prev_pos = letter.size(); prev_pos > 0; text_len++) { 
-				U8_BACK_1((uint8_t*)letter.c_str(), 0, prev_pos);
-			}
-			//std::cout << letter.size() << " -> " << prev_pos << std::endl;
+		if (letterU8.size() > 0) {
+			uint32_t text_len = letterUS.countChar32();
+			//int32_t prev_pos = letterUS.getChar32Start(letterUS.countChar32() - 1);
+			//icu::StringCharacterIterator
 
 			std::vector<skia::textlayout::TextBox> boxes = paragraph->getRectsForRange(text_len - 1, text_len,//prev_pos, letter.size(),
 													skia::textlayout::RectHeightStyle::kMax,
@@ -200,14 +207,14 @@ public:
 		// 		h / 2 - (letterMetrics.fAscent + letterMetrics.fDescent) / 2, *font, paint);
     }
 
-    void onCharacter(pi::Keyboard& kbd, char utf8CharCode[4]) override { 
-		if (utf8CharCode[0] <= 0x1F || utf8CharCode[0] == 0x7F) {
+    void onCharacter(pi::Keyboard& kbd, char32_t charCode) override { 
+		if (/*utf8CharCode[0]*/charCode <= 0x1F || /*utf8CharCode[0]*/charCode == 0x7F) {
 			std::stringstream ss;
-			uint32_t code = reinterpret_cast<uint8_t&>(utf8CharCode[0]);
+			uint32_t code = charCode;//reinterpret_cast<uint8_t&>(utf8CharCode[0]);
 			ss << "0x" << std::setfill ('0') << std::setw(2) << std::hex << code;
 			//letter = ss.str();
 		} else {
-			letter += utf8CharCode;
+			letterUS.append((UChar32)charCode);// += utf8CharCode;
 		}
 	}
     void onKeyPress(pi::Keyboard& kbd, uint32_t keysym, pi::Modifiers mods, pi::Leds leds, bool repeat) override { 
@@ -215,11 +222,13 @@ public:
 			platform.lock()->stop();
 
 		} else if (keysym == XKB_KEY_BackSpace) {
-			if (letter.size() > 0) {
-				int32_t pos = letter.size();
-				U8_BACK_1((uint8_t*)letter.c_str(), 0, pos);
+			auto sz = letterUS.countChar32();
+			if (sz > 0) {
+				int32_t pos = sz - 1;
+				letterUS = letterUS.remove(pos);
+				/*U8_BACK_1((uint8_t*)letter.c_str(), 0, pos);
 
-				letter = letter.substr(0, pos);
+				letter = letter.substr(0, pos);*/
 			}
 		}
 	}

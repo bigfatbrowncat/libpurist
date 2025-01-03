@@ -30,7 +30,7 @@ void SkiaOverlay::createFontMgr(const std::vector<Resource>& res) {
   //Resource text = LOAD_RESOURCE(frag_glsl);
   
   for (size_t i = 0; i < res.size(); i++) {
-    auto data = SkData::MakeFromMalloc(res[i].data(), res[i].size()); //MakeFromFileName("fonts/noto-sans/NotoSans-Regular.ttf");
+    auto data = SkData::MakeWithCopy(res[i].data(), res[i].size()); //MakeFromFileName("fonts/noto-sans/NotoSans-Regular.ttf");
     dataVec.push_back(data);
   }
 

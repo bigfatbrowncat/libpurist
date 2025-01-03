@@ -6,6 +6,7 @@
 #include <fcntl.h>
 
 #include <stdexcept>
+#include <string>
 #include <unistd.h>
 #include <climits>
 #include <cstring>
@@ -122,6 +123,18 @@ bool Keyboard::initializeAndProbe(xkb_keymap *keymap, xkb_compose_table *compose
 
 }
 
+// Taken from https://stackoverflow.com/questions/38688417/utf-conversion-functions-in-c11
+std::u32string to_utf32(const std::string &s)
+{
+    std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> conv;
+    return conv.from_bytes(s);
+}
+std::string to_utf8(const std::u32string &s)
+{
+    std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> conv;
+    return conv.to_bytes(s);
+}
+
 static void
 print_keycode(struct xkb_keymap *keymap, const char* prefix,
               xkb_keycode_t keycode, const char *suffix) {
@@ -148,7 +161,7 @@ void Keyboard::tools_print_keycode_state(const char *prefix,
     const int XKB_COMPOSE_MAX_STRING_SIZE = 256;
     const int XKB_KEYSYM_NAME_MAX_SIZE = 27;
 
-    char s[std::max(XKB_COMPOSE_MAX_STRING_SIZE, XKB_KEYSYM_NAME_MAX_SIZE)];
+    char s[std::max(XKB_COMPOSE_MAX_STRING_SIZE, XKB_KEYSYM_NAME_MAX_SIZE)] = {0};
     xkb_layout_index_t layout;
     enum xkb_compose_status status;
 
@@ -201,8 +214,11 @@ void Keyboard::tools_print_keycode_state(const char *prefix,
             xkb_state_key_get_utf8(state, keycode, s, sizeof(s));
         }
 
-        if (*s != 0 && keyboardHandler != nullptr) { 
-            keyboardHandler->onCharacter(*this, s);
+        if (*s != 0 && keyboardHandler != nullptr) {
+            std::string ss = s;
+            std::u32string u32s = to_utf32(s);
+
+            keyboardHandler->onCharacter(*this, u32s[0]);
         }
 
         /* HACK: escape single control characters from C0 set using the

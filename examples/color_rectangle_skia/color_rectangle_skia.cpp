@@ -1,5 +1,6 @@
 // libpurist headers
 #include "modules/skparagraph/include/ParagraphBuilder.h"
+#include <cmath>
 #include <purist/graphics/skia/DisplayContentsSkia.h>
 #include <purist/graphics/Display.h>
 #include <purist/graphics/Mode.h>
@@ -52,6 +53,7 @@ public:
 	uint8_t r, g, b;
 	bool r_up, g_up, b_up;
 
+	uint32_t cursor_phase = 0;
 	//sk_sp<SkTypeface> typeface;
 
 	//std::string letter;
@@ -137,11 +139,14 @@ public:
 			1.0f });
 		auto paint2 = SkPaint(color2);
 
+		uint32_t cursor_loop_len = 60;
+		cursor_phase = (cursor_phase + 1) % cursor_loop_len;
+		float cursor_alpha = sin(2 * M_PI * (float)cursor_phase / cursor_loop_len);
 		auto cursor_color = SkColor4f({ 
-			1.0f,
-			1.0f,
-			1.0f,
-			0.5f });
+			color.fR,
+			color.fG,
+			color.fB,
+			cursor_alpha });
 		auto cursor_paint = SkPaint(cursor_color);
 
 		canvas.clear(color);
@@ -150,18 +155,11 @@ public:
 		canvas.drawRect(rect, paint2);
 
 		int sz = (int)(h / sqrt(4 * fmax(1, letterUS.countChar32())));
-		//auto font = std::make_shared<SkFont>(typeface, sz);
-
-		// SkRect letterBounds;
-		// font->measureText(letter.c_str(), letter.size(), SkTextEncoding::kUTF8, &letterBounds);
-		// SkFontMetrics letterMetrics;
-		// font->getMetrics(&letterMetrics);
-
 
 		std::vector<SkString> fontFamilies { SkString("Noto Sans"), SkString("Noto Sans Hebrew") };
 
 		skia::textlayout::TextStyle style;
-        style.setBackgroundColor(paint2);
+        //style.setBackgroundColor(paint2);
         style.setForegroundColor(paint);
         style.setFontFamilies(fontFamilies);
         style.setFontSize(sz);
@@ -174,29 +172,59 @@ public:
         fontCollection->setDefaultFontManager(skiaOverlay->getFontMgr());
 		skia::textlayout::ParagraphBuilderImpl builder(paraStyle, fontCollection);
 
+		const icu::UnicodeString emptySpace = u"\u200B";
+		auto letterUSWithSpace = letterUS + emptySpace;
+
 		std::string letterU8;
-		letterU8 = letterUS.toUTF8String(letterU8);
+		letterU8 = letterUSWithSpace.toUTF8String(letterU8);
 		builder.addText(letterU8.c_str(), letterU8.size());
 		
 		auto paragraph = builder.Build();
 		paragraph->layout(3 * w / 5);
+
+		//Cluster& cluster(ClusterIndex clusterIndex);
+    	//ClusterIndex clusterIndex(TextIndex textIndex)
+		//paragraph->cluster
+
 		auto text_center_x = w / 5;
 		auto text_center_y = h / 2 - paragraph->getHeight() / 2;
 
+		std::string cursorLetter = "A";
+		auto typeface = skiaOverlay->getTypefaceForCharacter(cursorLetter[0], fontFamilies, style.getFontStyle());
+		auto font = std::make_shared<SkFont>(typeface, sz);
+		SkFontMetrics curFontMetrics;
+		font->getMetrics(&curFontMetrics);
+
+
+		// SkRect cursorBounds;
+		// font->measureText(cursorLetter.c_str(), cursorLetter.size(), SkTextEncoding::kUTF8, &cursorBounds);
+		
+
 		if (letterU8.size() > 0) {
 			uint32_t text_len = letterUS.countChar32();
-			//int32_t prev_pos = letterUS.getChar32Start(letterUS.countChar32() - 1);
-			//icu::StringCharacterIterator
-
 			std::vector<skia::textlayout::TextBox> boxes = paragraph->getRectsForRange(text_len - 1, text_len,//prev_pos, letter.size(),
 													skia::textlayout::RectHeightStyle::kMax,
 													skia::textlayout::RectWidthStyle::kTight);
 			paragraph->paint(&canvas, text_center_x, text_center_y);
 
+			skia::textlayout::Paragraph::GlyphInfo glyphInfo;
+			bool gcres = paragraph->getGlyphInfoAtUTF16Offset(text_len - 1, &glyphInfo);
+			
+			//std::cout << gcres << "; " << (glyphInfo.fDirection == skia::textlayout::TextDirection::kRtl ? "RTL" : "LTR") << std::endl;
+			bool rtl = gcres && (glyphInfo.fDirection == skia::textlayout::TextDirection::kRtl);
+
 			if (boxes.size() > 0) {
-				auto& box = *boxes.begin();
+				auto& box = *boxes.rbegin();
 				auto rect = box.rect;
 				rect.offset(text_center_x, text_center_y);
+
+				uint32_t curWidth = 4;				
+				if (rtl) {
+					rect.fRight = rect.fLeft + curWidth;
+				} else {
+					rect.fLeft = rect.fRight - curWidth;
+				}
+				
 				canvas.drawRect(rect, cursor_paint);
 			}
 		}

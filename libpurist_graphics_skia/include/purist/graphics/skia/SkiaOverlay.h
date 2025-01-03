@@ -20,7 +20,7 @@ class SkiaRasterOverlay;
 class SkiaOverlay {
 private:
 	sk_sp<SkFontMgr> fontMgr;
-	std::vector<sk_sp<SkData>> dataVec;
+
 public:
 	SkiaOverlay();
 	virtual ~SkiaOverlay() = default;

@@ -27,8 +27,7 @@
 namespace purist::graphics::skia {
 
 void SkiaOverlay::createFontMgr(const std::vector<Resource>& res) {
-  //Resource text = LOAD_RESOURCE(frag_glsl);
-  
+  std::vector<sk_sp<SkData>> dataVec;
   for (size_t i = 0; i < res.size(); i++) {
     auto data = SkData::MakeWithCopy(res[i].data(), res[i].size()); //MakeFromFileName("fonts/noto-sans/NotoSans-Regular.ttf");
     dataVec.push_back(data);
@@ -37,7 +36,6 @@ void SkiaOverlay::createFontMgr(const std::vector<Resource>& res) {
   SkSpan<sk_sp<SkData>> dataSpan(dataVec);
 
   fontMgr = SkFontMgr_New_Custom_Data(dataSpan); //SkFontMgr_New_FontConfig(nullptr);
-
   //fontMgr = SkFontMgr_New_Custom_Directory(fontDirectory.c_str());
     
   int families = fontMgr->countFamilies();
@@ -45,7 +43,6 @@ void SkiaOverlay::createFontMgr(const std::vector<Resource>& res) {
 }
 
 SkiaOverlay::SkiaOverlay() {
-  //createFontMgr(fontDirectory);
 }
 
 sk_sp<SkTypeface> SkiaOverlay::getTypefaceByName(const std::string& name) const {

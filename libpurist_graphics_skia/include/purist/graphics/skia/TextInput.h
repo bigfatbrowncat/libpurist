@@ -16,22 +16,23 @@ namespace purist::graphics::skia {
 
 class TextInput {
 private:
-	icu::UnicodeString letterUS;
+	icu::UnicodeString text;
     SkPaint paint;
     uint32_t fontSize;
     uint32_t width, height;
 
     uint32_t cursor_loop_len = 30, cursor_phase;
-    uint32_t position_x, position_y;
+    uint32_t left, top;
+
 public:
     void setWidth(uint32_t width) { this->width = width; }
     void setHeight(uint32_t height) { this->height = height; }
-    void setPositionX(uint32_t x) { position_x = x; }
-    void setPositionY(uint32_t y) { position_y = y; }
+    void setLeft(uint32_t x) { left = x; }
+    void setTop(uint32_t y) { top = y; }
     void setPaint(const SkPaint& paint) { this->paint = paint; }
     void setFontSize(uint32_t sz) { fontSize = sz; }
 
-    const icu::UnicodeString& getText() const { return letterUS; }
+    const icu::UnicodeString& getText() const { return text; }
 
     void drawIntoSurface(std::shared_ptr<Display> display, std::shared_ptr<SkiaOverlay> skiaOverlay, SkCanvas& canvas);
 

@@ -37,29 +37,29 @@ void TextInput::drawIntoSurface(std::shared_ptr<Display> display, std::shared_pt
     fontCollection->setDefaultFontManager(skiaOverlay->getFontMgr());
     st::ParagraphBuilderImpl builder(paraStyle, fontCollection);
 
-    auto letterUSWithSpace = letterUS;
+    auto textWithSpace = text;
 
     const icu::UnicodeString emptySpace = u"\u200B";
     
     // Adding zero-length space to the end 
     // if the string is empty or ends with a newline
-    if (letterUS.isEmpty() || 
-        letterUS.endsWith(u"\u000A")) {   
+    if (text.isEmpty() || 
+        text.endsWith(u"\u000A")) {   
 
-        letterUSWithSpace = letterUS + emptySpace;
+        textWithSpace = text + emptySpace;
     } else {
-        letterUSWithSpace = letterUS;
+        textWithSpace = text;
     }
 
     std::string letterU8;
-    letterU8 = letterUSWithSpace.toUTF8String(letterU8);
+    letterU8 = textWithSpace.toUTF8String(letterU8);
     builder.addText(letterU8.c_str(), letterU8.size());
     
     auto paragraph = builder.Build();
     paragraph->layout(width/*3 * w / 5*/);
 
-    auto text_left_x = position_x; //w / 5;
-    auto text_base_y = /*h / 2*/ position_y - paragraph->getHeight() / 2;
+    auto text_left_x = left; //w / 5;
+    auto text_base_y = /*h / 2*/ top - paragraph->getHeight() / 2;
 
     std::string cursorLetter = "A";
     auto typeface = skiaOverlay->getTypefaceForCharacter(cursorLetter[0], fontFamilies, style.getFontStyle());
@@ -68,7 +68,7 @@ void TextInput::drawIntoSurface(std::shared_ptr<Display> display, std::shared_pt
     font->getMetrics(&curFontMetrics);
     
     if (letterU8.size() > 0) {
-        uint32_t text_len = letterUSWithSpace.countChar32();
+        uint32_t text_len = textWithSpace.countChar32();
         std::vector<st::TextBox> boxes = paragraph->getRectsForRange(text_len - 1, text_len,//prev_pos, letter.size(),
                                                 st::RectHeightStyle::kMax,
                                                 st::RectWidthStyle::kTight);
@@ -103,7 +103,7 @@ bool TextInput::onCharacter(pi::Keyboard& kbd, char32_t charCode) {
         // uint32_t code = charCode;//reinterpret_cast<uint8_t&>(utf8CharCode[0]);
         // ss << "0x" << std::setfill ('0') << std::setw(2) << std::hex << code;
     } else {
-        letterUS.append((UChar32)charCode);
+        text.append((UChar32)charCode);
         return true;
     }
     return false;
@@ -111,14 +111,14 @@ bool TextInput::onCharacter(pi::Keyboard& kbd, char32_t charCode) {
 
 bool TextInput::onKeyPress(pi::Keyboard& kbd, uint32_t keysym, pi::Modifiers mods, pi::Leds leds, bool repeat) { 
     if (keysym == XKB_KEY_Return) {
-        letterUS += u"\u000A"; // Carriage return
+        text += u"\u000A"; // Carriage return
         return true;
 
     } else if (keysym == XKB_KEY_BackSpace) {
-        auto sz = letterUS.countChar32();
+        auto sz = text.countChar32();
         if (sz > 0) {
             int32_t pos = sz - 1;
-            letterUS = letterUS.remove(pos);
+            text = text.remove(pos);
             /*U8_BACK_1((uint8_t*)letter.c_str(), 0, pos);
 
             letter = letter.substr(0, pos);*/

@@ -151,8 +151,8 @@ public:
 
     	textInput.setWidth(3 * w / 5);
 		textInput.setHeight(h);
-		textInput.setPositionX(w / 5);
-		textInput.setPositionY(h / 2);
+		textInput.setLeft(w / 5);
+		textInput.setTop(h / 2);
 		textInput.setPaint(paint);
 
 		textInput.drawIntoSurface(display, skiaOverlay, canvas);

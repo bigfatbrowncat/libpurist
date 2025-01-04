@@ -10,6 +10,9 @@
         "**/.git/objects/**": true,
         "**/.git/subtree-cache/**": true
     },
+    "files.watcherInclude": [
+        "third_party/prefix/include/**"
+    ],
     "cmake.buildDirectory": "${workspaceFolder}/build-${buildType}",
     "cmake.environment": {
         "CMAKE_EXPORT_COMPILE_COMMANDS": "1",

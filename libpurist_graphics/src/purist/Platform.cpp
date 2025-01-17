@@ -59,26 +59,33 @@ void Platform::run(std::shared_ptr<graphics::DisplayContentsHandler> contentsFac
                    std::shared_ptr<input::KeyboardHandler> keyboardHandler) {
     
     auto keyboards = std::make_shared<purist::input::Keyboards>();
-    keyboards->initialize(keyboardHandler);
+    keyboards->initialize();
 
     auto card = probeCard(contentsFactory, enableOpenGL);
 
-    auto fds = keyboards->getFds();
-
-    // Appending the videocard fd
-    fds.push_back(pollfd {
-        .fd = card->fd,
-        .events = POLLIN,
-        .revents = 0
-    });
-
-
+    uint32_t counter = 0;
+    uint32_t polls_between_updates = 100;
     while (!stopPending) {
+        // Rebuilding the list of fds
+        auto fds = keyboards->getFds();
+
+        // Appending the videocard fd
+        fds.push_back(pollfd {
+            .fd = card->fd,
+            .events = POLLIN,
+            .revents = 0
+        });
+
         int ret = poll(fds.data(), fds.size(), -1);
         if (ret < 0) {
             if (errno == EINTR)
                 continue;
             throw errcode_exception(-errno, "Couldn't poll for events");
+        }
+
+		if (counter % polls_between_updates == 0) {
+			keyboards->updateHardwareConfiguration(keyboardHandler);
+            counter = 0;
         }
 
         // Processing the keyboards
@@ -89,6 +96,8 @@ void Platform::run(std::shared_ptr<graphics::DisplayContentsHandler> contentsFac
         
         // Processing the videocard
         card->processFd(fds_iter);
+
+        counter++;
     }
 
 

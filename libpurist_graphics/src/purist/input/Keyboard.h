@@ -90,7 +90,13 @@ public:
     Keyboard(const fs::path& node);
     bool initializeAndProbe(xkb_keymap *keymap, xkb_compose_table *compose_table, std::shared_ptr<KeyboardHandler> keyboardHandler);
     int getFd() const { return fd; }
-    int read_keyboard(bool with_compose);
+    
+    // Returns true if it succeeded, 
+    // false if the keyboard was disconnected, 
+    // throws exception in other cases
+    bool read_keyboard(bool with_compose);
+    
+    const fs::path& getNode() const { return node; }
     virtual ~Keyboard();
 };
 

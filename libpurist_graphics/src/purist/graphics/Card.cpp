@@ -276,7 +276,6 @@ void Card::processFd(std::vector<pollfd>::iterator fds_iter)
         drmHandleEvent(fd, &ev);
 
 		if (counter % redraws_between_updates == 0) {
-			//displays->createContentsForAll();
 			int ret = displays->updateHardwareConfiguration();
 			if (ret) {
 				throw errcode_exception(ret, "Displays::updateHardwareConfiguration() failed");

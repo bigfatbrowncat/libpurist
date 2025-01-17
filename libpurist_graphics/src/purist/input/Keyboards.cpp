@@ -26,7 +26,7 @@ Keyboards::~Keyboards() {
     }
 }
 
-void Keyboards::initialize(std::shared_ptr<input::KeyboardHandler> keyboardHandler) {
+void Keyboards::initialize() {
     bool no_default = false;
 
     if (no_default) {
@@ -129,19 +129,32 @@ void Keyboards::initialize(std::shared_ptr<input::KeyboardHandler> keyboardHandl
             throw std::runtime_error("Couldn't create compose from locale");
         }
     }
+}
 
+void Keyboards::updateHardwareConfiguration(std::shared_ptr<input::KeyboardHandler> keyboardHandler) {
     // Probing keyboards
     std::shared_ptr<input::Keyboard> keyboard;
-    fs::path input_path = "/dev/input";
+    fs::path input_path = "/dev/input/by-id/";
+    std::string suffix = "-event-kbd";
     std::string device_path;
     for (const auto & entry : fs::directory_iterator(input_path)) {
         device_path = entry.path();
-        if (device_path.find(std::string(input_path / "event")) == 0) {
-            keyboard = std::make_unique<input::Keyboard>(device_path);
-            if (keyboard->initializeAndProbe(keymap, compose_table, keyboardHandler)) {
-                std::cout << "Adding found keyboard: " << device_path << std::endl;
-                this->push_back(keyboard);
-                //break;  // Success
+        if (device_path.find(std::string(suffix)) == device_path.length() - suffix.size()) {
+            // Looking for an existing keyboard
+            bool exists = false;
+            for (auto kbd : *this) {
+                if (kbd->getNode() == device_path) {
+                    exists = true;
+                    break;
+                }
+            }
+            if (!exists) {
+                keyboard = std::make_unique<input::Keyboard>(device_path);
+                if (keyboard->initializeAndProbe(keymap, compose_table, keyboardHandler)) {
+                    std::cout << "Adding found keyboard: " << device_path << std::endl;
+                    this->push_back(keyboard);
+                    //break;  // Success
+                }
             }
             //keyboard = nullptr;
         }
@@ -179,7 +192,10 @@ void Keyboards::processFd(std::vector<pollfd>::iterator fds_iter)
     }
     
     if (fds_iter->revents != 0) {
-        found_kbd->read_keyboard(with_compose);
+        if (!found_kbd->read_keyboard(with_compose)) {
+            std::cerr << "Keyboard " << found_kbd->getNode() << " was disconnected" << std::endl;
+            this->remove(found_kbd);
+        }
     }
 }
 

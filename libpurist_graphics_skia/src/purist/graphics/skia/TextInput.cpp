@@ -4,6 +4,7 @@
 #include <modules/skparagraph/include/FontCollection.h>
 #include <modules/skparagraph/include/TextStyle.h>
 #include <modules/skparagraph/include/ParagraphBuilder.h>
+#include <xkbcommon/xkbcommon-keysyms.h>
 
 namespace purist::graphics::skia {
 
@@ -39,7 +40,7 @@ void TextInput::drawIntoSurface(std::shared_ptr<Display> display, std::shared_pt
 
     auto textWithSpace = text;
 
-    const icu::UnicodeString emptySpace = u"\u200B";
+    const icu::UnicodeString emptySpace { u"\u200B" };
     
     // Adding zero-length space to the end 
     // if the string is empty or ends with a newline
@@ -53,7 +54,7 @@ void TextInput::drawIntoSurface(std::shared_ptr<Display> display, std::shared_pt
 
     std::string letterU8;
     letterU8 = textWithSpace.toUTF8String(letterU8);
-    builder.addText(letterU8.c_str(), letterU8.size());
+    builder.addText(letterU8.data(), letterU8.size());
     
     auto paragraph = builder.Build();
     paragraph->layout(width/*3 * w / 5*/);
@@ -61,11 +62,11 @@ void TextInput::drawIntoSurface(std::shared_ptr<Display> display, std::shared_pt
     auto text_left_x = left; //w / 5;
     auto text_base_y = /*h / 2*/ top - paragraph->getHeight() / 2;
 
-    std::string cursorLetter = "A";
-    auto typeface = skiaOverlay->getTypefaceForCharacter(cursorLetter[0], fontFamilies, style.getFontStyle());
-    auto font = std::make_shared<SkFont>(typeface, fontSize);
-    SkFontMetrics curFontMetrics;
-    font->getMetrics(&curFontMetrics);
+    // std::string cursorLetter = "A";
+    // auto typeface = skiaOverlay->getTypefaceForCharacter(cursorLetter[0], fontFamilies, style.getFontStyle());
+    // auto font = std::make_shared<SkFont>(typeface, fontSize);
+    // SkFontMetrics curFontMetrics;
+    // font->getMetrics(&curFontMetrics);
     
     if (letterU8.size() > 0) {
         uint32_t text_len = textWithSpace.countChar32();
@@ -98,11 +99,10 @@ void TextInput::drawIntoSurface(std::shared_ptr<Display> display, std::shared_pt
 }
 
 bool TextInput::onCharacter(pi::Keyboard& kbd, char32_t charCode) { 
-    if (/*utf8CharCode[0]*/charCode <= 0x1F || /*utf8CharCode[0]*/charCode == 0x7F) {
-        // std::stringstream ss;
-        // uint32_t code = charCode;//reinterpret_cast<uint8_t&>(utf8CharCode[0]);
-        // ss << "0x" << std::setfill ('0') << std::setw(2) << std::hex << code;
+    if (charCode <= 0x1F || charCode == 0x7F) {
+        // Ignore this
     } else {
+        // This is a letter
         text.append((UChar32)charCode);
         return true;
     }
@@ -110,8 +110,8 @@ bool TextInput::onCharacter(pi::Keyboard& kbd, char32_t charCode) {
 }
 
 bool TextInput::onKeyPress(pi::Keyboard& kbd, uint32_t keysym, pi::Modifiers mods, pi::Leds leds, bool repeat) { 
-    if (keysym == XKB_KEY_Return) {
-        text += u"\u000A"; // Carriage return
+    if (keysym == XKB_KEY_Return || keysym == XKB_KEY_KP_Enter) {
+        text.append(u'\u000A'); // Carriage return
         return true;
 
     } else if (keysym == XKB_KEY_BackSpace) {
@@ -119,9 +119,6 @@ bool TextInput::onKeyPress(pi::Keyboard& kbd, uint32_t keysym, pi::Modifiers mod
         if (sz > 0) {
             int32_t pos = sz - 1;
             text = text.remove(pos);
-            /*U8_BACK_1((uint8_t*)letter.c_str(), 0, pos);
-
-            letter = letter.substr(0, pos);*/
         }
         return true;
     }

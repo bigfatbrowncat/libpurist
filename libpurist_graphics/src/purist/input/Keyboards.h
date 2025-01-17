@@ -25,10 +25,11 @@ private:
     bool with_compose = true;
 public:
     Keyboards();
-    void initialize(std::shared_ptr<input::KeyboardHandler> keyboardHandler);
+    void initialize();
     int loop();
     std::vector<pollfd> getFds();
     void processFd(std::vector<pollfd>::iterator fds_iter);
+    void updateHardwareConfiguration(std::shared_ptr<input::KeyboardHandler> keyboardHandler);
     virtual ~Keyboards();
 
 };

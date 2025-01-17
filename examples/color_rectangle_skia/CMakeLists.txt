@@ -15,4 +15,4 @@ target_link_libraries(color_rectangle_skia PUBLIC
     skshaper
 )
 
-add_dependencies(color_rectangle_skia purist_graphics_skia )
+add_dependencies(color_rectangle_skia purist_graphics_skia)

@@ -1,4 +1,5 @@
 #include "Keyboard.h"
+#include <asm-generic/errno-base.h>
 #include <cstdio>
 #include <purist/exceptions.h>
 
@@ -361,7 +362,7 @@ void Keyboard::process_event(uint16_t type, uint16_t code, int32_t value, bool w
 
 }
 
-int Keyboard::read_keyboard(bool with_compose)
+bool Keyboard::read_keyboard(bool with_compose)
 {
     ssize_t len;
     struct input_event evs[16];
@@ -373,12 +374,16 @@ int Keyboard::read_keyboard(bool with_compose)
             process_event(evs[i].type, evs[i].code, evs[i].value, with_compose);
     }
 
-    if (len < 0 && errno != EWOULDBLOCK) {
-        fprintf(stderr, "Couldn't read: %s\n", /*this->path,*/ strerror(errno));
-        return 1;
+    if (len < 0) {
+        if (errno == ENODEV) {
+            return false;
+        }
+        if (errno != EWOULDBLOCK) {
+            throw std::runtime_error(std::string("Couldn't read: ") + strerror(errno));
+        }
     }
 
-    return 0;
+    return true;
 }
 
 

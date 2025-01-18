@@ -95,8 +95,8 @@ public:
 
 	pgs::DisplayOrientation chooseOrientation(std::shared_ptr<pg::Display> display, std::shared_ptr<pgs::SkiaOverlay> skiaOverlay) override {
 		if (display->getMode().getHeight() > display->getMode().getWidth()) {
-			// We are assumming that the display is horizontally oriented.
-			// So if some of them has height > width, let's rotate it
+			// We are assumming that all the displays are horizontally oriented.
+			// So if some of them have height > width, let's rotate it
 			return pgs::DisplayOrientation::LEFT_VERTICAL;
 		} else {
 			return pgs::DisplayOrientation::HORIZONTAL;

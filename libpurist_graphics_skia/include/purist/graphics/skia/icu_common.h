@@ -7,3 +7,4 @@
 #include <icu/source/common/unicode/unistr.h>
 #include <icu/source/common/unicode/schriter.h>
 #include <icu/source/common/unicode/rep.h>
+#include <icu/source/common/unicode/normalizer2.h>

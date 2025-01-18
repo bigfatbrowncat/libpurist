@@ -62,12 +62,6 @@ void TextInput::drawIntoSurface(std::shared_ptr<Display> display, std::shared_pt
     auto text_left_x = left; //w / 5;
     auto text_base_y = /*h / 2*/ top - paragraph->getHeight() / 2;
 
-    // std::string cursorLetter = "A";
-    // auto typeface = skiaOverlay->getTypefaceForCharacter(cursorLetter[0], fontFamilies, style.getFontStyle());
-    // auto font = std::make_shared<SkFont>(typeface, fontSize);
-    // SkFontMetrics curFontMetrics;
-    // font->getMetrics(&curFontMetrics);
-    
     if (letterU8.size() > 0) {
         uint32_t text_len = textWithSpace.countChar32();
         std::vector<st::TextBox> boxes = paragraph->getRectsForRange(text_len - 1, text_len,//prev_pos, letter.size(),

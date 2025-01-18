@@ -13,4 +13,4 @@ add_subdirectory(libpurist_graphics)
 add_subdirectory(libpurist_graphics_skia)
 
 add_subdirectory(examples/blinking_screen)
-add_subdirectory(examples/color_rectangle_skia)
+add_subdirectory(examples/text_input_skia)

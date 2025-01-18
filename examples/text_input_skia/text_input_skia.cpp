@@ -159,14 +159,6 @@ public:
     }
 
     void onCharacter(pi::Keyboard& kbd, char32_t charCode) override { 
-		// if (/*utf8CharCode[0]*/charCode <= 0x1F || /*utf8CharCode[0]*/charCode == 0x7F) {
-		// 	std::stringstream ss;
-		// 	uint32_t code = charCode;//reinterpret_cast<uint8_t&>(utf8CharCode[0]);
-		// 	ss << "0x" << std::setfill ('0') << std::setw(2) << std::hex << code;
-		// 	//letter = ss.str();
-		// } else {
-		// 	letterUS.append((UChar32)charCode);
-		// }
 		textInput.onCharacter(kbd, charCode);
 	}
     void onKeyPress(pi::Keyboard& kbd, uint32_t keysym, pi::Modifiers mods, pi::Leds leds, bool repeat) override { 

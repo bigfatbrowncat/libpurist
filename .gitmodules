@@ -4,3 +4,6 @@
 [submodule "third_party/skia"]
 	path = third-party/skia-world/skia
 	url = https://skia.googlesource.com/skia
+[submodule "third-party/libvterm"]
+	path = third-party/libvterm
+	url = https://github.com/neovim/libvterm.git

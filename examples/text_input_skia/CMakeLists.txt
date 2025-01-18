@@ -3,11 +3,11 @@ embed_resources(NotoSansFont
     fonts/noto-sans/NotoSansHebrew-Regular.ttf
 )
 
-add_executable(color_rectangle_skia
-    color_rectangle_skia.cpp
+add_executable(text_input_skia
+    text_input_skia.cpp
     ${NotoSansFont}
 )
-target_link_libraries(color_rectangle_skia PUBLIC 
+target_link_libraries(text_input_skia PUBLIC 
     purist_graphics_skia
     skparagraph
     skunicode_core
@@ -15,4 +15,4 @@ target_link_libraries(color_rectangle_skia PUBLIC
     skshaper
 )
 
-add_dependencies(color_rectangle_skia purist_graphics_skia)
+add_dependencies(text_input_skia purist_graphics_skia)

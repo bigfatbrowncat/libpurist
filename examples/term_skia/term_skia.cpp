@@ -168,6 +168,7 @@ class TermDisplayContents : public pgs::SkiaDisplayContentsHandler, public pi::K
 public:
 	std::weak_ptr<p::Platform> platform;
 	uint32_t cursor_phase = 0;
+    uint32_t cursor_loop_len = 30;
 
 	VTerm* vterm;
     VTermScreen* screen;
@@ -243,7 +244,6 @@ public:
     }
     int movecursor(VTermPos pos, VTermPos oldpos, int visible) {
         cursor_pos = pos;
-        std::cout << "cursor pos: " << pos.col << ", " << pos.row << std::endl;
         return 0;
     }
     int settermprop(VTermProp prop, VTermValue *val) {
@@ -454,9 +454,19 @@ public:
         // SDL_RenderFillRect(renderer, &rect);
         // SDL_SetRenderDrawColor(renderer, 255,255,255,255 );
         // SDL_RenderDrawRect(renderer, &rect);
-		SkPaint cur_paint(cur_color);
-		cur_paint.setStyle(SkPaint::kFill_Style);
-		canvas.drawRect(rect, cur_paint);
+
+        cursor_phase = (cursor_phase + 1) % cursor_loop_len;
+        float cursor_alpha = 0.5 * sin(2 * M_PI * (float)cursor_phase / cursor_loop_len) + 0.5;
+        auto cursor_color = SkColor4f({ 
+            cur_color.fR,
+            cur_color.fG,
+            cur_color.fB,
+            cursor_alpha });
+        auto cursor_paint = SkPaint(cursor_color);
+
+		//SkPaint cur_paint(cur_color);
+		cursor_paint.setStyle(SkPaint::kFill_Style);
+		canvas.drawRect(rect, cursor_paint);
 
         if (ringing) {
             // TODO SDL_SetRenderDrawColor(renderer, 255,255,255,192 );

@@ -158,7 +158,7 @@ public:
 		textInput.drawIntoSurface(display, skiaOverlay, canvas);
     }
 
-    void onCharacter(pi::Keyboard& kbd, char32_t charCode) override { 
+    void onCharacter(pi::Keyboard& kbd, char32_t charCode, pi::Modifiers mods, pi::Leds leds) override { 
 		textInput.onCharacter(kbd, charCode);
 	}
     void onKeyPress(pi::Keyboard& kbd, uint32_t keysym, pi::Modifiers mods, pi::Leds leds, bool repeat) override { 

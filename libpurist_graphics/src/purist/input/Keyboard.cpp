@@ -208,33 +208,6 @@ void Keyboard::tools_print_keycode_state(const char *prefix,
     }
     printf("] ");
 
-    if (/*fields & PRINT_UNICODE*/ true) {
-        if (status == XKB_COMPOSE_COMPOSED) {
-            xkb_compose_state_get_utf8(compose_state, s, sizeof(s));
-        } else {
-            xkb_state_key_get_utf8(state, keycode, s, sizeof(s));
-        }
-
-        if (*s != 0 && keyboardHandler != nullptr) {
-            std::string ss = s;
-            std::u32string u32s = to_utf32(s);
-
-            keyboardHandler->onCharacter(*this, u32s[0]);
-        }
-
-        /* HACK: escape single control characters from C0 set using the
-        * Unicode codepoint convention. Ideally we would like to escape
-        * any non-printable character in the string.
-        */
-        if (!*s) {
-            printf("unicode [   ] ");
-        } else if (strlen(s) == 1 && (*s <= 0x1F || *s == 0x7F)) {
-            printf("unicode [ U+%04hX ] ", *s);
-        } else {
-            printf("unicode [ %s ] ", s);
-        }
-    }
-
     layout = xkb_state_key_get_layout(state, keycode);
     if (/*fields & PRINT_LAYOUT*/true) {
         printf("layout [ %s (%d) ] ",
@@ -264,6 +237,40 @@ void Keyboard::tools_print_keycode_state(const char *prefix,
         printf("%s ", xkb_keymap_led_get_name(keymap, led));
     }
     printf("] ");
+
+    if (/*fields & PRINT_UNICODE*/ true) {
+        if (status == XKB_COMPOSE_COMPOSED) {
+            xkb_compose_state_get_utf8(compose_state, s, sizeof(s));
+        } else {
+            xkb_state_key_get_utf8(state, keycode, s, sizeof(s));
+        }
+
+        if (*s != 0 && keyboardHandler != nullptr) {
+            std::string ss = s;
+            std::u32string u32s = to_utf32(s);
+            auto charCode = u32s[0];
+            if (charCode > 0x1F /* no Ctrl+Letter */ && 
+                charCode != 0x7F /* no DEL */) {
+
+                Modifiers mods = modifiersFromKeymap(keymap, state, keycode, consumed_mode);
+                Leds leds = ledsFromKeymap(keymap, state);
+
+                keyboardHandler->onCharacter(*this, charCode, mods, leds);
+            }
+        }
+
+        /* HACK: escape single control characters from C0 set using the
+        * Unicode codepoint convention. Ideally we would like to escape
+        * any non-printable character in the string.
+        */
+        if (!*s) {
+            printf("unicode [   ] ");
+        } else if (strlen(s) == 1 && (*s <= 0x1F || *s == 0x7F)) {
+            printf("unicode [ U+%04hX ] ", *s);
+        } else {
+            printf("unicode [ %s ] ", s);
+        }
+    }
 
     printf("\n");
 }

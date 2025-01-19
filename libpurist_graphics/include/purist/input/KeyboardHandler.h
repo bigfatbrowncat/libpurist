@@ -21,7 +21,7 @@ class Keyboard;
 
 class KeyboardHandler {
 public:
-    virtual void onCharacter(Keyboard& kbd, char32_t charCode) { }
+    virtual void onCharacter(Keyboard& kbd, char32_t charCode, Modifiers mods, Leds leds) { }
     virtual void onKeyPress(Keyboard& kbd, uint32_t keysym, Modifiers mods, Leds leds, bool repeat) { }
     virtual void onKeyRelease(Keyboard& kbd, uint32_t keysym, Modifiers mods, Leds leds) { }
 };

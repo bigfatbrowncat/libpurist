@@ -93,14 +93,14 @@ void TextInput::drawIntoSurface(std::shared_ptr<Display> display, std::shared_pt
 }
 
 bool TextInput::onCharacter(pi::Keyboard& kbd, char32_t charCode) { 
-    if (charCode <= 0x1F || charCode == 0x7F) {
+/*    if (charCode <= 0x1F || charCode == 0x7F) {
         // Ignore this
-    } else {
+    } else {*/
         // This is a letter
         text.append((UChar32)charCode);
         return true;
-    }
-    return false;
+/*    }
+    return false;*/
 }
 
 bool TextInput::onKeyPress(pi::Keyboard& kbd, uint32_t keysym, pi::Modifiers mods, pi::Leds leds, bool repeat) { 

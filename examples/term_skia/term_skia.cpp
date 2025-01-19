@@ -1,6 +1,7 @@
 // libpurist headers
 //#include <purist/graphics/skia/TextInput.h>
 #include "include/core/SkRect.h"
+#include "vterm_keycodes.h"
 #include <purist/graphics/skia/DisplayContentsSkia.h>
 #include <purist/graphics/Display.h>
 #include <purist/graphics/Mode.h>
@@ -33,6 +34,7 @@
 #include <iomanip>
 #include <sstream>
 #include <cmath>
+#include <xkbcommon/xkbcommon-keysyms.h>
 
 
 namespace p = purist;
@@ -241,6 +243,7 @@ public:
     }
     int movecursor(VTermPos pos, VTermPos oldpos, int visible) {
         cursor_pos = pos;
+        std::cout << "cursor pos: " << pos.col << ", " << pos.row << std::endl;
         return 0;
     }
     int settermprop(VTermProp prop, VTermValue *val) {
@@ -364,7 +367,6 @@ public:
                         if (VTERM_COLOR_IS_RGB(&cell.fg)) {
                             // TODO color = (SDL_Color){cell.fg.rgb.red, cell.fg.rgb.green, cell.fg.rgb.blue};
 							color = SkColor4f::FromColor(SkColorSetRGB(cell.fg.rgb.red, cell.fg.rgb.green, cell.fg.rgb.blue));
-
                         }
                         if (VTERM_COLOR_IS_INDEXED(&cell.bg)) {
                             vterm_screen_convert_color_to_rgb(screen, &cell.bg);
@@ -431,6 +433,7 @@ public:
         // draw cursor
         VTermScreenCell cell;
         vterm_screen_get_cell(screen, cursor_pos, &cell);
+		auto cur_color = SkColor4f::FromColor(SkColorSetRGB(cell.fg.rgb.red, cell.fg.rgb.green, cell.fg.rgb.blue));
 
         //SDL_Rect rect = { cursor_pos.col * font_width, cursor_pos.row * font_height, font_width, font_height };
 		SkRect rect = { 
@@ -451,9 +454,9 @@ public:
         // SDL_RenderFillRect(renderer, &rect);
         // SDL_SetRenderDrawColor(renderer, 255,255,255,255 );
         // SDL_RenderDrawRect(renderer, &rect);
-		SkPaint pt(color);
-		pt.setStyle(SkPaint::kFill_Style);
-		canvas.drawRect(rect, pt);
+		SkPaint cur_paint(cur_color);
+		cur_paint.setStyle(SkPaint::kFill_Style);
+		canvas.drawRect(rect, cur_paint);
 
         if (ringing) {
             // TODO SDL_SetRenderDrawColor(renderer, 255,255,255,192 );
@@ -464,7 +467,7 @@ public:
 
     }
 
-    void onCharacter(pi::Keyboard& kbd, char32_t charCode) override { 
+    void onCharacter(pi::Keyboard& kbd, char32_t charCode, pi::Modifiers mods, pi::Leds leds) override { 
 		
 		// TODO const Uint8 *state = SDL_GetKeyboardState(NULL);
 		// int mod = VTERM_MOD_NONE;
@@ -472,8 +475,14 @@ public:
 		// if (state[SDL_SCANCODE_LALT] || state[SDL_SCANCODE_RALT]) mod |= VTERM_MOD_ALT;
 		// if (state[SDL_SCANCODE_LSHIFT] || state[SDL_SCANCODE_RSHIFT]) mod |= VTERM_MOD_SHIFT;
 		
+        int mod = VTERM_MOD_NONE;
+		if (mods.ctrl) mod |= VTERM_MOD_CTRL;
+		if (mods.alt) mod |= VTERM_MOD_ALT;
+		if (mods.shift) mod |= VTERM_MOD_SHIFT;
+
+
 		//for (int i = 0; i < strlen(ev.text.text); i++) {
-			keyboard_unichar(charCode, VTERM_MOD_NONE);   //ev.text.text[i], (VTermModifier)mod);
+			keyboard_unichar(charCode, (VTermModifier)mod);   //ev.text.text[i], (VTermModifier)mod);
 		//}
 
 	}
@@ -486,51 +495,63 @@ public:
 
 		if (repeat) return;
 
-		/* TODO switch (ev.key.keysym.sym) {
-		case SDLK_RETURN:
-		case SDLK_KP_ENTER:
-			keyboard_key(VTERM_KEY_ENTER, VTERM_MOD_NONE);
+        int mod = VTERM_MOD_NONE;
+		if (mods.ctrl) mod |= VTERM_MOD_CTRL;
+		if (mods.alt) mod |= VTERM_MOD_ALT;
+		if (mods.shift) mod |= VTERM_MOD_SHIFT;
+
+
+        switch (keysym) {
+        case XKB_KEY_Return:
+        case XKB_KEY_KP_Enter:
+			keyboard_key(VTERM_KEY_ENTER, (VTermModifier)mod);
 			break;
-		case SDLK_BACKSPACE:
-			keyboard_key(VTERM_KEY_BACKSPACE, VTERM_MOD_NONE);
+		case XKB_KEY_BackSpace:
+			keyboard_key(VTERM_KEY_BACKSPACE, (VTermModifier)mod);
 			break;
-		case SDLK_ESCAPE:
-			keyboard_key(VTERM_KEY_ESCAPE, VTERM_MOD_NONE);
+		case XKB_KEY_Escape:
+			keyboard_key(VTERM_KEY_ESCAPE, (VTermModifier)mod);
 			break;
-		case SDLK_TAB:
-			keyboard_key(VTERM_KEY_TAB, VTERM_MOD_NONE);
+		case XKB_KEY_Tab:
+			keyboard_key(VTERM_KEY_TAB, (VTermModifier)mod);
 			break;
-		case SDLK_UP:
-			keyboard_key(VTERM_KEY_UP, VTERM_MOD_NONE);
+		case XKB_KEY_Up:
+			keyboard_key(VTERM_KEY_UP, (VTermModifier)mod);
 			break;
-		case SDLK_DOWN:
-			keyboard_key(VTERM_KEY_DOWN, VTERM_MOD_NONE);
+		case XKB_KEY_Down:
+			keyboard_key(VTERM_KEY_DOWN, (VTermModifier)mod);
 			break;
-		case SDLK_LEFT:
-			keyboard_key(VTERM_KEY_LEFT, VTERM_MOD_NONE);
+		case XKB_KEY_Left:
+			keyboard_key(VTERM_KEY_LEFT, (VTermModifier)mod);
 			break;
-		case SDLK_RIGHT:
-			keyboard_key(VTERM_KEY_RIGHT, VTERM_MOD_NONE);
+		case XKB_KEY_Right:
+			keyboard_key(VTERM_KEY_RIGHT, (VTermModifier)mod);
 			break;
-		case SDLK_PAGEUP:
-			keyboard_key(VTERM_KEY_PAGEUP, VTERM_MOD_NONE);
+		case XKB_KEY_Page_Up:
+			keyboard_key(VTERM_KEY_PAGEUP, (VTermModifier)mod);
 			break;
-		case SDLK_PAGEDOWN:
-			keyboard_key(VTERM_KEY_PAGEDOWN, VTERM_MOD_NONE);
+		case XKB_KEY_Page_Down:
+			keyboard_key(VTERM_KEY_PAGEDOWN, (VTermModifier)mod);
 			break;
-		case SDLK_HOME:
-			keyboard_key(VTERM_KEY_HOME, VTERM_MOD_NONE);
+		case XKB_KEY_Home:
+			keyboard_key(VTERM_KEY_HOME, (VTermModifier)mod);
 			break;
-		case SDLK_END:
-			keyboard_key(VTERM_KEY_END, VTERM_MOD_NONE);
+		case XKB_KEY_End:
+			keyboard_key(VTERM_KEY_END, (VTermModifier)mod);
+			break;
+		case XKB_KEY_Delete:
+		case XKB_KEY_KP_Delete:
+			keyboard_key(VTERM_KEY_DEL, (VTermModifier)mod);
 			break;
 		default:
-			if (ev.key.keysym.mod & KMOD_CTRL && ev.key.keysym.sym < 127) {
-				//std::cout << ev.key.keysym.sym << std::endl;
-				keyboard_unichar(ev.key.keysym.sym, VTERM_MOD_CTRL);
+            if (keysym >= XKB_KEY_F1 && keysym <= XKB_KEY_F35) {
+                VTermKey fsym = (VTermKey)VTERM_KEY_FUNCTION(keysym - XKB_KEY_F1 + 1);
+				keyboard_key(fsym, (VTermModifier)mod);
+            } else if (mods.ctrl && !mods.alt && !mods.shift && keysym < 127) {
+				keyboard_unichar(keysym, (VTermModifier)mod);
 			}
 			break;
-		}*/
+		}
 	}
 	
     void onKeyRelease(pi::Keyboard& kbd, uint32_t keysym, pi::Modifiers mods, pi::Leds leds) override { }

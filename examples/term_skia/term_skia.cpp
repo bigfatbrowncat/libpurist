@@ -25,6 +25,7 @@
 #include <include/core/SkColor.h>
 
 #include <stdexcept>
+#include <vector>
 #include <vterm.h>
 #include <termios.h>
 #include <pty.h>
@@ -129,6 +130,14 @@ public:
         uint32_t width, height;
         SkColor fgcolor, bgcolor;
 
+        bool operator == (const litera_key& other) const {
+            return utf8 == other.utf8 &&
+                   width == other.width &&
+                   height == other.height &&
+                   fgcolor == other.fgcolor &&
+                   bgcolor == other.bgcolor;
+        }
+
         bool operator < (const litera_key& other) const {
             if (utf8 < other.utf8) return true;
             else if (utf8 == other.utf8) {
@@ -151,7 +160,22 @@ public:
         }
     };
 
-    std::map<litera_key, sk_sp<SkImage>> typesettingBox;
+    struct row_key : public std::vector<litera_key> {
+        bool operator < (const row_key& other) const {
+            if (this->size() != other.size()) {
+                throw std::logic_error("Incomparable keys");
+            }
+            for (size_t i = 0; i < size(); i++) {
+                if ((*this)[i] < other[i]) return true;
+                if (!((*this)[i] == other[i])) {
+                    return false;
+                }
+            }
+            return false;
+        }
+    };
+
+    std::map<row_key, sk_sp<SkImage>> typesettingBox;
 
     const VTermScreenCallbacks screen_callbacks = {
         damage,
@@ -271,58 +295,21 @@ public:
 		}
 	}
 
-    void drawIntoSurface(std::shared_ptr<pg::Display> display, std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, int width, int height, SkCanvas& canvas) override {
-		processInput();
-        
-		SkScalar w = width, h = height;
-
-        // Scale coeffitcients
-        SkScalar kx = (float)w / (font_width * matrix.getCols());
-        SkScalar ky = (float)h / (font_height * matrix.getRows());
-
-        uint32_t font_width_scaled = w / matrix.getCols(); //font_width / kx;
-        uint32_t font_height_scaled = h / matrix.getRows(); //font_height / ky;
-        //SkScalar font_descent_scaled = font_descent / ky;
-
-        //canvas.scale(kx, ky);
-
-		std::pair<pid_t, int> rst;
-		rst = waitpid(this->pid, WNOHANG);
-		if (rst.first == pid) {
-			//BREAKING!!!
-			throw std::runtime_error("rst.first == pid");
-		}
-
-		const SkScalar gray_hsv[] { 0.0f, 0.0f, 0.7f };
-		auto color = SkColor4f::FromColor(SkHSVToColor(255, gray_hsv));
-		//auto paint_gray = SkPaint(color_gray);
-
-		const SkScalar black_hsv[] { 0.0f, 0.0f, 0.0f };
-		auto bgcolor = SkColor4f::FromColor(SkHSVToColor(255, black_hsv));
-		//auto paint_black = SkPaint(color_black);
-
-
-		canvas.clear(bgcolor);
-
-		///////////////
-
-		// SDL_Event ev;
-        // while(SDL_PollEvent(&ev)) {
-        //     if (ev.type == SDL_QUIT || (ev.type == SDL_KEYDOWN && ev.key.keysym.sym == SDLK_ESCAPE && (ev.key.keysym.mod & KMOD_CTRL))) {
-        //         kill(pid, SIGTERM);
-        //     } else {
-        //         terminal.processEvent(ev);
-        //     }
-        // }
+    void drawCells(int col_min, int col_max, int row, //int row_min, int row_max, 
+                   uint32_t font_width_scaled, uint32_t font_height_scaled, float kx, float ky,
+                   std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, SkCanvas& canvas) {
+        SkColor4f color, bgcolor;
 
         UErrorCode status = U_ZERO_ERROR;
         auto normalizer = icu::Normalizer2::getNFKCInstance(status);
         if (U_FAILURE(status)) throw std::runtime_error("unable to get NFKC normalizer");
 
+        
         /*if (!texture)*/ {
-            for (int row = 0; row < matrix.getRows(); row++) {
-                for (int col = 0; col < matrix.getCols(); col++) {
-                    //if (matrix(row, col)) {
+            /*for (int row = row_min; row < row_max; row++)*/ {
+                row_key rk;
+                for (int col = col_min; col < col_max; col++) {
+                    /*if (matrix(row, col))*/ {
                         VTermPos pos = { row, col };
                         VTermScreenCell cell;
                         vterm_screen_get_cell(screen, pos, &cell);
@@ -363,63 +350,144 @@ public:
                         if (cell.attrs.blink) { /*TBD*/ }
 
                         //SDL_Rect rect = { col * font_width, row * font_height, font_width * cell.width, font_height };
-						SkRect rect = { 
-							(float)col * font_width_scaled, 
-							(float)row * font_height_scaled, 
-							(float)(col+1) * font_width_scaled, 
-							(float)(row+1) * font_height_scaled, 
-							// (float)font_width * cell.width, 
-							// (float)font_height 
-						};
+
                         
 						// SkPaint bgpt(bgcolor);
 						// bgpt.setStyle(SkPaint::kFill_Style);
 						// canvas.drawRect(rect, bgpt);
 
+                        std::string utf8;
+
                         if (ustr.length() > 0) {
                             auto ustr_normalized = normalizer->normalize(ustr, status);
-                            std::string utf8;
                             if (U_SUCCESS(status)) {
                                 ustr_normalized.toUTF8String(utf8);
                             } else {
                                 ustr.toUTF8String(utf8);
                             }
 
-                            litera_key litkey { utf8, font_width_scaled, font_height_scaled, color.toSkColor(), bgcolor.toSkColor() };
-                            auto literaInBox = typesettingBox.find(litkey);
-                            sk_sp<SkImage> letter_image = nullptr;
-                            if (literaInBox == typesettingBox.end()) {
-                                //SkSurfaces::WrapBackendTexture
-                                //SkImage::makeTextureImage
-
-                                auto letter_surface = skiaOverlay->getSkiaSurface()->makeSurface(SkImageInfo::MakeN32Premul(font_width_scaled, font_height_scaled));
-                                //auto letter_surface = skiaOverlay->getSkiaSurface()->makeSurface(font_width_scaled, font_height_scaled);
-                                auto& letter_canvas = *letter_surface->getCanvas();
-
-                                // TODO TTF_SetFontStyle(font, style);
-                                //std::cout << utf8.c_str();
-                                letter_canvas.scale(kx, ky);
-                                letter_canvas.clear(bgcolor);
-                                letter_canvas.drawString(utf8.c_str(), 0, font_height - font_descent, *font, SkPaint(color));
-                                
-                                letter_image = letter_surface->makeImageSnapshot();
-
-                                //std::cout << "backed: " << letter_image->isTextureBacked() << std::endl;
-
-                                typesettingBox[litkey] = letter_image;
-                            } else {
-                                letter_image = typesettingBox[litkey];
-                            }
-
-                            canvas.drawImage(letter_image, rect.left(), rect.top());
                         }
-                    //    matrix(row, col) = 0;
-                    //}
+
+                        litera_key litkey { utf8, font_width_scaled, font_height_scaled, color.toSkColor(), bgcolor.toSkColor() };
+                        rk.push_back(litkey);
+                    }
+
                 }
+
+                SkRect rect = { 
+                    (float)col_min * font_width_scaled, 
+                    (float)row * font_height_scaled, 
+                    (float)(col_max) * font_width_scaled, 
+                    (float)(row + 1) * font_height_scaled, 
+                    // (float)font_width * cell.width, 
+                    // (float)font_height 
+                };
+
+
+                auto literaInBox = typesettingBox.find(rk);
+                sk_sp<SkImage> letter_image = nullptr;
+                if (literaInBox == typesettingBox.end()) {
+                    auto letter_surface = skiaOverlay->getSkiaSurface()->makeSurface(
+                        SkImageInfo::MakeN32Premul(font_width_scaled * (col_max - col_min),
+                                                            font_height_scaled /** (row_max - row_min)*/)
+                    );
+                    //auto letter_surface = skiaOverlay->getSkiaSurface()->makeSurface(font_width_scaled, font_height_scaled);
+                    auto& letter_canvas = *letter_surface->getCanvas();
+                    letter_canvas.scale(kx, ky);
+                    //letter_canvas.clear(bgcolor);
+
+                    for (int col = col_min; col < col_max; col++) {
+                        int c = col - col_min;
+
+                        // TODO TTF_SetFontStyle(font, style);
+                        //std::cout << utf8.c_str();
+                        auto& letter_key = rk[c];
+                        auto& utf8 = letter_key.utf8;
+
+                        SkRect bgrect = { 
+                            (float)c * font_width, 
+                            0.0f, 
+                            (float)(c + 1) * font_width, 
+                            (float)font_height, 
+                        };
+						SkPaint bgpt(SkColor4f::FromColor(letter_key.bgcolor));
+						bgpt.setStyle(SkPaint::kFill_Style);
+						letter_canvas.drawRect(bgrect, bgpt);
+
+                        letter_canvas.drawString(utf8.c_str(),
+                                                 c * font_width, font_height - font_descent, *font, 
+                                                 SkPaint(SkColor4f::FromColor(letter_key.fgcolor)));
+                        
+
+                        //std::cout << "backed: " << letter_image->isTextureBacked() << std::endl;
+
+                    }
+                    letter_image = letter_surface->makeImageSnapshot();
+
+                    typesettingBox[rk] = letter_image;
+                    std::cout << "new row " << row << std::endl;
+                } else {
+                    letter_image = typesettingBox[rk];
+                }
+                
+                canvas.drawImage(letter_image, rect.left(), rect.top());
             }
             //texture = SDL_CreateTextureFromSurface(renderer, surface);
             //SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
         }
+    }
+
+    void drawIntoSurface(std::shared_ptr<pg::Display> display, std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, int width, int height, SkCanvas& canvas) override {
+		processInput();
+        
+		SkScalar w = width, h = height;
+
+        // Scale coeffitcients
+        uint32_t font_width_scaled = w / matrix.getCols(); //font_width / kx;
+        uint32_t font_height_scaled = h / matrix.getRows(); //font_height / ky;
+
+        SkScalar kx = (float)(font_width_scaled * matrix.getCols()) / (font_width * matrix.getCols());
+        SkScalar ky = (float)(font_height_scaled * matrix.getRows()) / (font_height * matrix.getRows());
+
+
+        //SkScalar font_descent_scaled = font_descent / ky;
+
+        //canvas.scale(kx, ky);
+
+		std::pair<pid_t, int> rst;
+		rst = waitpid(this->pid, WNOHANG);
+		if (rst.first == pid) {
+			//BREAKING!!!
+			throw std::runtime_error("rst.first == pid");
+		}
+
+		const SkScalar gray_hsv[] { 0.0f, 0.0f, 0.7f };
+		auto color = SkColor4f::FromColor(SkHSVToColor(255, gray_hsv));
+		//auto paint_gray = SkPaint(color_gray);
+
+		const SkScalar black_hsv[] { 0.0f, 0.0f, 0.0f };
+		auto bgcolor = SkColor4f::FromColor(SkHSVToColor(255, black_hsv));
+		//auto paint_black = SkPaint(color_black);
+
+
+		canvas.clear(bgcolor);
+
+		///////////////
+
+		// SDL_Event ev;
+        // while(SDL_PollEvent(&ev)) {
+        //     if (ev.type == SDL_QUIT || (ev.type == SDL_KEYDOWN && ev.key.keysym.sym == SDLK_ESCAPE && (ev.key.keysym.mod & KMOD_CTRL))) {
+        //         kill(pid, SIGTERM);
+        //     } else {
+        //         terminal.processEvent(ev);
+        //     }
+        // }
+
+        for (int row = 0; row < matrix.getRows(); row++) {
+            drawCells(0, matrix.getCols(), row, //row + 1, 
+                        font_width_scaled, font_height_scaled, kx, ky, skiaOverlay, canvas);
+        }
+
         //SDL_RenderCopy(renderer, texture, NULL, &window_rect);
         // draw cursor
         VTermScreenCell cell;
@@ -638,8 +706,10 @@ int main(int argc, char **argv)
 
 		auto purist = std::make_shared<p::Platform>(enableOpenGL);
 		
-		//const int rows = 25, cols = 91;
-        const int rows = 50, cols = 182;
+		//const int rows = 36, cols = 128;  // ---- perfect for HD and FullHD
+        
+        const int rows = 25, cols = 93;
+        //const int rows = 50, cols = 182;
 
 		auto contents = std::make_shared<TermDisplayContents>(purist, rows, cols);
 		auto contents_handler_for_skia = std::make_shared<pgs::DisplayContentsHandlerForSkia>(contents, enableOpenGL);

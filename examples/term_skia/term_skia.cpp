@@ -127,16 +127,23 @@ public:
     struct litera_key {
         std::string utf8;
         uint32_t width, height;
-        SkColor color;
+        SkColor fgcolor, bgcolor;
 
         bool operator < (const litera_key& other) const {
             if (utf8 < other.utf8) return true;
             else if (utf8 == other.utf8) {
+
                 if (width < other.width) return true;
                 else if (width == other.width) {
+
                     if (height < other.height) return true;
                     else if (height == other.height) {
-                        if (color < other.color) return true;
+
+                        if (fgcolor < other.fgcolor) return true;
+                        else if (fgcolor == other.fgcolor) {
+
+                            if (bgcolor < other.bgcolor) return true;
+                        }
                     }
                 }
             }
@@ -365,9 +372,9 @@ public:
 							// (float)font_height 
 						};
                         
-						SkPaint bgpt(bgcolor);
-						bgpt.setStyle(SkPaint::kFill_Style);
-						canvas.drawRect(rect, bgpt);
+						// SkPaint bgpt(bgcolor);
+						// bgpt.setStyle(SkPaint::kFill_Style);
+						// canvas.drawRect(rect, bgpt);
 
                         if (ustr.length() > 0) {
                             auto ustr_normalized = normalizer->normalize(ustr, status);
@@ -378,7 +385,7 @@ public:
                                 ustr.toUTF8String(utf8);
                             }
 
-                            litera_key litkey { utf8, font_width_scaled, font_height_scaled, color.toSkColor() };
+                            litera_key litkey { utf8, font_width_scaled, font_height_scaled, color.toSkColor(), bgcolor.toSkColor() };
                             auto literaInBox = typesettingBox.find(litkey);
                             sk_sp<SkImage> letter_image = nullptr;
                             if (literaInBox == typesettingBox.end()) {
@@ -392,6 +399,7 @@ public:
                                 // TODO TTF_SetFontStyle(font, style);
                                 //std::cout << utf8.c_str();
                                 letter_canvas.scale(kx, ky);
+                                letter_canvas.clear(bgcolor);
                                 letter_canvas.drawString(utf8.c_str(), 0, font_height - font_descent, *font, SkPaint(color));
                                 
                                 letter_image = letter_surface->makeImageSnapshot();

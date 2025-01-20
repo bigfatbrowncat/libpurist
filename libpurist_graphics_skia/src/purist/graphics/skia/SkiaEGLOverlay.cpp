@@ -33,9 +33,19 @@ const sk_sp<GrDirectContext> SkiaEGLOverlay::getSkiaContext() const {
 }
 
 void SkiaEGLOverlay::updateBuffer(uint32_t w, uint32_t h) {
-    if (sSurface == nullptr || sSurface->width() < w || sSurface->height() < h) {
+    if (sContext == nullptr || sContext->abandoned()) {
+        // TODO When the context is recreated, all SkImage objects become invalid! SO SOME SIGNAL SHOULD BE PASSED TO THE CLIENT!
+
         auto interface = GrGLInterfaces::MakeEGL();
         sContext = GrDirectContexts::MakeGL(interface);
+        
+        sSurface = nullptr;
+    }
+
+    if (sSurface == nullptr || sSurface->width() < w || sSurface->height() < h) {
+        std::cout << (sSurface == nullptr) << "!!!!!!!!!!!!!!!! " << w << "," << h << std::endl;
+        // auto interface = GrGLInterfaces::MakeEGL();
+        // sContext = GrDirectContexts::MakeGL(interface);
 
         GrGLFramebufferInfo framebufferInfo;
 
@@ -50,7 +60,13 @@ void SkiaEGLOverlay::updateBuffer(uint32_t w, uint32_t h) {
         framebufferInfo.fFBOID = (GrGLuint) buffer;
 
         SkColorType colorType = kRGBA_8888_SkColorType;
-        GrBackendRenderTarget backendRenderTarget = GrBackendRenderTargets::MakeGL(w, h,
+        int mw = w, mh = h;
+        if (sSurface != nullptr) {
+            mw = sSurface->width() > w ? sSurface->width() : w;
+            mh = sSurface->height() > h ? sSurface->height() : h;
+        }
+
+        GrBackendRenderTarget backendRenderTarget = GrBackendRenderTargets::MakeGL(mw, mh,
             0, // sample count
             0, // stencil bits
             framebufferInfo);

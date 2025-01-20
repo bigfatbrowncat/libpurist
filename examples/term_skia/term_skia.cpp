@@ -1,6 +1,8 @@
 // libpurist headers
 //#include <purist/graphics/skia/TextInput.h>
+#include "include/core/SkImage.h"
 #include "include/core/SkRect.h"
+#include "include/core/SkSurface.h"
 #include "vterm_keycodes.h"
 #include <purist/graphics/skia/DisplayContentsSkia.h>
 #include <purist/graphics/Display.h>
@@ -14,6 +16,7 @@
 // Skia headers
 #include <include/core/SkCanvas.h>
 #include <include/core/SkSurface.h>
+#include <include/core/SkBitmap.h>
 #include <include/core/SkImage.h>
 #include <include/core/SkPaint.h>
 #include <include/core/SkFont.h>
@@ -100,69 +103,6 @@ std::pair<pid_t,int> waitpid(pid_t pid, int options)
     return {done_pid, status};
 }
 
-// int main()
-// {
-//     // if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-//     //     std::cerr << SDL_GetError() << std::endl;
-//     // 	return 1;
-//     // }
-//     // if (TTF_Init() < 0) {
-//     //     std::cerr << "TTF_Init: " << TTF_GetError() << std::endl;
-//     //     return 1;
-//     // }
-//     // TTF_Font* font = TTF_OpenFont("/usr/share/fonts/vlgothic/VL-Gothic-Regular.ttf", 48);
-//     // //TTF_Font* font = TTF_OpenFont("RictyDiminished-Regular.ttf", 48);
-//     // if (font == NULL) {
-//     //     std::cerr << "TTF_OpenFont: " << TTF_GetError() << std::endl;
-//     //     return 1;
-//     // }
-//     // SDL_ShowCursor(SDL_DISABLE);
-//     // SDL_Window* window = SDL_CreateWindow("term",SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,1024,768,SDL_WINDOW_SHOWN);
-//     // if (window == NULL) {
-//     //     std::cerr << "SDL_CreateWindow: " << SDL_GetError() << std::endl;
-//     // 	return 1;
-//     // }
-//     // SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC);
-//     // if (renderer == NULL) {
-//     //     std::cerr << "SDL_CreateRenderer: " << SDL_GetError() << std::endl;
-//     // 	return 1;
-//     // }
-
-//     const int rows = 32, cols = 100;
-//     auto subprocess = createSubprocessWithPty(rows, cols, getenv("SHELL"), {"-"});
-
-//     auto pid = subprocess.first;
-
-//     //Terminal terminal(subprocess.second/*fd*/, rows, cols, font);
-
-//     std::pair<pid_t, int> rst;
-//     while ((rst = waitpid(pid, WNOHANG)).first != pid) {
-//         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255 );
-//         SDL_RenderClear(renderer);
-//         SDL_Event ev;
-//         while(SDL_PollEvent(&ev)) {
-//             if (ev.type == SDL_QUIT || (ev.type == SDL_KEYDOWN && ev.key.keysym.sym == SDLK_ESCAPE && (ev.key.keysym.mod & KMOD_CTRL))) {
-//                 kill(pid, SIGTERM);
-//             } else {
-//                 terminal.processEvent(ev);
-//             }
-//         }
-
-//         terminal.processInput();
-
-//         SDL_Rect rect = { 0, 0, 1024, 768 };
-//         terminal.render(renderer, rect);
-//         SDL_RenderPresent(renderer);
-//     }
-//     std::cout << "Process exit status: " << rst.second << std::endl;
-
-//     TTF_Quit();
-//     SDL_Quit();
-//     return 0;
-// }
-
-
-
 
 class TermDisplayContents : public pgs::SkiaDisplayContentsHandler, public pi::KeyboardHandler {
 public:
@@ -183,6 +123,28 @@ public:
     int font_height;
     int font_descent;
     bool ringing = false;
+
+    struct litera_key {
+        std::string utf8;
+        uint32_t width, height;
+        SkColor color;
+
+        bool operator < (const litera_key& other) const {
+            if (utf8 < other.utf8) return true;
+            else if (utf8 == other.utf8) {
+                if (width < other.width) return true;
+                else if (width == other.width) {
+                    if (height < other.height) return true;
+                    else if (height == other.height) {
+                        if (color < other.color) return true;
+                    }
+                }
+            }
+            return false;                   
+        }
+    };
+
+    std::map<litera_key, sk_sp<SkImage>> typesettingBox;
 
     const VTermScreenCallbacks screen_callbacks = {
         damage,
@@ -283,11 +245,11 @@ public:
 		font = std::make_shared<SkFont>(typeface, 20);
 		
 		SkFontMetrics mets;
-		font_height = font->getMetrics(&mets);
+		/*font_height = */font->getMetrics(&mets);
 
-		font_width = mets.fAvgCharWidth;// .fMaxCharWidth;
+		font_width = mets.fAvgCharWidth;
         font_descent = mets.fDescent;
-		//font_height = mets.fDescent - mets.fAscent;
+		font_height = mets.fBottom - mets.fTop; //mets.fDescent - mets.fAscent;
 
 		return modes.begin();
 	}
@@ -308,10 +270,14 @@ public:
 		SkScalar w = width, h = height;
 
         // Scale coeffitcients
-        SkScalar kx = w / (font_width * matrix.getCols());
-        SkScalar ky = h / (font_height * matrix.getRows());
+        SkScalar kx = (float)w / (font_width * matrix.getCols());
+        SkScalar ky = (float)h / (font_height * matrix.getRows());
 
-        canvas.scale(kx, ky);
+        uint32_t font_width_scaled = w / matrix.getCols(); //font_width / kx;
+        uint32_t font_height_scaled = h / matrix.getRows(); //font_height / ky;
+        //SkScalar font_descent_scaled = font_descent / ky;
+
+        //canvas.scale(kx, ky);
 
 		std::pair<pid_t, int> rst;
 		rst = waitpid(this->pid, WNOHANG);
@@ -342,6 +308,9 @@ public:
         //     }
         // }
 
+        UErrorCode status = U_ZERO_ERROR;
+        auto normalizer = icu::Normalizer2::getNFKCInstance(status);
+        if (U_FAILURE(status)) throw std::runtime_error("unable to get NFKC normalizer");
 
         /*if (!texture)*/ {
             for (int row = 0; row < matrix.getRows(); row++) {
@@ -388,23 +357,19 @@ public:
 
                         //SDL_Rect rect = { col * font_width, row * font_height, font_width * cell.width, font_height };
 						SkRect rect = { 
-							(float)col * font_width, 
-							(float)row * font_height, 
-							(float)(col+1) * font_width, 
-							(float)(row+1) * font_height, 
+							(float)col * font_width_scaled, 
+							(float)row * font_height_scaled, 
+							(float)(col+1) * font_width_scaled, 
+							(float)(row+1) * font_height_scaled, 
 							// (float)font_width * cell.width, 
 							// (float)font_height 
 						};
                         
-						//SDL_FillRect(surface, &rect, SDL_MapRGB(surface->format, bgcolor.r, bgcolor.g, bgcolor.b));
 						SkPaint bgpt(bgcolor);
 						bgpt.setStyle(SkPaint::kFill_Style);
 						canvas.drawRect(rect, bgpt);
 
                         if (ustr.length() > 0) {
-                            UErrorCode status = U_ZERO_ERROR;
-                            auto normalizer = icu::Normalizer2::getNFKCInstance(status);
-                            if (U_FAILURE(status)) throw std::runtime_error("unable to get NFKC normalizer");
                             auto ustr_normalized = normalizer->normalize(ustr, status);
                             std::string utf8;
                             if (U_SUCCESS(status)) {
@@ -412,15 +377,33 @@ public:
                             } else {
                                 ustr.toUTF8String(utf8);
                             }
-                            // TODO TTF_SetFontStyle(font, style);
-							//std::cout << utf8.c_str();
-                            canvas.drawString(utf8.c_str(), rect.left(), rect.bottom() - font_descent, *font, SkPaint(color));
-//							canvas.drawString("A", rect.left(), rect.top(), *font, SkPaint(color));
 
-							//auto text_surface = TTF_RenderUTF8_Blended(font, utf8.c_str(), color);
-                            //SDL_SetSurfaceBlendMode(text_surface, SDL_BLENDMODE_BLEND);
-                            //SDL_BlitSurface(text_surface, NULL, surface, &rect);
-                            //SDL_FreeSurface(text_surface);
+                            litera_key litkey { utf8, font_width_scaled, font_height_scaled, color.toSkColor() };
+                            auto literaInBox = typesettingBox.find(litkey);
+                            sk_sp<SkImage> letter_image = nullptr;
+                            if (literaInBox == typesettingBox.end()) {
+                                //SkSurfaces::WrapBackendTexture
+                                //SkImage::makeTextureImage
+
+                                auto letter_surface = skiaOverlay->getSkiaSurface()->makeSurface(SkImageInfo::MakeN32Premul(font_width_scaled, font_height_scaled));
+                                //auto letter_surface = skiaOverlay->getSkiaSurface()->makeSurface(font_width_scaled, font_height_scaled);
+                                auto& letter_canvas = *letter_surface->getCanvas();
+
+                                // TODO TTF_SetFontStyle(font, style);
+                                //std::cout << utf8.c_str();
+                                letter_canvas.scale(kx, ky);
+                                letter_canvas.drawString(utf8.c_str(), 0, font_height - font_descent, *font, SkPaint(color));
+                                
+                                letter_image = letter_surface->makeImageSnapshot();
+
+                                //std::cout << "backed: " << letter_image->isTextureBacked() << std::endl;
+
+                                typesettingBox[litkey] = letter_image;
+                            } else {
+                                letter_image = typesettingBox[litkey];
+                            }
+
+                            canvas.drawImage(letter_image, rect.left(), rect.top());
                         }
                     //    matrix(row, col) = 0;
                     //}
@@ -437,10 +420,10 @@ public:
 
         //SDL_Rect rect = { cursor_pos.col * font_width, cursor_pos.row * font_height, font_width, font_height };
 		SkRect rect = { 
-			(float)cursor_pos.col * font_width, 
-			(float)cursor_pos.row * font_height, 
-			(float)(cursor_pos.col + 1) * font_width, 
-			(float)(cursor_pos.row + 1) * font_height
+			(float)cursor_pos.col * font_width_scaled, 
+			(float)cursor_pos.row * font_height_scaled, 
+			(float)(cursor_pos.col + 1) * font_width_scaled, 
+			(float)(cursor_pos.row + 1) * font_height_scaled
 		};
         
 		// scale cursor
@@ -503,7 +486,7 @@ public:
 			textInput.onKeyPress(kbd, keysym, mods, leds, repeat);
 		}*/
 
-		if (repeat) return;
+		//if (repeat) return;
 
         int mod = VTERM_MOD_NONE;
 		if (mods.ctrl) mod |= VTERM_MOD_CTRL;
@@ -647,7 +630,9 @@ int main(int argc, char **argv)
 
 		auto purist = std::make_shared<p::Platform>(enableOpenGL);
 		
-		const int rows = 25, cols = 90;
+		//const int rows = 25, cols = 91;
+        const int rows = 50, cols = 182;
+
 		auto contents = std::make_shared<TermDisplayContents>(purist, rows, cols);
 		auto contents_handler_for_skia = std::make_shared<pgs::DisplayContentsHandlerForSkia>(contents, enableOpenGL);
 		

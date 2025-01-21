@@ -25,7 +25,10 @@
 #include <include/core/SkColor.h>
 
 #include <stdexcept>
+#include <mutex>
+#include <unordered_map>
 #include <vector>
+#include <cassert>
 #include <vterm.h>
 #include <termios.h>
 #include <pty.h>
@@ -40,13 +43,61 @@
 #include <cmath>
 #include <xkbcommon/xkbcommon-keysyms.h>
 
-
 namespace p = purist;
 namespace pg = purist::graphics;
 namespace pi = purist::input;
 namespace pgs = purist::graphics::skia;
 
+template<typename key_t, typename value_t>
+class lru_cache {
+public:
+	typedef typename std::pair<key_t, value_t> key_value_pair_t;
+	typedef typename std::list<key_value_pair_t>::iterator list_iterator_t;
 
+	lru_cache(size_t max_size) :
+		_max_size(max_size) {
+	}
+	
+	void put(const key_t& key, const value_t& value) {
+		auto it = _cache_items_map.find(key);
+		_cache_items_list.push_front(key_value_pair_t(key, value));
+		if (it != _cache_items_map.end()) {
+			_cache_items_list.erase(it->second);
+			_cache_items_map.erase(it);
+		}
+		_cache_items_map[key] = _cache_items_list.begin();
+		
+		if (_cache_items_map.size() > _max_size) {
+			auto last = _cache_items_list.end();
+			last--;
+			_cache_items_map.erase(last->first);
+			_cache_items_list.pop_back();
+		}
+	}
+	
+	const value_t& get(const key_t& key) {
+		auto it = _cache_items_map.find(key);
+		if (it == _cache_items_map.end()) {
+			throw std::range_error("There is no such key in cache");
+		} else {
+			_cache_items_list.splice(_cache_items_list.begin(), _cache_items_list, it->second);
+			return it->second->second;
+		}
+	}
+	
+	bool exists(const key_t& key) const {
+		return _cache_items_map.find(key) != _cache_items_map.end();
+	}
+	
+	size_t size() const {
+		return _cache_items_map.size();
+	}
+	
+private:
+	std::list<key_value_pair_t> _cache_items_list;
+	std::map<key_t, list_iterator_t> _cache_items_map;
+	size_t _max_size;
+};
 
 template <typename T> class Matrix {
     T* buf;
@@ -73,8 +124,6 @@ public:
     int getRows() const { return rows; }
     int getCols() const { return cols; }
 };
-
-
 
 std::pair<int, int> createSubprocessWithPty(int rows, int cols, const char* prog, const std::vector<std::string>& args = {}, const char* TERM = "xterm-256color")
 {
@@ -111,19 +160,23 @@ public:
 	uint32_t cursor_phase = 0;
     uint32_t cursor_loop_len = 30;
 
+    std::mutex matrixMutex;
+
 	VTerm* vterm;
     VTermScreen* screen;
     //SDL_Surface* surface = NULL;
     //SDL_Texture* texture = NULL;
     int fd;
 	pid_t pid;
-    Matrix<unsigned char> matrix;
+    //Matrix<unsigned char> matrix;
     //TTF_Font* font;
 	std::shared_ptr<SkFont> font;
     int font_width;
     int font_height;
     int font_descent;
     bool ringing = false;
+
+    int rows, cols;
 
     struct litera_key {
         std::string utf8;
@@ -175,7 +228,10 @@ public:
         }
     };
 
-    std::map<row_key, sk_sp<SkImage>> typesettingBox;
+    lru_cache<row_key, sk_sp<SkImage>> typesettingBox;
+    std::map<uint32_t, sk_sp<SkImage>> fullScreen;  // The key is the display connector id
+    std::map<uint32_t, std::shared_ptr<Matrix<unsigned char>>> screenUpdateMatrices;  // The key is the display connector id
+    
 
     const VTermScreenCallbacks screen_callbacks = {
         damage,
@@ -191,7 +247,7 @@ public:
     VTermPos cursor_pos;
 
 	TermDisplayContents(std::weak_ptr<p::Platform> platform, int _rows, int _cols) 
-			: platform(platform), matrix(_rows, _cols) {
+			: platform(platform), rows(_rows), cols(_cols), typesettingBox(4*54*2) {
 
 		auto prog = getenv("SHELL");
 		auto subprocess = createSubprocessWithPty(_rows, _cols, prog, {"-"});
@@ -206,12 +262,7 @@ public:
         vterm_screen_set_callbacks(screen, &screen_callbacks, this);
         vterm_screen_reset(screen, 1);
 
-        matrix.fill(0);
-        //TTF_SizeUTF8(font, "X", &font_width, NULL);
-        //surface = SDL_CreateRGBSurfaceWithFormat(0, font_width * _cols, font_height * _rows, 32, SDL_PIXELFORMAT_RGBA32);
-        
-        //SDL_CreateRGBSurface(0, font_width, font_height, 32, 0, 0, 0, 0);
-        //SDL_SetSurfaceBlendMode(surface, SDL_BLENDMODE_BLEND);
+        //matrix.fill(0);
 	}
 
 	void keyboard_unichar(uint32_t c, VTermModifier mod) {
@@ -224,10 +275,14 @@ public:
         vterm_input_write(vterm, bytes, len);
     }
     int damage(int start_row, int start_col, int end_row, int end_col) {
+        std::lock_guard<std::mutex> lock(matrixMutex);
         //invalidateTexture();
-        for (int row = start_row; row < end_row; row++) {
-            for (int col = start_col; col < end_col; col++) {
-                matrix(row, col) = 1;
+        for (auto& mat_pair : screenUpdateMatrices) {
+            auto& matrix = *(mat_pair.second);
+            for (int row = start_row; row < end_row; row++) {
+                for (int col = start_col; col < end_col; col++) {
+                    matrix(row, col) = 1;
+                }
             }
         }
         return 0;
@@ -297,12 +352,11 @@ public:
 
     void drawCells(int col_min, int col_max, int row, //int row_min, int row_max, 
                    uint32_t font_width_scaled, uint32_t font_height_scaled, float kx, float ky,
-                   std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, SkCanvas& canvas) {
+                   std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, SkCanvas& canvas, const icu::Normalizer2* normalizer) {
         SkColor4f color, bgcolor;
-
         UErrorCode status = U_ZERO_ERROR;
-        auto normalizer = icu::Normalizer2::getNFKCInstance(status);
-        if (U_FAILURE(status)) throw std::runtime_error("unable to get NFKC normalizer");
+
+        sk_sp<SkSurface> letter_surface = nullptr;
 
         
         /*if (!texture)*/ {
@@ -384,14 +438,16 @@ public:
                 };
 
 
-                auto literaInBox = typesettingBox.find(rk);
                 sk_sp<SkImage> letter_image = nullptr;
-                if (literaInBox == typesettingBox.end()) {
-                    auto letter_surface = skiaOverlay->getSkiaSurface()->makeSurface(
-                        SkImageInfo::MakeN32Premul(font_width_scaled * (col_max - col_min),
-                                                            font_height_scaled /** (row_max - row_min)*/)
-                    );
-                    //auto letter_surface = skiaOverlay->getSkiaSurface()->makeSurface(font_width_scaled, font_height_scaled);
+                if (!typesettingBox.exists(rk)) {
+
+                    if (letter_surface == nullptr) {
+                        letter_surface = skiaOverlay->getSkiaSurface()->makeSurface(
+                            SkImageInfo::MakeN32Premul(font_width_scaled * (col_max - col_min),
+                                                                font_height_scaled /** (row_max - row_min)*/)
+                        );
+                    }
+
                     auto& letter_canvas = *letter_surface->getCanvas();
                     letter_canvas.scale(kx, ky);
                     //letter_canvas.clear(bgcolor);
@@ -424,10 +480,9 @@ public:
                     }
                     letter_image = letter_surface->makeImageSnapshot();
 
-                    typesettingBox[rk] = letter_image;
-                    std::cout << "new row " << row << std::endl;
+                    typesettingBox.put(rk, letter_image);
                 } else {
-                    letter_image = typesettingBox[rk];
+                    letter_image = typesettingBox.get(rk);
                 }
                 
                 canvas.drawImage(letter_image, rect.left(), rect.top());
@@ -439,6 +494,13 @@ public:
 
     void drawIntoSurface(std::shared_ptr<pg::Display> display, std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, int width, int height, SkCanvas& canvas) override {
 		processInput();
+
+        if (screenUpdateMatrices.find(display->getConnectorId()) == screenUpdateMatrices.end()) {
+            screenUpdateMatrices[display->getConnectorId()] = std::make_shared<Matrix<unsigned char>>(rows, cols);
+            screenUpdateMatrices[display->getConnectorId()]->fill(1);
+        }
+        
+        auto& matrix = *(screenUpdateMatrices[display->getConnectorId()]);
         
 		SkScalar w = width, h = height;
 
@@ -446,8 +508,8 @@ public:
         uint32_t font_width_scaled = w / matrix.getCols(); //font_width / kx;
         uint32_t font_height_scaled = h / matrix.getRows(); //font_height / ky;
 
-        SkScalar kx = (float)(font_width_scaled * matrix.getCols()) / (font_width * matrix.getCols());
-        SkScalar ky = (float)(font_height_scaled * matrix.getRows()) / (font_height * matrix.getRows());
+        SkScalar kx = (float)(font_width_scaled) / (font_width);
+        SkScalar ky = (float)(font_height_scaled) / (font_height);
 
 
         //SkScalar font_descent_scaled = font_descent / ky;
@@ -483,10 +545,53 @@ public:
         //     }
         // }
 
-        for (int row = 0; row < matrix.getRows(); row++) {
-            drawCells(0, matrix.getCols(), row, //row + 1, 
-                        font_width_scaled, font_height_scaled, kx, ky, skiaOverlay, canvas);
+        auto fullscreenSurface = skiaOverlay->getSkiaSurface()->makeSurface(
+                        SkImageInfo::MakeN32Premul(font_width_scaled * matrix.getCols(), font_height_scaled * matrix.getRows())
+                    );
+
+        auto& fullscreenCanvas = *fullscreenSurface->getCanvas();
+
+        sk_sp<SkImage> oldFullscreenImage = nullptr;
+        auto cachedFullImageKey = this->fullScreen.find(display->getConnectorId());
+        if (cachedFullImageKey != this->fullScreen.end()) {
+            oldFullscreenImage = cachedFullImageKey->second;
+            fullscreenCanvas.drawImage(oldFullscreenImage, 0, 0);
         }
+
+        int divider = 4;//96;
+        assert(matrix.getCols() % divider == 0);
+        int part_width = matrix.getCols() / divider;
+
+        UErrorCode status = U_ZERO_ERROR;
+        auto normalizer = icu::Normalizer2::getNFKCInstance(status);
+        if (U_FAILURE(status)) throw std::runtime_error("unable to get NFKC normalizer");
+
+        {
+            std::lock_guard<std::mutex> lock(matrixMutex);
+            for (int col_part = 0; col_part < divider; col_part++) {
+                for (int row = 0; row < matrix.getRows(); row++) {
+                    // Checking for the damage
+                    bool damaged = false;
+                    
+                    for (int col = part_width * col_part; col < part_width * (col_part + 1); col++) {
+                        if (matrix(row, col)) { matrix(row, col) = 0; damaged = true; }
+                    }
+
+                    //if (damaged) std::cout << "damaged" << std::endl;
+
+                    if (damaged) {
+                        // Drawing
+                        drawCells(part_width * col_part,
+                                part_width * (col_part + 1), row, //row + 1, 
+                                    font_width_scaled, font_height_scaled, kx, ky, skiaOverlay, fullscreenCanvas, normalizer);
+                    }
+                }
+            }
+        }
+
+        auto newFullscreenImage = fullscreenSurface->makeImageSnapshot();
+        canvas.drawImage(newFullscreenImage, 0, 0);
+        this->fullScreen[display->getConnectorId()] = newFullscreenImage;
 
         //SDL_RenderCopy(renderer, texture, NULL, &window_rect);
         // draw cursor
@@ -707,9 +812,10 @@ int main(int argc, char **argv)
 		auto purist = std::make_shared<p::Platform>(enableOpenGL);
 		
 		//const int rows = 36, cols = 128;  // ---- perfect for HD and FullHD
+        //const int rows = 27, cols = 96;    // ---- the biggest reasonable resolution
+        const int rows = 54, cols = 192;    // ---- the biggest reasonable resolution
+		//const int rows = 72, cols = 256;  // ---- Extremely huge. Noticeably lags on Raspberry Pi 4 (when refreshed)
         
-        const int rows = 25, cols = 93;
-        //const int rows = 50, cols = 182;
 
 		auto contents = std::make_shared<TermDisplayContents>(purist, rows, cols);
 		auto contents_handler_for_skia = std::make_shared<pgs::DisplayContentsHandlerForSkia>(contents, enableOpenGL);

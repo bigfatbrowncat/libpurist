@@ -66,6 +66,7 @@ public:
     void setContentsHandler(std::shared_ptr<DisplayContentsHandler> contents);
     void updateInDrawingLoop();
     uint32_t getConnectorId() const override { return connector_id; }
+    uint32_t getFramebuffersCount() const override { return framebuffers.size(); }
     uint32_t getCrtcId() const { return crtc_id; }
     const Mode& getMode() const override { return *mode; }
 

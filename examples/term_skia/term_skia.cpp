@@ -1,8 +1,5 @@
 // libpurist headers
 //#include <purist/graphics/skia/TextInput.h>
-#include "include/core/SkImage.h"
-#include "include/core/SkRect.h"
-#include "include/core/SkSurface.h"
 #include "vterm_keycodes.h"
 #include <purist/graphics/skia/DisplayContentsSkia.h>
 #include <purist/graphics/Display.h>
@@ -10,10 +7,12 @@
 #include <purist/input/KeyboardHandler.h>
 #include <purist/Platform.h>
 #include <purist/graphics/skia/icu_common.h>
-
 #include <Resource.h>
 
 // Skia headers
+#include "include/core/SkImage.h"
+#include "include/core/SkRect.h"
+#include "include/core/SkSurface.h"
 #include <include/core/SkCanvas.h>
 #include <include/core/SkSurface.h>
 #include <include/core/SkBitmap.h>
@@ -162,7 +161,7 @@ public:
 
     std::mutex matrixMutex;
 
-	VTerm* vterm;
+    VTerm* vterm;
     VTermScreen* screen;
     //SDL_Surface* surface = NULL;
     //SDL_Texture* texture = NULL;
@@ -174,7 +173,7 @@ public:
     int font_width;
     int font_height;
     int font_descent;
-    bool ringing = false;
+    uint32_t ringingFramebuffers = 0;
 
     int rows, cols;
 
@@ -228,8 +227,8 @@ public:
         }
     };
 
+    int divider = 4;
     lru_cache<row_key, sk_sp<SkImage>> typesettingBox;
-    std::map<uint32_t, sk_sp<SkImage>> fullScreen;  // The key is the display connector id
     std::map<uint32_t, std::shared_ptr<Matrix<unsigned char>>> screenUpdateMatrices;  // The key is the display connector id
     
 
@@ -245,9 +244,10 @@ public:
     };
 
     VTermPos cursor_pos;
+    uint32_t framebuffersCount = 0;
 
 	TermDisplayContents(std::weak_ptr<p::Platform> platform, int _rows, int _cols) 
-			: platform(platform), rows(_rows), cols(_cols), typesettingBox(4*54*2) {
+			: platform(platform), rows(_rows), cols(_cols), typesettingBox(_rows * divider * 4) { //4*54*2) {
 
 		auto prog = getenv("SHELL");
 		auto subprocess = createSubprocessWithPty(_rows, _cols, prog, {"-"});
@@ -281,7 +281,7 @@ public:
             auto& matrix = *(mat_pair.second);
             for (int row = start_row; row < end_row; row++) {
                 for (int col = start_col; col < end_col; col++) {
-                    matrix(row, col) = 1;
+                    matrix(row, col) = framebuffersCount;
                 }
             }
         }
@@ -291,14 +291,26 @@ public:
         return 0;
     }
     int movecursor(VTermPos pos, VTermPos oldpos, int visible) {
+        // Issuing repainting for the old cursor position
+        for (auto& mat_pair : screenUpdateMatrices) {
+            auto& matrix = *(mat_pair.second);
+	        matrix(cursor_pos.row, cursor_pos.col) = framebuffersCount;
+        }
+
         cursor_pos = pos;
-        return 0;
+        
+        // Issuing repainting for the new cursor position
+        for (auto& mat_pair : screenUpdateMatrices) {
+            auto& matrix = *(mat_pair.second);
+            matrix(cursor_pos.row, cursor_pos.col) = framebuffersCount;
+	    }
+	return 0;
     }
     int settermprop(VTermProp prop, VTermValue *val) {
         return 0;
     }
     int bell() {
-        ringing = true;
+        ringingFramebuffers = framebuffersCount;
         return 0;
     }
     int resize(int rows, int cols) {
@@ -337,6 +349,11 @@ public:
         font_descent = mets.fDescent;
 		font_height = mets.fBottom - mets.fTop; //mets.fDescent - mets.fAscent;
 
+        // Don't allow screens bigger than UHD
+        for (auto m = modes.begin(); m != modes.end(); m++) {
+             if ((*m)->getWidth() < 4000 && 
+                 (*m)->getHeight() < 4000) return m;
+        }
 		return modes.begin();
 	}
 
@@ -494,10 +511,14 @@ public:
 
     void drawIntoSurface(std::shared_ptr<pg::Display> display, std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, int width, int height, SkCanvas& canvas) override {
 		processInput();
+        if (framebuffersCount < display->getFramebuffersCount()) {
+            // Setting how many framebuffers we should redraw at once
+            framebuffersCount =  display->getFramebuffersCount();
+        }
 
         if (screenUpdateMatrices.find(display->getConnectorId()) == screenUpdateMatrices.end()) {
             screenUpdateMatrices[display->getConnectorId()] = std::make_shared<Matrix<unsigned char>>(rows, cols);
-            screenUpdateMatrices[display->getConnectorId()]->fill(1);
+            screenUpdateMatrices[display->getConnectorId()]->fill(framebuffersCount);
         }
         
         auto& matrix = *(screenUpdateMatrices[display->getConnectorId()]);
@@ -527,12 +548,12 @@ public:
 		auto color = SkColor4f::FromColor(SkHSVToColor(255, gray_hsv));
 		//auto paint_gray = SkPaint(color_gray);
 
-		const SkScalar black_hsv[] { 0.0f, 0.0f, 0.0f };
-		auto bgcolor = SkColor4f::FromColor(SkHSVToColor(255, black_hsv));
+		//const SkScalar black_hsv[] { 0.0f, 0.0f, 0.0f };
+		//auto bgcolor = SkColor4f::FromColor(SkHSVToColor(255, black_hsv));
 		//auto paint_black = SkPaint(color_black);
 
 
-		canvas.clear(bgcolor);
+		//canvas.clear(bgcolor);
 
 		///////////////
 
@@ -545,20 +566,19 @@ public:
         //     }
         // }
 
-        auto fullscreenSurface = skiaOverlay->getSkiaSurface()->makeSurface(
-                        SkImageInfo::MakeN32Premul(font_width_scaled * matrix.getCols(), font_height_scaled * matrix.getRows())
-                    );
+        // auto fullscreenSurface = skiaOverlay->getSkiaSurface()->makeSurface(
+        //                 SkImageInfo::MakeN32Premul(font_width_scaled * matrix.getCols(), font_height_scaled * matrix.getRows())
+        //             );
 
-        auto& fullscreenCanvas = *fullscreenSurface->getCanvas();
+        // auto& fullscreenCanvas = *fullscreenSurface->getCanvas();
 
-        sk_sp<SkImage> oldFullscreenImage = nullptr;
-        auto cachedFullImageKey = this->fullScreen.find(display->getConnectorId());
-        if (cachedFullImageKey != this->fullScreen.end()) {
-            oldFullscreenImage = cachedFullImageKey->second;
-            fullscreenCanvas.drawImage(oldFullscreenImage, 0, 0);
-        }
+        // sk_sp<SkImage> oldFullscreenImage = nullptr;
+        // auto cachedFullImageKey = this->fullScreen.find(display->getConnectorId());
+        // if (cachedFullImageKey != this->fullScreen.end()) {
+        //     oldFullscreenImage = cachedFullImageKey->second;
+        //     fullscreenCanvas.drawImage(oldFullscreenImage, 0, 0);
+        // }
 
-        int divider = 4;//96;
         assert(matrix.getCols() % divider == 0);
         int part_width = matrix.getCols() / divider;
 
@@ -574,7 +594,10 @@ public:
                     bool damaged = false;
                     
                     for (int col = part_width * col_part; col < part_width * (col_part + 1); col++) {
-                        if (matrix(row, col)) { matrix(row, col) = 0; damaged = true; }
+                        if (matrix(row, col) > 0) { matrix(row, col) -= 1; damaged = true; }
+                        
+                        // Because the cursor is blinking, we are always repainting it
+                        if (col == cursor_pos.col && row == cursor_pos.row) { damaged = true; }
                     }
 
                     //if (damaged) std::cout << "damaged" << std::endl;
@@ -583,21 +606,28 @@ public:
                         // Drawing
                         drawCells(part_width * col_part,
                                 part_width * (col_part + 1), row, //row + 1, 
-                                    font_width_scaled, font_height_scaled, kx, ky, skiaOverlay, fullscreenCanvas, normalizer);
+                                    font_width_scaled, font_height_scaled, kx, ky, skiaOverlay, canvas, normalizer);
                     }
                 }
             }
         }
 
-        auto newFullscreenImage = fullscreenSurface->makeImageSnapshot();
-        canvas.drawImage(newFullscreenImage, 0, 0);
-        this->fullScreen[display->getConnectorId()] = newFullscreenImage;
+        // auto newFullscreenImage = fullscreenSurface->makeImageSnapshot();
+        // canvas.drawImage(newFullscreenImage, 0, 0);
+        // this->fullScreen[display->getConnectorId()] = newFullscreenImage;
 
         //SDL_RenderCopy(renderer, texture, NULL, &window_rect);
         // draw cursor
         VTermScreenCell cell;
         vterm_screen_get_cell(screen, cursor_pos, &cell);
-		auto cur_color = SkColor4f::FromColor(SkColorSetRGB(cell.fg.rgb.red, cell.fg.rgb.green, cell.fg.rgb.blue));
+
+		auto cur_color = SkColor4f::FromColor(SkColorSetRGB(128, 128, 128));
+        if (VTERM_COLOR_IS_INDEXED(&cell.fg)) {
+            vterm_screen_convert_color_to_rgb(screen, &cell.fg);
+        }
+        if (VTERM_COLOR_IS_RGB(&cell.fg)) {
+            cur_color = SkColor4f::FromColor(SkColorSetRGB(cell.fg.rgb.red, cell.fg.rgb.green, cell.fg.rgb.blue));
+        }
 
         //SDL_Rect rect = { cursor_pos.col * font_width, cursor_pos.row * font_height, font_width, font_height };
 		SkRect rect = { 
@@ -632,11 +662,13 @@ public:
 		cursor_paint.setStyle(SkPaint::kFill_Style);
 		canvas.drawRect(rect, cursor_paint);
 
-        if (ringing) {
-            // TODO SDL_SetRenderDrawColor(renderer, 255,255,255,192 );
-            // SDL_RenderFillRect(renderer, &window_rect);
+        if (ringingFramebuffers) {
 			canvas.clear(color);
-            ringing = 0;
+            for (auto& mat_pair : screenUpdateMatrices) {
+                auto& matrix = *(mat_pair.second);
+                matrix.fill(framebuffersCount);
+            }
+            ringingFramebuffers -= 1;
         }
 
     }
@@ -690,27 +722,35 @@ public:
 			keyboard_key(VTERM_KEY_TAB, (VTermModifier)mod);
 			break;
 		case XKB_KEY_Up:
+		case XKB_KEY_KP_Up:
 			keyboard_key(VTERM_KEY_UP, (VTermModifier)mod);
 			break;
 		case XKB_KEY_Down:
+		case XKB_KEY_KP_Down:
 			keyboard_key(VTERM_KEY_DOWN, (VTermModifier)mod);
 			break;
 		case XKB_KEY_Left:
+		case XKB_KEY_KP_Left:
 			keyboard_key(VTERM_KEY_LEFT, (VTermModifier)mod);
 			break;
 		case XKB_KEY_Right:
+		case XKB_KEY_KP_Right:
 			keyboard_key(VTERM_KEY_RIGHT, (VTermModifier)mod);
 			break;
 		case XKB_KEY_Page_Up:
+		case XKB_KEY_KP_Page_Up:
 			keyboard_key(VTERM_KEY_PAGEUP, (VTermModifier)mod);
 			break;
 		case XKB_KEY_Page_Down:
+		case XKB_KEY_KP_Page_Down:
 			keyboard_key(VTERM_KEY_PAGEDOWN, (VTermModifier)mod);
 			break;
 		case XKB_KEY_Home:
+		case XKB_KEY_KP_Home:
 			keyboard_key(VTERM_KEY_HOME, (VTermModifier)mod);
 			break;
 		case XKB_KEY_End:
+		case XKB_KEY_KP_End:
 			keyboard_key(VTERM_KEY_END, (VTermModifier)mod);
 			break;
 		case XKB_KEY_Delete:
@@ -811,10 +851,10 @@ int main(int argc, char **argv)
 
 		auto purist = std::make_shared<p::Platform>(enableOpenGL);
 		
-		//const int rows = 36, cols = 128;  // ---- perfect for HD and FullHD
-        //const int rows = 27, cols = 96;    // ---- the biggest reasonable resolution
-        const int rows = 54, cols = 192;    // ---- the biggest reasonable resolution
-		//const int rows = 72, cols = 256;  // ---- Extremely huge. Noticeably lags on Raspberry Pi 4 (when refreshed)
+		// cols: 320
+
+		const int rows = 40, cols = 160;  // ---- middle, works for HD, FullHD
+		//const int rows = 72, cols = 320;  // ---- huge, only for 4K
         
 
 		auto contents = std::make_shared<TermDisplayContents>(purist, rows, cols);

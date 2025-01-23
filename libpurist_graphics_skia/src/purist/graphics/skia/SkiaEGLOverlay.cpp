@@ -43,7 +43,7 @@ void SkiaEGLOverlay::updateBuffer(uint32_t w, uint32_t h) {
     }
 
     if (sSurface == nullptr || sSurface->width() < w || sSurface->height() < h) {
-        std::cout << (sSurface == nullptr) << "!!!!!!!!!!!!!!!! " << w << "," << h << std::endl;
+        std::cout << "Allocating EGL surface: " << w << "x" << h << std::endl;
         // auto interface = GrGLInterfaces::MakeEGL();
         // sContext = GrDirectContexts::MakeGL(interface);
 

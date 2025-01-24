@@ -1,4 +1,5 @@
 embed_resources(HackNerdFontMono 
+    fonts/DejaVuSansMono/DejaVuSansMono.ttf
     fonts/HackNerdFontMono/HackNerdFontMono-Regular.ttf
     fonts/HackNerdFontMono/HackNerdFontMono-Bold.ttf
     fonts/HackNerdFontMono/HackNerdFontMono-Italic.ttf

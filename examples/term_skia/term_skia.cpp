@@ -50,52 +50,52 @@ namespace pgs = purist::graphics::skia;
 template<typename key_t, typename value_t>
 class lru_cache {
 public:
-	typedef typename std::pair<key_t, value_t> key_value_pair_t;
-	typedef typename std::list<key_value_pair_t>::iterator list_iterator_t;
+    typedef typename std::pair<key_t, value_t> key_value_pair_t;
+    typedef typename std::list<key_value_pair_t>::iterator list_iterator_t;
 
-	lru_cache(size_t max_size) :
-		_max_size(max_size) {
-	}
-	
-	void put(const key_t& key, const value_t& value) {
-		auto it = _cache_items_map.find(key);
-		_cache_items_list.push_front(key_value_pair_t(key, value));
-		if (it != _cache_items_map.end()) {
-			_cache_items_list.erase(it->second);
-			_cache_items_map.erase(it);
-		}
-		_cache_items_map[key] = _cache_items_list.begin();
-		
-		if (_cache_items_map.size() > _max_size) {
-			auto last = _cache_items_list.end();
-			last--;
-			_cache_items_map.erase(last->first);
-			_cache_items_list.pop_back();
-		}
-	}
-	
-	const value_t& get(const key_t& key) {
-		auto it = _cache_items_map.find(key);
-		if (it == _cache_items_map.end()) {
-			throw std::range_error("There is no such key in cache");
-		} else {
-			_cache_items_list.splice(_cache_items_list.begin(), _cache_items_list, it->second);
-			return it->second->second;
-		}
-	}
-	
-	bool exists(const key_t& key) const {
-		return _cache_items_map.find(key) != _cache_items_map.end();
-	}
-	
-	size_t size() const {
-		return _cache_items_map.size();
-	}
-	
+    lru_cache(size_t max_size) :
+        _max_size(max_size) {
+    }
+    
+    void put(const key_t& key, const value_t& value) {
+        auto it = _cache_items_map.find(key);
+        _cache_items_list.push_front(key_value_pair_t(key, value));
+        if (it != _cache_items_map.end()) {
+            _cache_items_list.erase(it->second);
+            _cache_items_map.erase(it);
+        }
+        _cache_items_map[key] = _cache_items_list.begin();
+        
+        if (_cache_items_map.size() > _max_size) {
+            auto last = _cache_items_list.end();
+            last--;
+            _cache_items_map.erase(last->first);
+            _cache_items_list.pop_back();
+        }
+    }
+    
+    const value_t& get(const key_t& key) {
+        auto it = _cache_items_map.find(key);
+        if (it == _cache_items_map.end()) {
+            throw std::range_error("There is no such key in cache");
+        } else {
+            _cache_items_list.splice(_cache_items_list.begin(), _cache_items_list, it->second);
+            return it->second->second;
+        }
+    }
+    
+    bool exists(const key_t& key) const {
+        return _cache_items_map.find(key) != _cache_items_map.end();
+    }
+    
+    size_t size() const {
+        return _cache_items_map.size();
+    }
+    
 private:
-	std::list<key_value_pair_t> _cache_items_list;
-	std::map<key_t, list_iterator_t> _cache_items_map;
-	size_t _max_size;
+    std::list<key_value_pair_t> _cache_items_list;
+    std::map<key_t, list_iterator_t> _cache_items_map;
+    size_t _max_size;
 };
 
 template <typename T> class Matrix {
@@ -155,8 +155,8 @@ std::pair<pid_t,int> waitpid(pid_t pid, int options)
 
 class TermDisplayContents : public pgs::SkiaDisplayContentsHandler, public pi::KeyboardHandler {
 public:
-	std::weak_ptr<p::Platform> platform;
-	uint32_t cursor_phase = 0;
+    std::weak_ptr<p::Platform> platform;
+    uint32_t cursor_phase = 0;
     uint32_t cursor_loop_len = 30;
 
     std::mutex matrixMutex;
@@ -166,10 +166,10 @@ public:
     //SDL_Surface* surface = NULL;
     //SDL_Texture* texture = NULL;
     int fd;
-	pid_t pid;
+    pid_t pid;
     //Matrix<unsigned char> matrix;
     //TTF_Font* font;
-	std::shared_ptr<SkFont> font;
+    std::shared_ptr<SkFont> font;
     int font_width;
     int font_height;
     int font_descent;
@@ -246,13 +246,13 @@ public:
     VTermPos cursor_pos;
     uint32_t framebuffersCount = 0;
 
-	TermDisplayContents(std::weak_ptr<p::Platform> platform, int _rows, int _cols) 
-			: platform(platform), rows(_rows), cols(_cols), typesettingBox(_rows * divider * 4) { //4*54*2) {
+    TermDisplayContents(std::weak_ptr<p::Platform> platform, int _rows, int _cols) 
+            : platform(platform), rows(_rows), cols(_cols), typesettingBox(_rows * divider * 4) { //4*54*2) {
 
-		auto prog = getenv("SHELL");
-		auto subprocess = createSubprocessWithPty(_rows, _cols, prog, {"-"});
-		this->pid = subprocess.first;
-		fd = subprocess.second;
+        auto prog = getenv("SHELL");
+        auto subprocess = createSubprocessWithPty(_rows, _cols, prog, {"-"});
+        this->pid = subprocess.first;
+        fd = subprocess.second;
 
         vterm = vterm_new(_rows,_cols);
         vterm_set_utf8(vterm, 1);
@@ -260,12 +260,82 @@ public:
 
         screen = vterm_obtain_screen(vterm);
         vterm_screen_set_callbacks(screen, &screen_callbacks, this);
+
+        VTermColor black;
+        vterm_color_rgb(&black, 0, 0, 0);
+        VTermColor red;
+        vterm_color_rgb(&red, 224, 0, 0);
+        VTermColor green;
+        vterm_color_rgb(&green, 0, 192, 0);
+        VTermColor yellow;
+        vterm_color_rgb(&yellow, 192, 192, 0);
+        VTermColor blue;
+        vterm_color_rgb(&blue, 0, 0, 224);
+        VTermColor magenta;
+        vterm_color_rgb(&magenta, 192, 0, 192);
+        VTermColor cyan;
+        vterm_color_rgb(&cyan, 0, 192, 192);
+        VTermColor light_gray;
+        vterm_color_rgb(&light_gray, 160, 160, 160);
+
+        VTermColor dark_gray;
+        vterm_color_rgb(&dark_gray, 96, 96, 96);
+        VTermColor lred;
+        vterm_color_rgb(&lred, 255, 64, 64);
+        VTermColor lgreen;
+        vterm_color_rgb(&lgreen, 64, 255, 64);
+        VTermColor lyellow;
+        vterm_color_rgb(&lyellow, 255, 255, 64);
+        VTermColor lblue;
+        vterm_color_rgb(&lblue, 64, 64, 255);
+        VTermColor lmagenta;
+        vterm_color_rgb(&lmagenta, 255, 64, 255);
+        VTermColor lcyan;
+        vterm_color_rgb(&lcyan, 64, 255, 255);
+        VTermColor white;
+        vterm_color_rgb(&white, 255, 255, 255);
+
+        static const VTermColor color_palette[] = {
+            black,     red,  green,  yellow,  blue,  magenta,  cyan,  light_gray,
+            dark_gray, lred, lgreen, lyellow, lblue, lmagenta, lcyan, white
+        };
+
+        // static const VTermColor color_palette[] = {
+        //     /* R    G    B */
+        //     {   0,   0,   0 }, // black
+        //     { 224,   0,   0 }, // red
+        //     {   0, 224,   0 }, // green
+        //     { 224, 224,   0 }, // yellow
+        //     {   0,   0, 224 }, // blue
+        //     { 224,   0, 224 }, // magenta
+        //     {   0, 224, 224 }, // cyan
+        //     { 224, 224, 224 }, // white == light grey
+
+        //     // high intensity
+        //     { 128, 128, 128 }, // black
+        //     { 255,  64,  64 }, // red
+        //     {  64, 255,  64 }, // green
+        //     { 255, 255,  64 }, // yellow
+        //     {  64,  64, 255 }, // blue
+        //     { 255,  64, 255 }, // magenta
+        //     {  64, 255, 255 }, // cyan
+        //     { 255, 255, 255 }, // white for real
+        // };
+        VTermState * state = vterm_obtain_state(vterm);
+        for (uint8_t index = 0; index < 16; index++) {
+            vterm_state_set_palette_color(state, index, &color_palette[index]);
+        }
+
+        vterm_screen_set_default_colors(screen, &light_gray, &black);
+
+
         vterm_screen_reset(screen, 1);
-
+        
+        
         //matrix.fill(0);
-	}
+    }
 
-	void keyboard_unichar(uint32_t c, VTermModifier mod) {
+    void keyboard_unichar(uint32_t c, VTermModifier mod) {
         vterm_keyboard_unichar(vterm, c, mod);
     }
     void keyboard_key(VTermKey key, VTermModifier mod) {
@@ -294,7 +364,7 @@ public:
         // Issuing repainting for the old cursor position
         for (auto& mat_pair : screenUpdateMatrices) {
             auto& matrix = *(mat_pair.second);
-	        matrix(cursor_pos.row, cursor_pos.col) = framebuffersCount;
+            matrix(cursor_pos.row, cursor_pos.col) = framebuffersCount;
         }
 
         cursor_pos = pos;
@@ -303,8 +373,8 @@ public:
         for (auto& mat_pair : screenUpdateMatrices) {
             auto& matrix = *(mat_pair.second);
             matrix(cursor_pos.row, cursor_pos.col) = framebuffersCount;
-	    }
-	return 0;
+        }
+    return 0;
     }
     int settermprop(VTermProp prop, VTermValue *val) {
         return 0;
@@ -325,47 +395,54 @@ public:
         return 0;
     }
 
-	virtual ~TermDisplayContents() {
-		vterm_free(vterm);
+    virtual ~TermDisplayContents() {
+        vterm_free(vterm);
         //invalidateTexture();
         //SDL_FreeSurface(surface);
-	}
-	
+    }
+    
     std::list<std::shared_ptr<pg::Mode>>::const_iterator chooseMode(std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, const std::list<std::shared_ptr<pg::Mode>>& modes) override {
 
-		if (skiaOverlay->getFontMgr() == nullptr) {
-			skiaOverlay->createFontMgr({
-				LOAD_RESOURCE(fonts_HackNerdFontMono_HackNerdFontMono_Regular_ttf)
-			});
-		}
+        if (skiaOverlay->getFontMgr() == nullptr) {
+            skiaOverlay->createFontMgr({
+                //LOAD_RESOURCE(fonts_HackNerdFontMono_HackNerdFontMono_Regular_ttf)    // "Hack Nerd Font Mono"
+                LOAD_RESOURCE(fonts_DejaVuSansMono_DejaVuSansMono_ttf)
+            });
+        }
 
-		auto typeface = skiaOverlay->getTypefaceByName("Hack Nerd Font Mono");
-		font = std::make_shared<SkFont>(typeface, 20);
-		
-		SkFontMetrics mets;
-		/*font_height = */font->getMetrics(&mets);
+        auto typeface = skiaOverlay->getTypefaceByName("DejaVu Sans Mono");
+        font = std::make_shared<SkFont>(typeface, 20);
 
-		font_width = mets.fAvgCharWidth;
+        SkFontMetrics mets;
+        /*font_height = */font->getMetrics(&mets);
+
+        SkRect verticalBoxLineBounds;
+        char16_t verticalBoxLineChar = u'\u2503';
+	    font->measureText((const void*)&verticalBoxLineChar, 2, SkTextEncoding::kUTF8, &verticalBoxLineBounds);
+
+        font_width = mets.fAvgCharWidth; // This is the real character width for monospace
         font_descent = mets.fDescent;
-		font_height = mets.fBottom - mets.fTop; //mets.fDescent - mets.fAscent;
+        font_height = verticalBoxLineBounds.height(); //mets.fBottom - mets.fTop;
 
         // Don't allow screens bigger than UHD
         for (auto m = modes.begin(); m != modes.end(); m++) {
              if ((*m)->getWidth() < 4000 && 
                  (*m)->getHeight() < 4000) return m;
         }
-		return modes.begin();
-	}
+        return modes.begin();
+    }
 
-	pgs::DisplayOrientation chooseOrientation(std::shared_ptr<pg::Display> display, std::shared_ptr<pgs::SkiaOverlay> skiaOverlay) override {
-		if (display->getMode().getHeight() > display->getMode().getWidth()) {
-			// We are assumming that all the displays are horizontally oriented.
-			// So if some of them have height > width, let's rotate it
-			return pgs::DisplayOrientation::LEFT_VERTICAL;
-		} else {
-			return pgs::DisplayOrientation::HORIZONTAL;
-		}
-	}
+    pgs::DisplayOrientation chooseOrientation(std::shared_ptr<pg::Display> display, std::shared_ptr<pgs::SkiaOverlay> skiaOverlay) override {
+        if (display->getMode().getHeight() > display->getMode().getWidth()) {
+            // We are assumming that all the displays are horizontally oriented.
+            // So if some of them have height > width, let's rotate it
+            return pgs::DisplayOrientation::LEFT_VERTICAL;
+        } else {
+            return pgs::DisplayOrientation::HORIZONTAL;
+        }
+    }
+
+    sk_sp<SkSurface> letter_surface = nullptr;
 
     void drawCells(int col_min, int col_max, int row, //int row_min, int row_max, 
                    uint32_t font_width_scaled, uint32_t font_height_scaled, float kx, float ky,
@@ -373,7 +450,6 @@ public:
         SkColor4f color, bgcolor;
         UErrorCode status = U_ZERO_ERROR;
 
-        sk_sp<SkSurface> letter_surface = nullptr;
 
         
         /*if (!texture)*/ {
@@ -390,29 +466,29 @@ public:
                             ustr.append((UChar32)cell.chars[i]);
                         }
                         //SDL_Color color = (SDL_Color){128,128,128};
-						color = SkColor4f::FromColor(SkColorSetRGB(128, 128, 128));
+                        color = SkColor4f::FromColor(SkColorSetRGB(128, 128, 128));
 
                         //SDL_Color bgcolor = (SDL_Color){0,0,0};
-						bgcolor = SkColor4f::FromColor(SkColorSetRGB(0, 0, 0));
+                        bgcolor = SkColor4f::FromColor(SkColorSetRGB(0, 0, 0));
 
                         if (VTERM_COLOR_IS_INDEXED(&cell.fg)) {
                             vterm_screen_convert_color_to_rgb(screen, &cell.fg);
                         }
                         if (VTERM_COLOR_IS_RGB(&cell.fg)) {
                             // TODO color = (SDL_Color){cell.fg.rgb.red, cell.fg.rgb.green, cell.fg.rgb.blue};
-							color = SkColor4f::FromColor(SkColorSetRGB(cell.fg.rgb.red, cell.fg.rgb.green, cell.fg.rgb.blue));
+                            color = SkColor4f::FromColor(SkColorSetRGB(cell.fg.rgb.red, cell.fg.rgb.green, cell.fg.rgb.blue));
                         }
                         if (VTERM_COLOR_IS_INDEXED(&cell.bg)) {
                             vterm_screen_convert_color_to_rgb(screen, &cell.bg);
                         }
                         if (VTERM_COLOR_IS_RGB(&cell.bg)) {
                             // TODO bgcolor = (SDL_Color){cell.bg.rgb.red, cell.bg.rgb.green, cell.bg.rgb.blue};
-							bgcolor = SkColor4f::FromColor(SkColorSetRGB(cell.bg.rgb.red, cell.bg.rgb.green, cell.bg.rgb.blue));
+                            bgcolor = SkColor4f::FromColor(SkColorSetRGB(cell.bg.rgb.red, cell.bg.rgb.green, cell.bg.rgb.blue));
                         }
 
                         if (cell.attrs.reverse) std::swap(color, bgcolor);
                         
-						/* TODO
+                        /* TODO
                         int style = TTF_STYLE_NORMAL;
                         if (cell.attrs.bold) style |= TTF_STYLE_BOLD;
                         if (cell.attrs.underline) style |= TTF_STYLE_UNDERLINE;
@@ -423,9 +499,9 @@ public:
                         //SDL_Rect rect = { col * font_width, row * font_height, font_width * cell.width, font_height };
 
                         
-						// SkPaint bgpt(bgcolor);
-						// bgpt.setStyle(SkPaint::kFill_Style);
-						// canvas.drawRect(rect, bgpt);
+                        // SkPaint bgpt(bgcolor);
+                        // bgpt.setStyle(SkPaint::kFill_Style);
+                        // canvas.drawRect(rect, bgpt);
 
                         std::string utf8;
 
@@ -458,12 +534,12 @@ public:
                 sk_sp<SkImage> letter_image = nullptr;
                 if (!typesettingBox.exists(rk)) {
 
-                    if (letter_surface == nullptr) {
+                    //if (letter_surface == nullptr) {
                         letter_surface = skiaOverlay->getSkiaSurface()->makeSurface(
                             SkImageInfo::MakeN32Premul(font_width_scaled * (col_max - col_min),
                                                                 font_height_scaled /** (row_max - row_min)*/)
                         );
-                    }
+                    //}
 
                     auto& letter_canvas = *letter_surface->getCanvas();
                     letter_canvas.scale(kx, ky);
@@ -483,14 +559,14 @@ public:
                             (float)(c + 1) * font_width, 
                             (float)font_height, 
                         };
-						SkPaint bgpt(SkColor4f::FromColor(letter_key.bgcolor));
-						bgpt.setStyle(SkPaint::kFill_Style);
-						letter_canvas.drawRect(bgrect, bgpt);
+                        SkPaint bgpt(SkColor4f::FromColor(letter_key.bgcolor));
+                        bgpt.setStyle(SkPaint::kFill_Style);
+                        letter_canvas.drawRect(bgrect, bgpt);
 
                         letter_canvas.drawString(utf8.c_str(),
                                                  c * font_width, font_height - font_descent, *font, 
                                                  SkPaint(SkColor4f::FromColor(letter_key.fgcolor)));
-                        
+
 
                         //std::cout << "backed: " << letter_image->isTextureBacked() << std::endl;
 
@@ -501,7 +577,7 @@ public:
                 } else {
                     letter_image = typesettingBox.get(rk);
                 }
-                
+
                 canvas.drawImage(letter_image, rect.left(), rect.top());
             }
             //texture = SDL_CreateTextureFromSurface(renderer, surface);
@@ -510,7 +586,7 @@ public:
     }
 
     void drawIntoSurface(std::shared_ptr<pg::Display> display, std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, int width, int height, SkCanvas& canvas) override {
-		processInput();
+        processInput();
         if (framebuffersCount < display->getFramebuffersCount()) {
             // Setting how many framebuffers we should redraw at once
             framebuffersCount =  display->getFramebuffersCount();
@@ -523,7 +599,7 @@ public:
         
         auto& matrix = *(screenUpdateMatrices[display->getConnectorId()]);
         
-		SkScalar w = width, h = height;
+        SkScalar w = width, h = height;
 
         // Scale coeffitcients
         uint32_t font_width_scaled = w / matrix.getCols(); //font_width / kx;
@@ -537,27 +613,27 @@ public:
 
         //canvas.scale(kx, ky);
 
-		std::pair<pid_t, int> rst;
-		rst = waitpid(this->pid, WNOHANG);
-		if (rst.first == pid) {
-			//BREAKING!!!
-			throw std::runtime_error("rst.first == pid");
-		}
+        std::pair<pid_t, int> rst;
+        rst = waitpid(this->pid, WNOHANG);
+        if (rst.first == pid) {
+            //BREAKING!!!
+            throw std::runtime_error("rst.first == pid");
+        }
 
-		const SkScalar gray_hsv[] { 0.0f, 0.0f, 0.7f };
-		auto color = SkColor4f::FromColor(SkHSVToColor(255, gray_hsv));
-		//auto paint_gray = SkPaint(color_gray);
+        const SkScalar gray_hsv[] { 0.0f, 0.0f, 0.7f };
+        auto color = SkColor4f::FromColor(SkHSVToColor(255, gray_hsv));
+        //auto paint_gray = SkPaint(color_gray);
 
-		//const SkScalar black_hsv[] { 0.0f, 0.0f, 0.0f };
-		//auto bgcolor = SkColor4f::FromColor(SkHSVToColor(255, black_hsv));
-		//auto paint_black = SkPaint(color_black);
+        //const SkScalar black_hsv[] { 0.0f, 0.0f, 0.0f };
+        //auto bgcolor = SkColor4f::FromColor(SkHSVToColor(255, black_hsv));
+        //auto paint_black = SkPaint(color_black);
 
 
-		//canvas.clear(bgcolor);
+        //canvas.clear(bgcolor);
 
-		///////////////
+        ///////////////
 
-		// SDL_Event ev;
+        // SDL_Event ev;
         // while(SDL_PollEvent(&ev)) {
         //     if (ev.type == SDL_QUIT || (ev.type == SDL_KEYDOWN && ev.key.keysym.sym == SDLK_ESCAPE && (ev.key.keysym.mod & KMOD_CTRL))) {
         //         kill(pid, SIGTERM);
@@ -621,7 +697,7 @@ public:
         VTermScreenCell cell;
         vterm_screen_get_cell(screen, cursor_pos, &cell);
 
-		auto cur_color = SkColor4f::FromColor(SkColorSetRGB(128, 128, 128));
+        auto cur_color = SkColor4f::FromColor(SkColorSetRGB(128, 128, 128));
         if (VTERM_COLOR_IS_INDEXED(&cell.fg)) {
             vterm_screen_convert_color_to_rgb(screen, &cell.fg);
         }
@@ -630,14 +706,14 @@ public:
         }
 
         //SDL_Rect rect = { cursor_pos.col * font_width, cursor_pos.row * font_height, font_width, font_height };
-		SkRect rect = { 
-			(float)cursor_pos.col * font_width_scaled, 
-			(float)cursor_pos.row * font_height_scaled, 
-			(float)(cursor_pos.col + 1) * font_width_scaled, 
-			(float)(cursor_pos.row + 1) * font_height_scaled
-		};
+        SkRect rect = { 
+            (float)cursor_pos.col * font_width_scaled, 
+            (float)cursor_pos.row * font_height_scaled, 
+            (float)(cursor_pos.col + 1) * font_width_scaled, 
+            (float)(cursor_pos.row + 1) * font_height_scaled
+        };
         
-		// scale cursor
+        // scale cursor
         // rect.x = window_rect.x + rect.x * window_rect.w / surface->w;
         // rect.y = window_rect.y + rect.y * window_rect.h / surface->h;
         // rect.w = rect.w * window_rect.w / surface->w;
@@ -658,12 +734,12 @@ public:
             cursor_alpha });
         auto cursor_paint = SkPaint(cursor_color);
 
-		//SkPaint cur_paint(cur_color);
-		cursor_paint.setStyle(SkPaint::kFill_Style);
-		canvas.drawRect(rect, cursor_paint);
+        //SkPaint cur_paint(cur_color);
+        cursor_paint.setStyle(SkPaint::kFill_Style);
+        canvas.drawRect(rect, cursor_paint);
 
         if (ringingFramebuffers) {
-			canvas.clear(color);
+            canvas.clear(color);
             for (auto& mat_pair : screenUpdateMatrices) {
                 auto& matrix = *(mat_pair.second);
                 matrix.fill(framebuffersCount);
@@ -674,100 +750,100 @@ public:
     }
 
     void onCharacter(pi::Keyboard& kbd, char32_t charCode, pi::Modifiers mods, pi::Leds leds) override { 
-		
-		// TODO const Uint8 *state = SDL_GetKeyboardState(NULL);
-		// int mod = VTERM_MOD_NONE;
-		// if (state[SDL_SCANCODE_LCTRL] || state[SDL_SCANCODE_RCTRL]) mod |= VTERM_MOD_CTRL;
-		// if (state[SDL_SCANCODE_LALT] || state[SDL_SCANCODE_RALT]) mod |= VTERM_MOD_ALT;
-		// if (state[SDL_SCANCODE_LSHIFT] || state[SDL_SCANCODE_RSHIFT]) mod |= VTERM_MOD_SHIFT;
-		
+        
+        // TODO const Uint8 *state = SDL_GetKeyboardState(NULL);
+        // int mod = VTERM_MOD_NONE;
+        // if (state[SDL_SCANCODE_LCTRL] || state[SDL_SCANCODE_RCTRL]) mod |= VTERM_MOD_CTRL;
+        // if (state[SDL_SCANCODE_LALT] || state[SDL_SCANCODE_RALT]) mod |= VTERM_MOD_ALT;
+        // if (state[SDL_SCANCODE_LSHIFT] || state[SDL_SCANCODE_RSHIFT]) mod |= VTERM_MOD_SHIFT;
+        
         int mod = VTERM_MOD_NONE;
-		if (mods.ctrl) mod |= VTERM_MOD_CTRL;
-		if (mods.alt) mod |= VTERM_MOD_ALT;
-		if (mods.shift) mod |= VTERM_MOD_SHIFT;
+        if (mods.ctrl) mod |= VTERM_MOD_CTRL;
+        if (mods.alt) mod |= VTERM_MOD_ALT;
+        if (mods.shift) mod |= VTERM_MOD_SHIFT;
 
 
-		//for (int i = 0; i < strlen(ev.text.text); i++) {
-			keyboard_unichar(charCode, (VTermModifier)mod);   //ev.text.text[i], (VTermModifier)mod);
-		//}
+        //for (int i = 0; i < strlen(ev.text.text); i++) {
+            keyboard_unichar(charCode, (VTermModifier)mod);   //ev.text.text[i], (VTermModifier)mod);
+        //}
 
-	}
+    }
     void onKeyPress(pi::Keyboard& kbd, uint32_t keysym, pi::Modifiers mods, pi::Leds leds, bool repeat) override { 
-		/*if (keysym == XKB_KEY_Escape) {
-			platform.lock()->stop();
-		} else {
-			textInput.onKeyPress(kbd, keysym, mods, leds, repeat);
-		}*/
+        /*if (keysym == XKB_KEY_Escape) {
+            platform.lock()->stop();
+        } else {
+            textInput.onKeyPress(kbd, keysym, mods, leds, repeat);
+        }*/
 
-		//if (repeat) return;
+        //if (repeat) return;
 
         int mod = VTERM_MOD_NONE;
-		if (mods.ctrl) mod |= VTERM_MOD_CTRL;
-		if (mods.alt) mod |= VTERM_MOD_ALT;
-		if (mods.shift) mod |= VTERM_MOD_SHIFT;
+        if (mods.ctrl) mod |= VTERM_MOD_CTRL;
+        if (mods.alt) mod |= VTERM_MOD_ALT;
+        if (mods.shift) mod |= VTERM_MOD_SHIFT;
 
 
         switch (keysym) {
         case XKB_KEY_Return:
         case XKB_KEY_KP_Enter:
-			keyboard_key(VTERM_KEY_ENTER, (VTermModifier)mod);
-			break;
-		case XKB_KEY_BackSpace:
-			keyboard_key(VTERM_KEY_BACKSPACE, (VTermModifier)mod);
-			break;
-		case XKB_KEY_Escape:
-			keyboard_key(VTERM_KEY_ESCAPE, (VTermModifier)mod);
-			break;
-		case XKB_KEY_Tab:
-			keyboard_key(VTERM_KEY_TAB, (VTermModifier)mod);
-			break;
-		case XKB_KEY_Up:
-		case XKB_KEY_KP_Up:
-			keyboard_key(VTERM_KEY_UP, (VTermModifier)mod);
-			break;
-		case XKB_KEY_Down:
-		case XKB_KEY_KP_Down:
-			keyboard_key(VTERM_KEY_DOWN, (VTermModifier)mod);
-			break;
-		case XKB_KEY_Left:
-		case XKB_KEY_KP_Left:
-			keyboard_key(VTERM_KEY_LEFT, (VTermModifier)mod);
-			break;
-		case XKB_KEY_Right:
-		case XKB_KEY_KP_Right:
-			keyboard_key(VTERM_KEY_RIGHT, (VTermModifier)mod);
-			break;
-		case XKB_KEY_Page_Up:
-		case XKB_KEY_KP_Page_Up:
-			keyboard_key(VTERM_KEY_PAGEUP, (VTermModifier)mod);
-			break;
-		case XKB_KEY_Page_Down:
-		case XKB_KEY_KP_Page_Down:
-			keyboard_key(VTERM_KEY_PAGEDOWN, (VTermModifier)mod);
-			break;
-		case XKB_KEY_Home:
-		case XKB_KEY_KP_Home:
-			keyboard_key(VTERM_KEY_HOME, (VTermModifier)mod);
-			break;
-		case XKB_KEY_End:
-		case XKB_KEY_KP_End:
-			keyboard_key(VTERM_KEY_END, (VTermModifier)mod);
-			break;
-		case XKB_KEY_Delete:
-		case XKB_KEY_KP_Delete:
-			keyboard_key(VTERM_KEY_DEL, (VTermModifier)mod);
-			break;
-		default:
+            keyboard_key(VTERM_KEY_ENTER, (VTermModifier)mod);
+            break;
+        case XKB_KEY_BackSpace:
+            keyboard_key(VTERM_KEY_BACKSPACE, (VTermModifier)mod);
+            break;
+        case XKB_KEY_Escape:
+            keyboard_key(VTERM_KEY_ESCAPE, (VTermModifier)mod);
+            break;
+        case XKB_KEY_Tab:
+            keyboard_key(VTERM_KEY_TAB, (VTermModifier)mod);
+            break;
+        case XKB_KEY_Up:
+        case XKB_KEY_KP_Up:
+            keyboard_key(VTERM_KEY_UP, (VTermModifier)mod);
+            break;
+        case XKB_KEY_Down:
+        case XKB_KEY_KP_Down:
+            keyboard_key(VTERM_KEY_DOWN, (VTermModifier)mod);
+            break;
+        case XKB_KEY_Left:
+        case XKB_KEY_KP_Left:
+            keyboard_key(VTERM_KEY_LEFT, (VTermModifier)mod);
+            break;
+        case XKB_KEY_Right:
+        case XKB_KEY_KP_Right:
+            keyboard_key(VTERM_KEY_RIGHT, (VTermModifier)mod);
+            break;
+        case XKB_KEY_Page_Up:
+        case XKB_KEY_KP_Page_Up:
+            keyboard_key(VTERM_KEY_PAGEUP, (VTermModifier)mod);
+            break;
+        case XKB_KEY_Page_Down:
+        case XKB_KEY_KP_Page_Down:
+            keyboard_key(VTERM_KEY_PAGEDOWN, (VTermModifier)mod);
+            break;
+        case XKB_KEY_Home:
+        case XKB_KEY_KP_Home:
+            keyboard_key(VTERM_KEY_HOME, (VTermModifier)mod);
+            break;
+        case XKB_KEY_End:
+        case XKB_KEY_KP_End:
+            keyboard_key(VTERM_KEY_END, (VTermModifier)mod);
+            break;
+        case XKB_KEY_Delete:
+        case XKB_KEY_KP_Delete:
+            keyboard_key(VTERM_KEY_DEL, (VTermModifier)mod);
+            break;
+        default:
             if (keysym >= XKB_KEY_F1 && keysym <= XKB_KEY_F35) {
                 VTermKey fsym = (VTermKey)VTERM_KEY_FUNCTION(keysym - XKB_KEY_F1 + 1);
-				keyboard_key(fsym, (VTermModifier)mod);
+                keyboard_key(fsym, (VTermModifier)mod);
             } else if (mods.ctrl && !mods.alt && !mods.shift && keysym < 127) {
-				keyboard_unichar(keysym, (VTermModifier)mod);
-			}
-			break;
-		}
-	}
-	
+                keyboard_unichar(keysym, (VTermModifier)mod);
+            }
+            break;
+        }
+    }
+
     void onKeyRelease(pi::Keyboard& kbd, uint32_t keysym, pi::Modifiers mods, pi::Leds leds) override { }
 
     void processInput() {
@@ -798,8 +874,8 @@ public:
 
 void TermDisplayContents::output_callback(const char* s, size_t len, void* user)
 {
-	//std::string ss(s, len);
-	//std::cout << "> " << ss << std::endl;
+    //std::string ss(s, len);
+    //std::cout << "> " << ss << std::endl;
     write(*(int*)user, s, len);
 }
 
@@ -846,26 +922,27 @@ int TermDisplayContents::sb_popline(int cols, VTermScreenCell *cells, void *user
 
 int main(int argc, char **argv)
 {
-	try {
-		bool enableOpenGL = true;
+    try {
+        bool enableOpenGL = true;
 
-		auto purist = std::make_shared<p::Platform>(enableOpenGL);
-		
-		// cols: 320
+        auto purist = std::make_shared<p::Platform>(enableOpenGL);
 
-		const int rows = 40, cols = 160;  // ---- middle, works for HD, FullHD
-		//const int rows = 72, cols = 320;  // ---- huge, only for 4K
-        
+        // cols: 320
 
-		auto contents = std::make_shared<TermDisplayContents>(purist, rows, cols);
-		auto contents_handler_for_skia = std::make_shared<pgs::DisplayContentsHandlerForSkia>(contents, enableOpenGL);
-		
-		purist->run(contents_handler_for_skia, contents);
+        const int rows = 36, cols = 128;  // ---- small
+        //const int rows = 40, cols = 160;  // ---- middle, works for HD, FullHD
+        //const int rows = 72, cols = 320;  // ---- huge, only for 4K
 
-		return 0;
-	
-	} catch (const purist::errcode_exception& ex) {
-		fprintf(stderr, "%s\n", ex.what());
-		return ex.errcode;
-	}
+
+        auto contents = std::make_shared<TermDisplayContents>(purist, rows, cols);
+        auto contents_handler_for_skia = std::make_shared<pgs::DisplayContentsHandlerForSkia>(contents, enableOpenGL);
+
+        purist->run(contents_handler_for_skia, contents);
+
+        return 0;
+
+    } catch (const purist::errcode_exception& ex) {
+        fprintf(stderr, "%s\n", ex.what());
+        return ex.errcode;
+    }
 }

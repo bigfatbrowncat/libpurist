@@ -170,9 +170,9 @@ public:
     //Matrix<unsigned char> matrix;
     //TTF_Font* font;
     std::shared_ptr<SkFont> font;
-    int font_width;
-    int font_height;
-    int font_descent;
+    SkScalar font_width;
+    SkScalar font_height;
+    SkScalar font_descent;
     uint32_t ringingFramebuffers = 0;
 
     int rows, cols;
@@ -246,8 +246,102 @@ public:
     VTermPos cursor_pos;
     uint32_t framebuffersCount = 0;
 
+    VTermColor color_palette[16];
+
+    void setEqualizedColorPalette(VTermState* state) {
+        VTermColor black;
+        vterm_color_rgb(&black, 1, 1, 1);
+        VTermColor red;
+        vterm_color_rgb(&red, 128, 0, 0);
+        VTermColor green;
+        vterm_color_rgb(&green, 0, 96, 0);
+        VTermColor yellow;
+        vterm_color_rgb(&yellow, 128, 64, 0);
+        VTermColor blue;
+        vterm_color_rgb(&blue, 24, 24, 255);
+        VTermColor magenta;
+        vterm_color_rgb(&magenta, 128, 0, 128);
+        VTermColor cyan;
+        vterm_color_rgb(&cyan, 0, 96, 128);
+        VTermColor light_gray;
+        vterm_color_rgb(&light_gray, 128, 128, 128);
+
+        VTermColor dark_gray;
+        vterm_color_rgb(&dark_gray, 64, 64, 64);
+        VTermColor lred;
+        vterm_color_rgb(&lred, 255, 48, 48);
+        VTermColor lgreen;
+        vterm_color_rgb(&lgreen, 48, 224, 48);
+        VTermColor lyellow;
+        vterm_color_rgb(&lyellow, 192, 192, 32);
+        VTermColor lblue;
+        vterm_color_rgb(&lblue, 96, 96, 255);
+        VTermColor lmagenta;
+        vterm_color_rgb(&lmagenta, 255, 64, 255);
+        VTermColor lcyan;
+        vterm_color_rgb(&lcyan, 64, 192, 224);
+        VTermColor white;
+        vterm_color_rgb(&white, 255, 255, 255);
+
+        VTermColor equalized_palette[] = {
+            black,     red,  green,  yellow,  blue,  magenta,  cyan,  light_gray,
+            dark_gray, lred, lgreen, lyellow, lblue, lmagenta, lcyan, white
+        };
+
+        for (uint8_t index = 0; index < 16; index++) {
+            color_palette[index] = equalized_palette[index];
+            vterm_state_set_palette_color(state, index, &color_palette[index]);
+        }
+    }
+
+     void setStandardColorPalette(VTermState* state) {
+        VTermColor black;
+        vterm_color_rgb(&black, 1, 1, 1);
+        VTermColor red;
+        vterm_color_rgb(&red, 222, 56, 43);
+        VTermColor green;
+        vterm_color_rgb(&green, 57, 181, 74);
+        VTermColor yellow;
+        vterm_color_rgb(&yellow, 255, 199, 6);
+        VTermColor blue;
+        vterm_color_rgb(&blue, 0, 111, 184);
+        VTermColor magenta;
+        vterm_color_rgb(&magenta, 118, 38, 113);
+        VTermColor cyan;
+        vterm_color_rgb(&cyan, 44, 181, 233);
+        VTermColor light_gray;
+        vterm_color_rgb(&light_gray, 204, 204, 204);
+
+        VTermColor dark_gray;
+        vterm_color_rgb(&dark_gray, 128, 128, 128);
+        VTermColor lred;
+        vterm_color_rgb(&lred, 255, 0, 0);
+        VTermColor lgreen;
+        vterm_color_rgb(&lgreen, 0, 255, 0);
+        VTermColor lyellow;
+        vterm_color_rgb(&lyellow, 255, 255, 0);
+        VTermColor lblue;
+        vterm_color_rgb(&lblue, 0, 0, 255);
+        VTermColor lmagenta;
+        vterm_color_rgb(&lmagenta, 255, 0, 255);
+        VTermColor lcyan;
+        vterm_color_rgb(&lcyan, 0, 255, 255);
+        VTermColor white;
+        vterm_color_rgb(&white, 255, 255, 255);
+
+        VTermColor equalized_palette[] = {
+            black,     red,  green,  yellow,  blue,  magenta,  cyan,  light_gray,
+            dark_gray, lred, lgreen, lyellow, lblue, lmagenta, lcyan, white
+        };
+
+        for (uint8_t index = 0; index < 16; index++) {
+            color_palette[index] = equalized_palette[index];
+            vterm_state_set_palette_color(state, index, &color_palette[index]);
+        }
+    }
+
     TermDisplayContents(std::weak_ptr<p::Platform> platform, int _rows, int _cols) 
-            : platform(platform), rows(_rows), cols(_cols), typesettingBox(_rows * divider * 4) { //4*54*2) {
+            : platform(platform), rows(_rows), cols(_cols), typesettingBox(_rows * divider * 6) { //4*54*2) {
 
         auto prog = getenv("SHELL");
         auto subprocess = createSubprocessWithPty(_rows, _cols, prog, {"-"});
@@ -261,72 +355,12 @@ public:
         screen = vterm_obtain_screen(vterm);
         vterm_screen_set_callbacks(screen, &screen_callbacks, this);
 
-        VTermColor black;
-        vterm_color_rgb(&black, 0, 0, 0);
-        VTermColor red;
-        vterm_color_rgb(&red, 224, 0, 0);
-        VTermColor green;
-        vterm_color_rgb(&green, 0, 192, 0);
-        VTermColor yellow;
-        vterm_color_rgb(&yellow, 192, 192, 0);
-        VTermColor blue;
-        vterm_color_rgb(&blue, 0, 0, 224);
-        VTermColor magenta;
-        vterm_color_rgb(&magenta, 192, 0, 192);
-        VTermColor cyan;
-        vterm_color_rgb(&cyan, 0, 192, 192);
-        VTermColor light_gray;
-        vterm_color_rgb(&light_gray, 160, 160, 160);
-
-        VTermColor dark_gray;
-        vterm_color_rgb(&dark_gray, 96, 96, 96);
-        VTermColor lred;
-        vterm_color_rgb(&lred, 255, 64, 64);
-        VTermColor lgreen;
-        vterm_color_rgb(&lgreen, 64, 255, 64);
-        VTermColor lyellow;
-        vterm_color_rgb(&lyellow, 255, 255, 64);
-        VTermColor lblue;
-        vterm_color_rgb(&lblue, 64, 64, 255);
-        VTermColor lmagenta;
-        vterm_color_rgb(&lmagenta, 255, 64, 255);
-        VTermColor lcyan;
-        vterm_color_rgb(&lcyan, 64, 255, 255);
-        VTermColor white;
-        vterm_color_rgb(&white, 255, 255, 255);
-
-        static const VTermColor color_palette[] = {
-            black,     red,  green,  yellow,  blue,  magenta,  cyan,  light_gray,
-            dark_gray, lred, lgreen, lyellow, lblue, lmagenta, lcyan, white
-        };
-
-        // static const VTermColor color_palette[] = {
-        //     /* R    G    B */
-        //     {   0,   0,   0 }, // black
-        //     { 224,   0,   0 }, // red
-        //     {   0, 224,   0 }, // green
-        //     { 224, 224,   0 }, // yellow
-        //     {   0,   0, 224 }, // blue
-        //     { 224,   0, 224 }, // magenta
-        //     {   0, 224, 224 }, // cyan
-        //     { 224, 224, 224 }, // white == light grey
-
-        //     // high intensity
-        //     { 128, 128, 128 }, // black
-        //     { 255,  64,  64 }, // red
-        //     {  64, 255,  64 }, // green
-        //     { 255, 255,  64 }, // yellow
-        //     {  64,  64, 255 }, // blue
-        //     { 255,  64, 255 }, // magenta
-        //     {  64, 255, 255 }, // cyan
-        //     { 255, 255, 255 }, // white for real
-        // };
         VTermState * state = vterm_obtain_state(vterm);
-        for (uint8_t index = 0; index < 16; index++) {
-            vterm_state_set_palette_color(state, index, &color_palette[index]);
-        }
+        
+        //setEqualizedColorPalette(state);
+        setStandardColorPalette(state);
 
-        vterm_screen_set_default_colors(screen, &light_gray, &black);
+        vterm_screen_set_default_colors(screen, &color_palette[7], &color_palette[0]);
 
 
         vterm_screen_reset(screen, 1);
@@ -405,24 +439,32 @@ public:
 
         if (skiaOverlay->getFontMgr() == nullptr) {
             skiaOverlay->createFontMgr({
-                //LOAD_RESOURCE(fonts_HackNerdFontMono_HackNerdFontMono_Regular_ttf)    // "Hack Nerd Font Mono"
-                LOAD_RESOURCE(fonts_DejaVuSansMono_DejaVuSansMono_ttf)
+                LOAD_RESOURCE(fonts_HackNerdFontMono_HackNerdFontMono_Regular_ttf)    // "Hack Nerd Font Mono"
+                //LOAD_RESOURCE(fonts_DejaVuSansMono_DejaVuSansMono_ttf)
             });
         }
 
-        auto typeface = skiaOverlay->getTypefaceByName("DejaVu Sans Mono");
-        font = std::make_shared<SkFont>(typeface, 20);
+        //auto typeface = skiaOverlay->getTypefaceByName("DejaVu Sans Mono");
+        auto typeface = skiaOverlay->getTypefaceByName("Hack Nerd Font Mono");
+        SkScalar fontSize = 1;
+        font = std::make_shared<SkFont>(typeface, fontSize);
+	    font->setHinting(SkFontHinting::kNone);
 
         SkFontMetrics mets;
-        /*font_height = */font->getMetrics(&mets);
+        /*font_height =*/ font->getMetrics(&mets);
 
-        SkRect verticalBoxLineBounds;
-        char16_t verticalBoxLineChar = u'\u2503';
-	    font->measureText((const void*)&verticalBoxLineChar, 2, SkTextEncoding::kUTF8, &verticalBoxLineBounds);
+        /*SkRect verticalBoxLineBounds;
+        char16_t verticalBoxLineChar = u'│'; //u'\u2503';
+	    font->measureText((const void*)&verticalBoxLineChar, 2, SkTextEncoding::kUTF8, &verticalBoxLineBounds);*/
 
         font_width = mets.fAvgCharWidth; // This is the real character width for monospace
         font_descent = mets.fDescent;
-        font_height = verticalBoxLineBounds.height(); //mets.fBottom - mets.fTop;
+        
+        /*font_height = verticalBoxLineBounds.height();
+        std::cout << "font_height: " << font_height << std::endl;*/
+
+        font_height = fontSize;            // Setting font height equal to 
+        font_descent -= 0.025;             // Patching the descent for the specific font (here is for Hack)
 
         // Don't allow screens bigger than UHD
         for (auto m = modes.begin(); m != modes.end(); m++) {
@@ -929,7 +971,7 @@ int main(int argc, char **argv)
 
         // cols: 320
 
-        const int rows = 36, cols = 128;  // ---- small
+        const int rows = 40, cols = 128;  // ---- small
         //const int rows = 40, cols = 160;  // ---- middle, works for HD, FullHD
         //const int rows = 72, cols = 320;  // ---- huge, only for 4K
 

@@ -180,7 +180,7 @@ public:
 
     struct litera_key {
         std::string utf8;
-        SkScalar width, height;
+        int width, height;
         SkColor fgcolor, bgcolor;
 
         bool operator == (const litera_key& other) const {
@@ -216,7 +216,7 @@ public:
     struct row_key : public std::vector<litera_key> {
         bool operator < (const row_key& other) const {
             if (this->size() != other.size()) {
-                throw std::logic_error("Incomparable keys");
+                throw std::logic_error(std::string("Incomparable keys - different length: ") + std::to_string(this->size()) + " and " +  std::to_string(other.size()));
             }
             for (size_t i = 0; i < size(); i++) {
                 if ((*this)[i] < other[i]) return true;
@@ -228,7 +228,7 @@ public:
         }
     };
 
-    int divider = 7;//4;
+    int divider = 4;
     lru_cache<row_key, sk_sp<SkImage>> typesettingBox;
     std::map<uint32_t, std::shared_ptr<Matrix<unsigned char>>> screenUpdateMatrices;  // The key is the display connector id
     
@@ -305,13 +305,13 @@ public:
         VTermColor yellow;
         vterm_color_rgb(&yellow, 255, 199, 6);
         VTermColor blue;
-        vterm_color_rgb(&blue, 0, 111, 184);
+        vterm_color_rgb(&blue, 0, 80, 184); //vterm_color_rgb(&blue, 0, 111, 184);
         VTermColor magenta;
         vterm_color_rgb(&magenta, 118, 38, 113);
         VTermColor cyan;
-        vterm_color_rgb(&cyan, 44, 181, 233);
+        vterm_color_rgb(&cyan, 30, 160, 200); //vterm_color_rgb(&cyan, 44, 181, 233);
         VTermColor light_gray;
-        vterm_color_rgb(&light_gray, 204, 204, 204);
+        vterm_color_rgb(&light_gray, 190, 190, 190); //vterm_color_rgb(&light_gray, 204, 204, 204);
 
         VTermColor dark_gray;
         vterm_color_rgb(&dark_gray, 128, 128, 128);
@@ -497,8 +497,8 @@ public:
         SkScalar kx = ((SkScalar)buffer_width / (col_max - col_min) + epsilon) / font_width;
         SkScalar ky = ((SkScalar)buffer_height + epsilon) / font_height;
 
-        SkScalar font_width_scaled = font_width * kx;
-        SkScalar font_height_scaled = font_height * kx;
+        // SkScalar font_width_scaled = font_width * kx;
+        // SkScalar font_height_scaled = font_height * kx;
 
         SkColor4f color, bgcolor;
         UErrorCode status = U_ZERO_ERROR;
@@ -509,11 +509,11 @@ public:
             /*for (int row = row_min; row < row_max; row++)*/ {
                 row_key rk;
                 for (int col = col_min; col < col_max; col++) {
-                    /*if (matrix(row, col))*/ {
-                        VTermPos pos = { row, col };
-                        VTermScreenCell cell;
-                        vterm_screen_get_cell(screen, pos, &cell);
-                        if (cell.chars[0] == 0xffffffff) continue;
+                    std::string utf8 = "";
+                    VTermPos pos = { row, col };
+                    VTermScreenCell cell;
+                    vterm_screen_get_cell(screen, pos, &cell);
+                    if (cell.chars[0] != 0xffffffff) {
                         icu::UnicodeString ustr;
                         for (int i = 0; cell.chars[i] != 0 && i < VTERM_MAX_CHARS_PER_CELL; i++) {
                             ustr.append((UChar32)cell.chars[i]);
@@ -556,8 +556,6 @@ public:
                         // bgpt.setStyle(SkPaint::kFill_Style);
                         // canvas.drawRect(rect, bgpt);
 
-                        std::string utf8;
-
                         if (ustr.length() > 0) {
                             auto ustr_normalized = normalizer->normalize(ustr, status);
                             if (U_SUCCESS(status)) {
@@ -567,16 +565,15 @@ public:
                             }
 
                         }
-
-                        litera_key litkey { utf8, font_width_scaled, font_height_scaled, color.toSkColor(), bgcolor.toSkColor() };
-                        rk.push_back(litkey);
                     }
 
+                    litera_key litkey { utf8, buffer_width, buffer_height, color.toSkColor(), bgcolor.toSkColor() };
+                    rk.push_back(litkey);
                 }
 
                 if (!typesettingBox.exists(rk)) {
-                    static int cache_misses = 0;
-                    std::cout << "cache miss: " << cache_misses++ << std::endl;
+                    //static int cache_misses = 0;
+                    //std::cout << "cache miss: " << cache_misses++ << std::endl;
                     //if (letter_surface == nullptr) {
                         letter_surface = skiaOverlay->getSkiaSurface()->makeSurface(
                             SkImageInfo::MakeN32Premul(((uint32_t)buffer_width) ,   // * (col_max - col_min)
@@ -611,11 +608,9 @@ public:
                         //std::cout << utf8.c_str();
                         auto& utf8 = letter_key.utf8;
 
-
                         letter_canvas.drawString(utf8.c_str(),
                                                  c * font_width, font_height - font_descent, *font, 
                                                  SkPaint(SkColor4f::FromColor(letter_key.fgcolor)));
-
                     }
                     letter_image = letter_surface->makeImageSnapshot();
 
@@ -623,10 +618,7 @@ public:
                 } else {
                     letter_image = typesettingBox.get(rk);
                 }
-
             }
-            //texture = SDL_CreateTextureFromSurface(renderer, surface);
-            //SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
         }
         return letter_image;
     }
@@ -649,7 +641,7 @@ public:
 
         // Scale coeffitcients
         SkScalar font_width_scaled = w / matrix.getCols(); //font_width / kx;
-        SkScalar font_height_scaled = h / matrix.getRows(); //font_height / ky;
+        //SkScalar font_height_scaled = h / matrix.getRows(); //font_height / ky;
 
         // SkScalar kx = (float)(font_width_scaled) / (font_width);
         // SkScalar ky = (float)(font_height_scaled) / (font_height);
@@ -749,7 +741,7 @@ public:
         // canvas.drawImage(newFullscreenImage, 0, 0);
         // this->fullScreen[display->getConnectorId()] = newFullscreenImage;
 
-        //SDL_RenderCopy(renderer, texture, NULL, &window_rect);
+        
         // draw cursor
         VTermScreenCell cell;
         vterm_screen_get_cell(screen, cursor_pos, &cell);
@@ -762,25 +754,12 @@ public:
             cur_color = SkColor4f::FromColor(SkColorSetRGB(cell.fg.rgb.red, cell.fg.rgb.green, cell.fg.rgb.blue));
         }
 
-        //SDL_Rect rect = { cursor_pos.col * font_width, cursor_pos.row * font_height, font_width, font_height };
         SkRect rect = { 
             (float)cursor_pos.col * font_width_scaled, 
-            (float)cursor_pos.row * font_height_scaled, 
+            (float)cursor_pos.row * buffer_height, 
             (float)(cursor_pos.col + 1) * font_width_scaled, 
-            (float)(cursor_pos.row + 1) * font_height_scaled
+            (float)(cursor_pos.row + 1) * buffer_height
         };
-        
-        // scale cursor
-        // rect.x = window_rect.x + rect.x * window_rect.w / surface->w;
-        // rect.y = window_rect.y + rect.y * window_rect.h / surface->h;
-        // rect.w = rect.w * window_rect.w / surface->w;
-        // rect.w *= cell.width;
-        // rect.h = rect.h * window_rect.h / surface->h;
-        // SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-        // SDL_SetRenderDrawColor(renderer, 255,255,255,96 );
-        // SDL_RenderFillRect(renderer, &rect);
-        // SDL_SetRenderDrawColor(renderer, 255,255,255,255 );
-        // SDL_RenderDrawRect(renderer, &rect);
 
         cursor_phase = (cursor_phase + 1) % cursor_loop_len;
         float cursor_alpha = 0.5 * sin(2 * M_PI * (float)cursor_phase / cursor_loop_len) + 0.5;
@@ -984,7 +963,11 @@ int main(int argc, char **argv)
 
         auto purist = std::make_shared<p::Platform>(enableOpenGL);
 
-        const int rows = 40, cols = 140;
+        //const int rows = 24, cols = 80;    // Tiny
+        const int rows = 30, cols = 100;    // Small
+        //const int rows = 40, cols = 136;    // Middle
+        //const int rows = 48, cols = 160;    // Large
+        //const int rows = 60, cols = 200;    // Huge
 
 
         auto contents = std::make_shared<TermDisplayContents>(purist, rows, cols);

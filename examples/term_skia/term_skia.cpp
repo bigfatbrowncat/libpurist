@@ -47,6 +47,7 @@
 #include <unordered_map>
 #include <vector>
 #include <cassert>
+#include <chrono>
 
 
 namespace p = purist;
@@ -134,8 +135,8 @@ public:
 class TermDisplayContents : public pgs::SkiaDisplayContentsHandler, public pi::KeyboardHandler {
 public:
     std::weak_ptr<p::Platform> platform;
-    uint32_t cursor_phase = 0;
-    uint32_t cursor_loop_len = 30;
+    float cursorPhase = 0;
+    uint32_t cursorBlinkPeriodMSec = 300;
 
     std::mutex matrixMutex;
 
@@ -282,7 +283,7 @@ public:
         VTermColor yellow;
         vterm_color_rgb(&yellow, 255, 199, 6);
         VTermColor blue;
-        vterm_color_rgb(&blue, 0, 80, 184); //vterm_color_rgb(&blue, 0, 111, 184);
+        vterm_color_rgb(&blue, 0, 85, 190); //vterm_color_rgb(&blue, 0, 111, 184);
         VTermColor magenta;
         vterm_color_rgb(&magenta, 118, 38, 113);
         VTermColor cyan;
@@ -609,6 +610,9 @@ public:
     }
 
     void drawIntoSurface(std::shared_ptr<pg::Display> display, std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, int width, int height, SkCanvas& canvas) override {
+        auto cur_time = std::chrono::system_clock::now();
+        auto sec_since_epoch = std::chrono::duration_cast<std::chrono::milliseconds>(cur_time.time_since_epoch());
+
         processInput();
         if (framebuffersCount < display->getFramebuffersCount()) {
             // Setting how many framebuffers we should redraw at once
@@ -736,8 +740,8 @@ public:
             (float)(cursor_pos.row + 1) * buffer_height
         };
 
-        cursor_phase = (cursor_phase + 1) % cursor_loop_len;
-        float cursor_alpha = 0.5 * sin(2 * M_PI * (float)cursor_phase / cursor_loop_len) + 0.5;
+        cursorPhase = (float)(sec_since_epoch.count() % cursorBlinkPeriodMSec) / cursorBlinkPeriodMSec;
+        float cursor_alpha = 0.5 * sin(2 * M_PI * (float)cursorPhase) + 0.5;
         auto cursor_color = SkColor4f({ 
             cur_color.fR,
             cur_color.fG,

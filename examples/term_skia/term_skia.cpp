@@ -153,6 +153,7 @@ public:
     SkScalar font_height;
     SkScalar font_descent;
     uint32_t ringingFramebuffers = 0;
+    bool cursorVisible = true;
 
     uint32_t rows, cols;
 
@@ -398,6 +399,13 @@ public:
         return 0;
     }
     int settermprop(VTermProp prop, VTermValue *val) {
+        switch (prop) {
+        case VTERM_PROP_CURSORVISIBLE:
+            this->cursorVisible = val->boolean;
+            break;
+        default:
+            break;
+        }
         return 0;
     }
     int bell() {
@@ -610,9 +618,6 @@ public:
     }
 
     void drawIntoSurface(std::shared_ptr<pg::Display> display, std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, int width, int height, SkCanvas& canvas) override {
-        auto cur_time = std::chrono::system_clock::now();
-        auto sec_since_epoch = std::chrono::duration_cast<std::chrono::milliseconds>(cur_time.time_since_epoch());
-
         processInput();
         if (framebuffersCount < display->getFramebuffersCount()) {
             // Setting how many framebuffers we should redraw at once
@@ -740,18 +745,22 @@ public:
             (float)(cursor_pos.row + 1) * buffer_height
         };
 
-        cursorPhase = (float)(sec_since_epoch.count() % cursorBlinkPeriodMSec) / cursorBlinkPeriodMSec;
-        float cursor_alpha = 0.5 * sin(2 * M_PI * (float)cursorPhase) + 0.5;
-        auto cursor_color = SkColor4f({ 
-            cur_color.fR,
-            cur_color.fG,
-            cur_color.fB,
-            cursor_alpha });
-        auto cursor_paint = SkPaint(cursor_color);
+        if (cursorVisible) {
+            auto cur_time = std::chrono::system_clock::now();
+            auto sec_since_epoch = std::chrono::duration_cast<std::chrono::milliseconds>(cur_time.time_since_epoch());
+            cursorPhase = (float)(sec_since_epoch.count() % cursorBlinkPeriodMSec) / cursorBlinkPeriodMSec;
+            float cursor_alpha = 0.5 * sin(2 * M_PI * (float)cursorPhase) + 0.5;
+            auto cursor_color = SkColor4f({ 
+                cur_color.fR,
+                cur_color.fG,
+                cur_color.fB,
+                cursor_alpha });
+            auto cursor_paint = SkPaint(cursor_color);
 
-        //SkPaint cur_paint(cur_color);
-        cursor_paint.setStyle(SkPaint::kFill_Style);
-        canvas.drawRect(rect, cursor_paint);
+            //SkPaint cur_paint(cur_color);
+            cursor_paint.setStyle(SkPaint::kFill_Style);
+            canvas.drawRect(rect, cursor_paint);
+        }
 
         if (ringingFramebuffers) {
             canvas.clear(color);

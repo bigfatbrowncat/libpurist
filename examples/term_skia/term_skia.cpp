@@ -1,7 +1,6 @@
+#include "process_tools.h"
+
 // libpurist headers
-//#include <purist/graphics/skia/TextInput.h>
-#include "include/core/SkScalar.h"
-#include "vterm_keycodes.h"
 #include <purist/graphics/skia/DisplayContentsSkia.h>
 #include <purist/graphics/Display.h>
 #include <purist/graphics/Mode.h>
@@ -11,6 +10,7 @@
 #include <Resource.h>
 
 // Skia headers
+#include "include/core/SkScalar.h"
 #include "include/core/SkImage.h"
 #include "include/core/SkRect.h"
 #include "include/core/SkSurface.h"
@@ -24,15 +24,16 @@
 #include <include/core/SkFontMetrics.h>
 #include <include/core/SkColor.h>
 
-#include <stdexcept>
-#include <mutex>
-#include <unordered_map>
-#include <vector>
-#include <cassert>
+// xkbcommon headers
+#include <xkbcommon/xkbcommon-keysyms.h>
+
+// VTerm headers
 #include <vterm.h>
+#include <vterm_keycodes.h>
+
+// System headers
 #include <termios.h>
-#include <pty.h>
-#include <sys/wait.h>
+#include <unistd.h>
 
 // std headers
 #include <map>
@@ -41,7 +42,12 @@
 #include <iomanip>
 #include <sstream>
 #include <cmath>
-#include <xkbcommon/xkbcommon-keysyms.h>
+#include <stdexcept>
+#include <mutex>
+#include <unordered_map>
+#include <vector>
+#include <cassert>
+
 
 namespace p = purist;
 namespace pg = purist::graphics;
@@ -125,35 +131,6 @@ public:
     int getCols() const { return cols; }
 };
 
-std::pair<int, int> createSubprocessWithPty(int rows, int cols, const char* prog, const std::vector<std::string>& args = {}, const char* TERM = "xterm-256color")
-{
-    int fd;
-    struct winsize win = { (unsigned short)rows, (unsigned short)cols, 0, 0 };
-    auto pid = forkpty(&fd, NULL, NULL, &win);
-    if (pid < 0) throw std::runtime_error("forkpty failed");
-    //else
-    if (!pid) {
-        setenv("TERM", TERM, 1);
-        char ** argv = new char *[args.size() + 2];
-        argv[0] = strdup(prog);
-        for (int i = 1; i <= args.size(); i++) {
-            argv[i] = strdup(args[i - 1].c_str());
-        }
-        argv[args.size() + 1] = NULL;
-        if (execvp(prog, argv) < 0) exit(-1);
-    }
-    //else 
-    return { pid, fd };
-}
-
-std::pair<pid_t,int> waitpid(pid_t pid, int options)
-{
-    int status;
-    auto done_pid = waitpid(pid, &status, options);
-    return {done_pid, status};
-}
-
-
 class TermDisplayContents : public pgs::SkiaDisplayContentsHandler, public pi::KeyboardHandler {
 public:
     std::weak_ptr<p::Platform> platform;
@@ -176,7 +153,7 @@ public:
     SkScalar font_descent;
     uint32_t ringingFramebuffers = 0;
 
-    int rows, cols;
+    uint32_t rows, cols;
 
     struct litera_key {
         std::string utf8;
@@ -341,15 +318,23 @@ public:
         }
     }
 
-    TermDisplayContents(std::weak_ptr<p::Platform> platform, int _rows, int _cols) 
+    TermDisplayContents(std::weak_ptr<p::Platform> platform, uint32_t _rows, uint32_t _cols) 
             : platform(platform), rows(_rows), cols(_cols), typesettingBox(_rows * divider * 6) { //4*54*2) {
+
+        // Checking the arguments
+        if (_cols == 0 || _rows == 0) {
+            throw std::logic_error(std::string("Columns and rows count hade to be fositive"));
+        }
+        if (_cols % divider != 0) { 
+            throw std::logic_error(std::string("Columns count ") + std::to_string(_cols) + std::string(" should be divideable by te number of substrings ") + std::to_string(divider));
+        }
 
         auto prog = getenv("SHELL");
         auto subprocess = createSubprocessWithPty(_rows, _cols, prog, {"-"});
         this->pid = subprocess.first;
         fd = subprocess.second;
 
-        vterm = vterm_new(_rows,_cols);
+        vterm = vterm_new(_rows, _cols);
         vterm_set_utf8(vterm, 1);
         vterm_output_set_callback(vterm, output_callback, (void*)&fd);
 
@@ -409,7 +394,7 @@ public:
             auto& matrix = *(mat_pair.second);
             matrix(cursor_pos.row, cursor_pos.col) = framebuffersCount;
         }
-    return 0;
+        return 0;
     }
     int settermprop(VTermProp prop, VTermValue *val) {
         return 0;
@@ -721,11 +706,6 @@ public:
 
                     if (damaged) {
                         // Drawing
-
-                //             void drawCells(int col_min, int col_max, int row, //int row_min, int row_max, 
-                //    SkScalar font_width_scaled, SkScalar font_height_scaled, int buffer_width, int buffer_height,
-                //    std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, SkCanvas& canvas, const icu::Normalizer2* normalizer)
-
                         auto cells_image = drawCells(part_width * col_part,
                                 part_width * (col_part + 1), row, 
                                 buffer_width, buffer_height, skiaOverlay, normalizer);
@@ -736,11 +716,6 @@ public:
                 }
             }
         }
-
-        // auto newFullscreenImage = fullscreenSurface->makeImageSnapshot();
-        // canvas.drawImage(newFullscreenImage, 0, 0);
-        // this->fullScreen[display->getConnectorId()] = newFullscreenImage;
-
         
         // draw cursor
         VTermScreenCell cell;
@@ -782,7 +757,6 @@ public:
             }
             ringingFramebuffers -= 1;
         }
-
     }
 
     void onCharacter(pi::Keyboard& kbd, char32_t charCode, pi::Modifiers mods, pi::Leds leds) override { 
@@ -888,7 +862,7 @@ public:
         FD_SET(fd, &readfds);
         timeval timeout = { 0, 0 };
         if (select(fd + 1, &readfds, NULL, NULL, &timeout) > 0) {
-            char buf[4096];
+            char buf[cols * rows * 4]; //4096];
             auto size = read(fd, buf, sizeof(buf));
             if (size > 0) {
                 input_write(buf, size);

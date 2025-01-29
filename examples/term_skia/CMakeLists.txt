@@ -8,6 +8,7 @@ embed_resources(HackNerdFontMono
 
 add_executable(term_skia
     term_skia.cpp
+    process_tools.cpp
     ${HackNerdFontMono}
 )
 

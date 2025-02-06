@@ -452,14 +452,13 @@ public:
         char16_t verticalBoxLineChar = u'│'; //u'\u2503';
 	    font->measureText((const void*)&verticalBoxLineChar, 2, SkTextEncoding::kUTF8, &verticalBoxLineBounds);*/
 
-        font_width = mets.fAvgCharWidth; // This is the real character width for monospace
-        font_descent = mets.fDescent;
-        
-        /*font_height = verticalBoxLineBounds.height();
-        std::cout << "font_height: " << font_height << std::endl;*/
+        auto font_height_patch = 0.05;
+        auto font_width_patch = -0.01;
+        auto font_descent_patch = 0.0;
 
-        font_height = fontSize + 0.05;     // Applying font height patch
-        font_descent -= 0.02;              // Patching the descent for the specific font (here is for Hack)
+        font_width = mets.fAvgCharWidth + font_width_patch; // This is the real character width for monospace
+        font_height = fontSize + font_height_patch;     // Applying font height patch
+        font_descent = mets.fDescent + font_descent_patch;              // Patching the descent for the specific font (here is for Hack)
 
         // Don't allow screens bigger than UHD
         for (auto m = modes.begin(); m != modes.end(); m++) {
@@ -485,7 +484,7 @@ public:
                    int buffer_width, int buffer_height,
                    std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, const icu::Normalizer2* normalizer) {
 
-        SkScalar epsilon = 0.001f; // This very small value is added to the skale factor 
+        SkScalar epsilon = 0.0005f; // This very small value is added to the skale factor 
                                    // to make sure that the images will not have any gaps between them
 
         SkScalar kx = ((SkScalar)buffer_width / (col_max - col_min) + epsilon) / font_width;
@@ -602,9 +601,18 @@ public:
                         //std::cout << utf8.c_str();
                         auto& utf8 = letter_key.utf8;
 
+                        SkRect bgrect = { 
+                            (float)c * font_width, 
+                            0.0f, 
+                            (float)(c + 1) * font_width,
+                            (float)font_height
+                        };
+                        letter_canvas.save();
+                        letter_canvas.clipRect(bgrect);
                         letter_canvas.drawString(utf8.c_str(),
                                                  c * font_width, font_height - font_descent, *font, 
                                                  SkPaint(SkColor4f::FromColor(letter_key.fgcolor)));
+                        letter_canvas.restore();
                     }
                     letter_image = letter_surface->makeImageSnapshot();
 
@@ -695,7 +703,19 @@ public:
         if (U_FAILURE(status)) throw std::runtime_error("unable to get NFKC normalizer");
 
         int buffer_width = w / divider;
+        int cols_per_buffer = cols / divider;
+
+        // Patching buffer_width so that a single character consists of an integer number of pixels
+        int rem = buffer_width % cols_per_buffer;
+        float hscale = 1.0f;
+        if (rem > 0) {
+            buffer_width += cols_per_buffer - rem;
+            hscale = (w / divider) / (float)buffer_width;
+        }
+
         int buffer_height = h / matrix.getRows();
+        
+        //canvas.scale(hscale, 1.0f);
         
         {
             std::lock_guard<std::mutex> lock(matrixMutex);
@@ -719,8 +739,17 @@ public:
                                 part_width * (col_part + 1), row, 
                                 buffer_width, buffer_height, skiaOverlay, normalizer);
 
-                        canvas.drawImage(cells_image, buffer_width * col_part, buffer_height * row);
+                        //canvas.drawImage(cells_image, buffer_width * col_part, buffer_height * row);
 
+                        //void drawImageRect(const SkImage*, const SkRect& dst, const SkSamplingOptions&);
+                        SkRect dst = {
+                            (float)buffer_width * col_part * hscale, 
+                            (float)buffer_height * row,
+                            (float)buffer_width * (col_part + 1) * hscale,
+                            (float)buffer_height * (row + 1),
+                        };
+                        SkSamplingOptions so { SkFilterMode::kLinear };
+                        canvas.drawImageRect(cells_image, dst, so);
                     }
                 }
             }
@@ -951,9 +980,9 @@ int main(int argc, char **argv)
         auto purist = std::make_shared<p::Platform>(enableOpenGL);
 
         //const int rows = 24, cols = 80;    // Tiny
-        const int rows = 30, cols = 100;    // Small
+        //const int rows = 30, cols = 100;    // Small
         //const int rows = 40, cols = 136;    // Middle
-        //const int rows = 48, cols = 160;    // Large
+        const int rows = 45, cols = 152;    // Large
         //const int rows = 60, cols = 200;    // Huge
 
 

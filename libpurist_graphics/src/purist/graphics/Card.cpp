@@ -153,7 +153,7 @@ int Card::initGL()
 	eglGetConfigs(glDisplay, NULL, 0, &count);
 	std::vector<EGLConfig> configs(count);
 	eglGetConfigs(glDisplay, configs.data(), configs.size(), &count);
-	assert(count == configs.size());
+	assert(count == (EGLint)configs.size());
 
 	EGLint num_config;
 	if (!eglChooseConfig(glDisplay, config_attribs, configs.data(), count, &num_config)) {

@@ -42,7 +42,8 @@ int Displays::updateHardwareConfiguration()
 	//auto resources = modeRes.resources;
 
 	/* iterate all connectors */
-	for (unsigned int i = 0; i < modeRes.getCountConnectors(); ++i) {
+	assert(modeRes.getCountConnectors() >= 0);
+	for (unsigned int i = 0; i < (unsigned int)modeRes.getCountConnectors(); ++i) {
 		/* get information for each connector */
 		try {
 			ModeConnector modeConnector(card, modeRes, i);

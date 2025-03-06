@@ -52,8 +52,8 @@ public:
 	}
 
     void drawIntoBuffer(std::shared_ptr<pg::Display> display, std::shared_ptr<pg::TargetSurface> target) override {
-		
-		int w = target->getWidth(), h = target->getHeight();
+		assert(target->getWidth() > 0 && target->getHeight() > 0);
+		unsigned int w = target->getWidth(), h = target->getHeight();
 
        	r = next_color(&r_up, r, 20);
         g = next_color(&g_up, g, 10);

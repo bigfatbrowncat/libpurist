@@ -1,9 +1,13 @@
 set -e
-cd skia-world
-source env.sh
-./build-linux.debug.sh
-./build-linux.release.sh
-cd ..
+echo "* Building libvterm..."
+(cd libvterm && make)
+
+echo "* Building skia..."
+(cd skia-world && \
+source env.sh && \
+./build-linux.debug.sh && \
+./build-linux.release.sh \
+)
 
 mkdir -p prefix/lib-debug
 mkdir -p prefix/lib-release

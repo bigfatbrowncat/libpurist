@@ -16,6 +16,7 @@
 
 #include <string>
 #include <iostream>
+#include <cassert>
 
 namespace purist::graphics::skia {
 
@@ -42,7 +43,8 @@ void SkiaEGLOverlay::updateBuffer(uint32_t w, uint32_t h) {
         sSurface = nullptr;
     }
 
-    if (sSurface == nullptr || sSurface->width() < w || sSurface->height() < h) {
+    assert(sSurface->width() > 0 && sSurface->height() > 0);
+    if (sSurface == nullptr || (uint32_t)sSurface->width() < w || (uint32_t)sSurface->height() < h) {
         std::cout << "Allocating EGL surface: " << w << "x" << h << std::endl;
         // auto interface = GrGLInterfaces::MakeEGL();
         // sContext = GrDirectContexts::MakeGL(interface);
@@ -60,10 +62,10 @@ void SkiaEGLOverlay::updateBuffer(uint32_t w, uint32_t h) {
         framebufferInfo.fFBOID = (GrGLuint) buffer;
 
         SkColorType colorType = kRGBA_8888_SkColorType;
-        int mw = w, mh = h;
+        uint32_t mw = w, mh = h;
         if (sSurface != nullptr) {
-            mw = sSurface->width() > w ? sSurface->width() : w;
-            mh = sSurface->height() > h ? sSurface->height() : h;
+            mw = (uint32_t)sSurface->width() > w ? sSurface->width() : w;
+            mh = (uint32_t)sSurface->height() > h ? sSurface->height() : h;
         }
 
         GrBackendRenderTarget backendRenderTarget = GrBackendRenderTargets::MakeGL(mw, mh,

@@ -256,7 +256,8 @@ int DisplayImpl::connectDisplayToNotOccupiedCrtc(const ModeResources& res, const
 	 * encoder+crtc is already used by another connector (actually unlikely
 	 * but lets be safe), iterate all other available encoders to find a
 	 * matching CRTC. */
-	for (unsigned int i = 0; i < conn.connector->count_encoders; ++i) {
+	assert(conn.connector->count_encoders >= 0);
+	for (unsigned int i = 0; i < (unsigned int)conn.connector->count_encoders; ++i) {
 		try {
 			enc = std::make_unique<ModeEncoder>(conn, i); //drmModeGetEncoder(card.fd, conn->encoders[i]);
 		} catch (const errcode_exception& ex) {
@@ -264,7 +265,8 @@ int DisplayImpl::connectDisplayToNotOccupiedCrtc(const ModeResources& res, const
 		}
 
 		/* iterate all global CRTCs */
-		for (unsigned int j = 0; j < res.getCountCrtcs(); ++j) {
+		assert(res.getCountCrtcs() >= 0);
+		for (unsigned int j = 0; j < (unsigned int)res.getCountCrtcs(); ++j) {
 			/* check whether this CRTC works with the encoder */
 			if (!(enc->isCrtcPossible(j))) {
 				continue;

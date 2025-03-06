@@ -16,7 +16,7 @@ std::pair<int, int> createSubprocessWithPty(uint16_t rows, uint16_t cols, const 
         setenv("TERM", TERM, 1);
         char ** argv = new char *[args.size() + 2];
         argv[0] = strdup(prog);
-        for (int i = 1; i <= args.size(); i++) {
+        for (size_t i = 1; i <= args.size(); i++) {
             argv[i] = strdup(args[i - 1].c_str());
         }
         argv[args.size() + 1] = NULL;

@@ -1,6 +1,6 @@
-#include "include/core/SkTypeface.h"
 #include <purist/graphics/skia/SkiaOverlay.h>
 
+#include <include/core/SkTypeface.h>
 #include <include/core/SkSurface.h>
 #include <include/core/SkData.h>
 #include <include/core/SkSpan.h>
@@ -23,6 +23,7 @@
 #include <string>
 #include <iostream>
 #include <list>
+#include <cassert>
 
 namespace purist::graphics::skia {
 
@@ -58,7 +59,8 @@ sk_sp<SkTypeface> SkiaOverlay::getTypefaceByName(const std::string& name) const 
 std::list<SkString> SkiaOverlay::getAllFontFamilyNames() const {
   // Listing the families
   std::list<SkString> familyNames;
-  for (size_t i = 0; i < fontMgr->countFamilies(); i++) {
+  assert(fontMgr->countFamilies() >= 0);
+  for (size_t i = 0; i < (size_t)fontMgr->countFamilies(); i++) {
     SkString name;
     fontMgr->getFamilyName(i, &name);
     familyNames.push_back(name);

@@ -103,7 +103,7 @@ public:
 		}
 	}
 
-	static float squareFunctionHarmonics(float x, int count) {
+	static float squareFunctionHarmonics(float x, uint32_t count) {
 		float y = 0;
 		for (uint32_t i = 0; i < count; i++) {
 			auto n = 2 * i - 1;

@@ -137,26 +137,28 @@ void Keyboards::updateHardwareConfiguration(std::shared_ptr<input::KeyboardHandl
     fs::path input_path = "/dev/input/by-id/";
     std::string suffix = "-event-kbd";
     std::string device_path;
-    for (const auto & entry : fs::directory_iterator(input_path)) {
-        device_path = entry.path();
-        if (device_path.find(std::string(suffix)) == device_path.length() - suffix.size()) {
-            // Looking for an existing keyboard
-            bool exists = false;
-            for (auto kbd : *this) {
-                if (kbd->getNode() == device_path) {
-                    exists = true;
-                    break;
+    if (fs::is_directory(input_path)) {
+        for (const auto & entry : fs::directory_iterator(input_path)) {
+            device_path = entry.path();
+            if (device_path.find(std::string(suffix)) == device_path.length() - suffix.size()) {
+                // Looking for an existing keyboard
+                bool exists = false;
+                for (auto kbd : *this) {
+                    if (kbd->getNode() == device_path) {
+                        exists = true;
+                        break;
+                    }
                 }
-            }
-            if (!exists) {
-                keyboard = std::make_unique<input::Keyboard>(device_path);
-                if (keyboard->initializeAndProbe(keymap, compose_table, keyboardHandler)) {
-                    std::cout << "Adding found keyboard: " << device_path << std::endl;
-                    this->push_back(keyboard);
-                    //break;  // Success
+                if (!exists) {
+                    keyboard = std::make_unique<input::Keyboard>(device_path);
+                    if (keyboard->initializeAndProbe(keymap, compose_table, keyboardHandler)) {
+                        std::cout << "Adding found keyboard: " << device_path << std::endl;
+                        this->push_back(keyboard);
+                        //break;  // Success
+                    }
                 }
+                //keyboard = nullptr;
             }
-            //keyboard = nullptr;
         }
     }
 }

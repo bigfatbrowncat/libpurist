@@ -19,4 +19,4 @@ To run the `libpurist` examples the user has to be in two groups: `input` and `v
 
 These packages have to be installed for the building to succeed
 
-    $ sudo apt install libtool-bin libfreetype-dev libfontconfig-dev libegl-dev libgles-dev libjpeg-dev libwebp-dev libxkbcommon-dev libgbm-dev libdrm-dev libevdev-dev
+    $ sudo apt install --no-install-recommends libtool-bin libfreetype-dev libfontconfig-dev libegl-dev libgles-dev libjpeg-dev libwebp-dev libxkbcommon-dev libgbm-dev libdrm-dev libevdev-dev

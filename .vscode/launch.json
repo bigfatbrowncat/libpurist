@@ -33,6 +33,34 @@
             ]
         },
         {
+            "name": "text_input_skia",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build-Debug/examples/text_input_skia/text_input_skia",
+            "args": [],
+            "stopAtEntry": true,
+            "cwd": "${workspaceFolder}",
+            "environment": [ 
+                { 
+                    "name": "ASAN_OPTIONS",
+                    "value": "halt_on_error=1:abort_on_error=1"
+                },
+                { 
+                    "name": "LSAN_OPTIONS",
+                    "value": "suppressions=${workspaceFolder}/lsan-suppressions.supp"
+                }
+
+            ],
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
             "name": "term_skia",
             "type": "cppdbg",
             "request": "launch",

@@ -63,7 +63,7 @@ void Platform::run(std::shared_ptr<graphics::DisplayContentsHandler> contentsFac
 
     auto card = probeCard(contentsFactory, enableOpenGL);
 
-    uint32_t counter = 0;
+    uint32_t keyboards_poll_counter = 0;
     uint32_t polls_between_updates = 100;
     while (!stopPending) {
         // Rebuilding the list of fds
@@ -76,16 +76,16 @@ void Platform::run(std::shared_ptr<graphics::DisplayContentsHandler> contentsFac
             .revents = 0
         });
 
-        int ret = poll(fds.data(), fds.size(), -1);
+        int ret = poll(fds.data(), fds.size(), 100);
         if (ret < 0) {
             if (errno == EINTR)
                 continue;
             throw errcode_exception(-errno, "Couldn't poll for events");
         }
 
-		if (counter % polls_between_updates == 0) {
+		if (keyboards_poll_counter % polls_between_updates == 0) {
 			keyboards->updateHardwareConfiguration(keyboardHandler);
-            counter = 0;
+            keyboards_poll_counter = 0;
         }
 
         // Processing the keyboards
@@ -97,7 +97,7 @@ void Platform::run(std::shared_ptr<graphics::DisplayContentsHandler> contentsFac
         // Processing the videocard
         card->processFd(fds_iter);
 
-        counter++;
+        keyboards_poll_counter++;
     }
 
 

@@ -75,6 +75,7 @@ int Displays::updateHardwareConfiguration()
 						i, modeRes.getConnectorId(i), errno);	//  resources->connectors[i]
 				}
 				
+				// If it is ENOENT
 				display = nullptr;
 				continue;
 			}

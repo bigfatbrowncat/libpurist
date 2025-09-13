@@ -1,4 +1,5 @@
 .cache
+.idea
 compile_commands.json
 /build-*
 /third-party/prefix

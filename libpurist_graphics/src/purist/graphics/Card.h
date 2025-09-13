@@ -31,7 +31,7 @@ private:
 
     gbm_device *gbmDevice = nullptr;
     std::shared_ptr<Displays> displays;
-    int counter = 0;
+    int card_poll_counter = 0;
 
     int initGBM(int fd, uint32_t width, uint32_t height);
     int initGL();

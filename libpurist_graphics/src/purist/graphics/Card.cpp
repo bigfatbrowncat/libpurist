@@ -37,6 +37,7 @@
 #include <xf86drm.h>
 
 #include <vector>
+#include <iostream>
 
 namespace purist::graphics {
 
@@ -275,15 +276,19 @@ void Card::processFd(std::vector<pollfd>::iterator fds_iter)
     if (fds_iter->revents != 0) {
         drmHandleEvent(fd, &ev);
 
-		if (counter % redraws_between_updates == 0) {
-			int ret = displays->updateHardwareConfiguration();
-			if (ret) {
-				throw errcode_exception(ret, "Displays::updateHardwareConfiguration() failed");
-			}
-			displays->addNewlyConnectedToDrawingLoop();
-		}
-		counter ++;
     }
+
+	if (card_poll_counter % redraws_between_updates == 0) {
+		int ret = displays->updateHardwareConfiguration();
+		if (ret) {
+			throw errcode_exception(ret, "Displays::updateHardwareConfiguration() failed");
+		}
+		displays->addNewlyConnectedToDrawingLoop();
+		std::cout << "card update !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
+	}
+
+	std::cout << "card poll counter: " << card_poll_counter << std::endl;
+	card_poll_counter ++;
 }
 
 // void Card::runDrawingLoop()

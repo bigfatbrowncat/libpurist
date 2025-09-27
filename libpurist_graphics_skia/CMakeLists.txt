@@ -38,6 +38,7 @@ target_link_libraries(purist_graphics_skia PUBLIC
     GLX
     fontconfig
     z
+    pthread
 )
 
 # Installing the library

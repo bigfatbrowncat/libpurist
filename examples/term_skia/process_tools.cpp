@@ -4,6 +4,7 @@
 #include <sys/wait.h>
 #include <stdexcept>
 #include <cstring.h>
+#include <unistd.h>
 
 std::pair<int, int> createSubprocessWithPty(uint16_t rows, uint16_t cols, const char* prog, const std::vector<std::string>& args, const char* TERM)
 {

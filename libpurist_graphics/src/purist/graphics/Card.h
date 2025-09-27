@@ -38,9 +38,9 @@ private:
 
 
 public:
-    EGLDisplay glDisplay;
+    EGLDisplay glDisplay = EGL_NO_DISPLAY;
     EGLConfig glConfig;
-    EGLContext glContext;
+    EGLContext glContext = EGL_NO_CONTEXT;
     
     const int fd;
     const bool enableOpenGL = true;

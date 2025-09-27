@@ -114,7 +114,7 @@ public:
         buf = new T[cols * rows];
     }
     ~Matrix() {
-        delete buf;
+        delete[] buf;
     }
     void fill(const T& by) {
         for (int row = 0; row < rows; row++) {
@@ -461,11 +461,25 @@ public:
         font_descent = mets.fDescent + font_descent_patch;              // Patching the descent for the specific font (here is for Hack)
 
         // Don't allow screens bigger than UHD
-        for (auto m = modes.begin(); m != modes.end(); m++) {
-             if ((*m)->getWidth() < 4000 && 
-                 (*m)->getHeight() < 4000) return m;
-        }
-        return modes.begin();
+        // for (auto m = modes.begin(); m != modes.end(); m++) {
+        //      if ((*m)->getWidth() < 4000 &&  
+        //          (*m)->getHeight() < 4000) {
+        //             return m;
+        //          }
+        // }
+        // return modes.begin();
+
+        std::list<std::shared_ptr<pg::Mode>>::const_iterator res = modes.begin();
+
+		for(auto mode = modes.begin(); mode != modes.end(); mode++) {
+			if ((*mode)->getFreq() == 30 && 
+                (*mode)->getWidth() > (*res)->getWidth() &&
+                (*mode)->getWidth() < 4000) {
+				res = mode;
+			}
+		}
+
+        return res;
     }
 
     pgs::DisplayOrientation chooseOrientation(std::shared_ptr<pg::Display> display, std::shared_ptr<pgs::SkiaOverlay> skiaOverlay) override {
@@ -656,8 +670,9 @@ public:
         std::pair<pid_t, int> rst;
         rst = waitpid(this->pid, WNOHANG);
         if (rst.first == pid) {
+            platform.lock()->stop();
             //BREAKING!!!
-            throw std::runtime_error("rst.first == pid");
+            //throw std::runtime_error("rst.first == pid");
         }
 
         const SkScalar gray_hsv[] { 0.0f, 0.0f, 0.7f };
@@ -982,8 +997,10 @@ int main(int argc, char **argv)
         //const int rows = 24, cols = 80;    // Tiny
         //const int rows = 30, cols = 100;    // Small
         //const int rows = 40, cols = 136;    // Middle
-        const int rows = 45, cols = 152;    // Large
+        //const int rows = 45, cols = 152;    // Large
         //const int rows = 60, cols = 200;    // Huge
+        
+        const int rows = 48, cols = 136;    // Middle 3x2
 
 
         auto contents = std::make_shared<TermDisplayContents>(purist, rows, cols);

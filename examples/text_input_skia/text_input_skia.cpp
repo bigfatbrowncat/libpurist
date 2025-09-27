@@ -73,14 +73,21 @@ public:
 	bool top = true;
     std::list<std::shared_ptr<pg::Mode>>::const_iterator chooseMode(std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, const std::list<std::shared_ptr<pg::Mode>>& modes) override {
 		
-		i = (i + 1) % 5;
+		//i = (i + 1) % 5;
 
-		if (i == 0) top = !top;
+		//if (i == 0) top = !top;
+		
+		// Looking for the highest resolution at 30 fps
+		
+		std::list<std::shared_ptr<pg::Mode>>::const_iterator res = modes.begin();
 
-		auto res = modes.begin();
-		if (top) {
-			auto res = modes.end();  //.begin();
-			res--;
+		int index = 0;
+		for(auto mode = modes.begin(); mode != modes.end(); mode++) {
+			//std::cout << "Mode " << index << ": " << (*mode)->getWidth() << "x" << (*mode)->getHeight() << "@" << (*mode)->getFreq() << std::endl;
+			index++;
+			if ((*mode)->getFreq() == 30 && (*mode)->getWidth() > (*res)->getWidth()) {
+				res = mode;
+			}
 		}
 
 		if (skiaOverlay->getFontMgr() == nullptr) {

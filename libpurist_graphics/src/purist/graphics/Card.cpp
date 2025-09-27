@@ -167,7 +167,7 @@ int Card::initGL()
 	glConfig = configs[config_index];
 
 	glContext = eglCreateContext(glDisplay, glConfig, EGL_NO_CONTEXT, context_attribs);
-	if (glContext == NULL) {
+	if (glContext == EGL_NO_CONTEXT) {
 		printf("failed to create context\n");
 		return -1;
 	}
@@ -191,6 +191,30 @@ int Card::initGL()
  */
 Card::~Card() {
 	displays = nullptr;
+
+	if (eglGetCurrentContext() == glContext) {
+		// This will ensure that the context is immediately deleted.
+		eglMakeCurrent(glDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+	}
+
+	if (EGL_NO_CONTEXT != glContext) {
+		auto res = eglDestroyContext(glDisplay, glContext);
+		if (res != GL_TRUE) {
+			std::cout << "eglDestroyContext() returns " << res << std::endl;
+		}
+		glContext = EGL_NO_CONTEXT;
+	}
+
+	if (EGL_NO_DISPLAY != glDisplay) {
+		auto res = eglTerminate(glDisplay);
+		if (res != GL_TRUE) {
+			std::cout << "eglTerminate() returns " << res << std::endl;
+		}
+		glDisplay = EGL_NO_DISPLAY;
+	}
+
+	gbm_device_destroy(gbmDevice);
+	std::cout << "gbm_device_destroy() done" << std::endl;
 
     // Closing the video card file
 	close(fd);
@@ -284,10 +308,8 @@ void Card::processFd(std::vector<pollfd>::iterator fds_iter)
 			throw errcode_exception(ret, "Displays::updateHardwareConfiguration() failed");
 		}
 		displays->addNewlyConnectedToDrawingLoop();
-		std::cout << "card update !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
 	}
 
-	std::cout << "card poll counter: " << card_poll_counter << std::endl;
 	card_poll_counter ++;
 }
 

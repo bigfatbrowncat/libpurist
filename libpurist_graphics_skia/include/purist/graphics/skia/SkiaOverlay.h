@@ -1,7 +1,7 @@
 #pragma once
 
-#define SK_GANESH
-#define SK_GL
+//#define SK_GANESH
+//#define SK_GL
 
 #include <Resource.h>
 

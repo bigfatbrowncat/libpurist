@@ -6,23 +6,33 @@
     "configurations": [
         {
             "name": "blinking_screen",
-            "type": "cppdbg",
+            "type": "lldb",
             "request": "launch",
             "program": "${command:cmake.buildDirectory}/examples/blinking_screen/blinking_screen",
             "args": [],
-            "stopAtEntry": true,
             "cwd": "${workspaceFolder}",
-            "environment": [ 
-                { 
-                    "name": "ASAN_OPTIONS",
-                    "value": "halt_on_error=1:abort_on_error=1"
-                },
-                { 
-                    "name": "LSAN_OPTIONS",
-                    "value": "suppressions=${workspaceFolder}/lsan-suppressions.supp"
-                }
+            "env": {
+                "GBM_BACKEND": "dri",
+                "GBM_BACKENDS_PATH": "/usr/lib/aarch64-linux-gnu/gbm",
+                "__EGL_VENDOR_LIBRARY_FILENAMES": "/usr/share/glvnd/egl_vendor.d/50_mesa.json",
+                "LD_LIBRARY_PATH": "/usr/lib/aarch64-linux-gnu"
+            },
+            // "environment": [ 
+            //     { 
+            //         "name": "ASAN_OPTIONS",
+            //         "value": "halt_on_error=1:abort_on_error=1"
+            //     },
+            //     { 
+            //         "name": "LSAN_OPTIONS",
+            //         "value": "suppressions=${workspaceFolder}/lsan-suppressions.supp"
+            //     },
+            //     {
+            //         "name": "GBM_BACKEND",
+            //         "value": "dri"
+            //     }
 
-            ],
+            // ],
+            "miDebuggerPath": "/usr/bin/lldb",
             "MIMode": "gdb",
             "setupCommands": [
                 {
@@ -34,31 +44,19 @@
         },
         {
             "name": "text_input_skia",
-            "type": "cppdbg",
+            "type": "lldb",
             "request": "launch",
             "program": "${command:cmake.buildDirectory}/examples/text_input_skia/text_input_skia",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
-            "environment": [ 
-                { 
-                    "name": "ASAN_OPTIONS",
-                    "value": "halt_on_error=1:abort_on_error=1"
-                },
-                { 
-                    "name": "LSAN_OPTIONS",
-                    "value": "suppressions=${workspaceFolder}/lsan-suppressions.supp"
-                }
+            "env": {
+                "GBM_BACKEND": "dri",
+                "GBM_BACKENDS_PATH": "/usr/lib/aarch64-linux-gnu/gbm",
+                "__EGL_VENDOR_LIBRARY_FILENAMES": "/usr/share/glvnd/egl_vendor.d/50_mesa.json",
+                "LD_LIBRARY_PATH": "/usr/lib/aarch64-linux-gnu"
+            },
 
-            ],
-            "MIMode": "gdb",
-            "setupCommands": [
-                {
-                    "description": "Enable pretty-printing for gdb",
-                    "text": "-enable-pretty-printing",
-                    "ignoreFailures": true
-                }
-            ]
         },
         {
             "name": "term_skia",

@@ -1,0 +1,13 @@
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+index 4a02dbe..16abbf1 100644
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -188,7 +188,7 @@ target_include_directories(checkShared
+ )
+ 
+ if(NOT THIS_IS_SUBPROJECT)
+-  install(TARGETS check checkShared
++  install(TARGETS check #checkShared
+     EXPORT check-targets
+     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}

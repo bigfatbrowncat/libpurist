@@ -1,3 +1,4 @@
+set -e
 mkdir -p ${OUT}
 
 cd skia
@@ -17,12 +18,11 @@ sort -u ../${OUT}/lib_targets.txt > ../${OUT}/lib_targets_nodupes.txt
 
 ninja -C ../${OUT} $(cat ../${OUT}/lib_targets_nodupes.txt)
 
-
-#for lib_target in $(cat ../out/Static/lib_targets_nodupes.txt)
-#do
-#  echo "Building the library ${lib_target}"
-#  ninja -C ../out/Static ${lib_target}
-#done
+# for lib_target in $(cat ../${OUT}/lib_targets_nodupes.txt)
+# do
+#   echo "****** Building the library ${lib_target} ******"
+#   ninja -C ../${OUT}
+# done
 
 #ninja -C ../out/Static -j 1     # Linking the remaining (executables) with only 1 core to avoid OOM
 

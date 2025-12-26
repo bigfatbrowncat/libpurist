@@ -7,3 +7,27 @@
 [submodule "third-party/libvterm"]
 	path = third-party/libvterm
 	url = https://github.com/neovim/libvterm.git
+[submodule "third-party/libxkbcommon"]
+	path = third-party/libxkbcommon
+	url = https://github.com/xkbcommon/libxkbcommon.git
+[submodule "third-party/drm"]
+	path = third-party/drm
+	url = https://gitlab.freedesktop.org/mesa/drm
+[submodule "third-party/mesa"]
+	path = third-party/mesa
+	url = https://gitlab.freedesktop.org/mesa/mesa.git
+[submodule "third-party/check"]
+	path = third-party/check
+	url = https://github.com/libcheck/check.git
+[submodule "third-party/libevdev"]
+	path = third-party/libevdev
+	url = https://gitlab.freedesktop.org/libevdev/libevdev.git
+[submodule "third-party/libglvnd"]
+	path = third-party/libglvnd
+	url = https://github.com/NVIDIA/libglvnd.git
+[submodule "third-party/libdrm"]
+	path = third-party/libdrm
+	url = https://gitlab.freedesktop.org/mesa/libdrm.git
+[submodule "third-party/libexecinfo"]
+	path = third-party/libexecinfo
+	url = https://github.com/fam007e/libexecinfo.git

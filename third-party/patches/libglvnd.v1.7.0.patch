@@ -1,0 +1,217 @@
+diff --git a/meson.build b/meson.build
+index 236c188..0153b5f 100644
+--- a/meson.build
++++ b/meson.build
+@@ -252,7 +252,7 @@ pkg = import('pkgconfig')
+ 
+ subdir('include')
+ subdir('src')
+-subdir('tests')
++#subdir('tests')
+ 
+ pkg.generate(
+   name : 'libglvnd',
+diff --git a/src/EGL/libegl.c b/src/EGL/libegl.c
+index 61a526d..866ab8c 100644
+--- a/src/EGL/libegl.c
++++ b/src/EGL/libegl.c
+@@ -1351,8 +1351,9 @@ void _init(void)
+     }
+ 
+     /* Initialize GLdispatch; this will also initialize our pthreads imports */
+-    __glDispatchInit();
++//    __glDispatchInit();
+     glvndSetupPthreads();
++    __glDispatchInit();
+ 
+     // Set up the mapping code, and populate the getprocaddress hashtable.
+     __eglMappingInit();
+diff --git a/src/EGL/meson.build b/src/EGL/meson.build
+index c90f0ca..ffcc128 100644
+--- a/src/EGL/meson.build
++++ b/src/EGL/meson.build
+@@ -44,7 +44,7 @@ else
+     join_paths(get_option('prefix'),get_option('datadir')))
+ endif
+ 
+-libEGL = shared_library(
++libEGL = static_library(
+   'EGL',
+   [
+     'libegl.c',
+@@ -63,7 +63,6 @@ libEGL = shared_library(
+     dep_threads, dep_dl, dep_m, dep_x11_headers, idep_trace, idep_glvnd_pthread,
+     idep_utils_misc, idep_cjson, idep_winsys_dispatch, idep_gldispatch,
+   ],
+-  version : '1.1.0',
+   install : true,
+   gnu_symbol_visibility : 'hidden',
+ )
+diff --git a/src/GL/meson.build b/src/GL/meson.build
+index 41a2a79..753b48d 100644
+--- a/src/GL/meson.build
++++ b/src/GL/meson.build
+@@ -22,7 +22,7 @@
+ # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ # MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
+ 
+-libGL = shared_library(
++libGL = static_library(
+   'GL',
+   ['libgl.c', g_libglglxwrapper_c],
+   include_directories : [inc_include],
+@@ -30,7 +30,6 @@ libGL = shared_library(
+   dependencies : [
+     dep_dl, idep_gldispatch, idep_glapi_gl, dep_glx, idep_utils_misc, dep_x11_headers
+   ],
+-  version : '1.7.0',
+   gnu_symbol_visibility : 'hidden',
+   install : true,
+ )
+diff --git a/src/GLESv1/meson.build b/src/GLESv1/meson.build
+index 7b5e868..5d7cf66 100644
+--- a/src/GLESv1/meson.build
++++ b/src/GLESv1/meson.build
+@@ -21,13 +21,12 @@
+ # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ # MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
+ 
+-libGLESv1 = shared_library(
++libGLESv1 = static_library(
+   'GLESv1_CM',
+   link_whole : libopengl_main,
+   dependencies : [
+     idep_gldispatch, idep_utils_misc, idep_glapi_glesv1,
+   ],
+-  version : '1.2.0',
+   gnu_symbol_visibility : 'hidden',
+   install : true,
+ )
+diff --git a/src/GLESv2/meson.build b/src/GLESv2/meson.build
+index 634db0d..7733d7e 100644
+--- a/src/GLESv2/meson.build
++++ b/src/GLESv2/meson.build
+@@ -22,13 +22,12 @@
+ # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ # MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
+ 
+-libGLESv2 = shared_library(
++libGLESv2 = static_library(
+   'GLESv2',
+   link_whole : libopengl_main,
+   dependencies : [
+     idep_gldispatch, idep_utils_misc, idep_glapi_glesv2,
+   ],
+-  version : '2.1.0',
+   gnu_symbol_visibility : 'hidden',
+   install : true,
+ )
+diff --git a/src/GLX/meson.build b/src/GLX/meson.build
+index d0e93bb..dbd1e0f 100644
+--- a/src/GLX/meson.build
++++ b/src/GLX/meson.build
+@@ -29,7 +29,7 @@ g_glx_dispatch_stub_list_h = custom_target(
+   capture : true,
+ )
+ 
+-libGLX = shared_library(
++libGLX = static_library(
+   'GLX',
+   [
+     'libglx.c',
+@@ -48,7 +48,6 @@ libGLX = shared_library(
+   ],
+   gnu_symbol_visibility : 'hidden',
+   install : true,
+-  version : '0.0.0',
+ )
+ 
+ inc_glx = include_directories('.')
+diff --git a/src/GLdispatch/meson.build b/src/GLdispatch/meson.build
+index 4f46615..b64bd80 100644
+--- a/src/GLdispatch/meson.build
++++ b/src/GLdispatch/meson.build
+@@ -30,7 +30,7 @@ else
+ endif
+ _ver_script = join_paths(meson.current_source_dir(), _ver_script)
+ 
+-libgldispatch = shared_library(
++libgldispatch = static_library(
+   'GLdispatch',
+   ['GLdispatch.c'],
+   include_directories : [include_directories('vnd-glapi'), inc_include],
+@@ -42,7 +42,6 @@ libgldispatch = shared_library(
+   gnu_symbol_visibility : 'hidden',
+   link_depends : [_ver_script],
+   install : true,
+-  version : '0.0.0',
+ )
+ 
+ inc_dispatch = include_directories('.')
+diff --git a/src/HGL/meson.build b/src/HGL/meson.build
+index 601fab7..197cc20 100644
+--- a/src/HGL/meson.build
++++ b/src/HGL/meson.build
+@@ -24,7 +24,7 @@
+ 
+ dep_be = cc.find_library('be')
+ 
+-libGL = shared_library(
++libGL = static_library(
+   'GL',
+   [
+     'libgl.c',
+diff --git a/src/OpenGL/meson.build b/src/OpenGL/meson.build
+index 6a083dd..a7138c8 100644
+--- a/src/OpenGL/meson.build
++++ b/src/OpenGL/meson.build
+@@ -28,13 +28,12 @@ libopengl_main = static_library(
+   gnu_symbol_visibility : 'hidden',
+ )
+ 
+-libOpenGL = shared_library(
++libOpenGL = static_library(
+   'OpenGL',
+   link_whole : libopengl_main,
+   dependencies : [idep_gldispatch, idep_glapi_opengl, idep_utils_misc],
+   gnu_symbol_visibility : 'hidden',
+   install : true,
+-  version : '0.0.0',
+ )
+ 
+ pkg.generate(
+diff --git a/tests/dummy/meson.build b/tests/dummy/meson.build
+index 5a4f20a..25c45f2 100644
+--- a/tests/dummy/meson.build
++++ b/tests/dummy/meson.build
+@@ -30,13 +30,12 @@ libpatchentrypoints = static_library(
+ prog_cp = find_program('cp')
+ 
+ if with_glx
+-  libGLX_dummy = shared_library(
++  libGLX_dummy = static_library(
+     'GLX_dummy',
+     ['GLX_dummy.c'],
+     include_directories : [inc_dispatch, inc_glx, inc_include],
+     link_with: [libpatchentrypoints],
+     dependencies : [idep_trace, idep_utils_misc, dep_x11],
+-    version : '0',
+   )
+ endif
+ 
+@@ -44,14 +43,13 @@ libEGL_dummy = []
+ 
+ if get_option('egl')
+   foreach v : ['0', '1']
+-    libEGL_dummy += shared_library(
++    libEGL_dummy += static_library(
+       'EGL_dummy' + v,
+       ['EGL_dummy.c'],
+       c_args : ['-DDUMMY_VENDOR_NAME="dummy@0@"'.format(v)],
+       include_directories : [inc_include],
+       link_with: [libpatchentrypoints],
+       dependencies : [idep_glvnd_pthread],
+-      version : '0',
+     )
+   endforeach
+ endif

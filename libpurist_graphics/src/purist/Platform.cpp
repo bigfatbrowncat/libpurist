@@ -38,7 +38,7 @@ static std::unique_ptr<graphics::Card> probeCard(std::shared_ptr<graphics::Displ
                 if (ex.errcode == EOPNOTSUPP) {
                     std::cout << "DRM not supported at " << card_path << std::endl;
                 } else {
-                    std::cout << "DRM can not be initialized at " << card_path << ": " << strerror(errno) << std::endl;
+                    std::cout << "DRM can not be initialized at " << card_path << ": " << ex.what() << std::endl;
                 }
                 card = nullptr;
                 continue;

@@ -1,0 +1,62 @@
+diff --git a/meson.build b/meson.build
+index 2d9200529ca..d29fa7fd11c 100644
+--- a/meson.build
++++ b/meson.build
+@@ -1454,11 +1454,11 @@ endif
+ 
+ with_c11_threads = false
+ if cc.has_function('thrd_create', prefix: '#include <threads.h>')
+-  if with_platform_android
+-    # Current only Android's c11 <threads.h> are verified
++  #if with_platform_android
++  #  # Current only Android's c11 <threads.h> are verified
+     pre_args += '-DHAVE_THRD_CREATE'
+     with_c11_threads = true
+-  endif
++  #endif
+ endif
+ 
+ if cc.has_header_symbol('errno.h', 'program_invocation_name',
+diff --git a/src/gbm/meson.build b/src/gbm/meson.build
+index 97e8d5fa044..e1ae56c343b 100644
+--- a/src/gbm/meson.build
++++ b/src/gbm/meson.build
+@@ -21,7 +21,7 @@ if with_platform_android and get_option('platform-sdk-version') >= 30
+   libgbm_name = 'gbm_mesa'
+ endif
+ 
+-libgbm = shared_library(
++libgbm = static_library(
+   libgbm_name,
+   files_gbm,
+   include_directories : incs_gbm,
+@@ -30,7 +30,7 @@ libgbm = shared_library(
+   link_with : [libloader],
+   dependencies : [dep_libdrm, idep_xmlconfig],
+   gnu_symbol_visibility : 'hidden',
+-  version : '1.0.0',
++#  version : '1.0.0',
+   install : true,
+ )
+ 
+diff --git a/src/util/cnd_monotonic.c b/src/util/cnd_monotonic.c
+index 71d9ac0d247..4fbab736602 100644
+--- a/src/util/cnd_monotonic.c
++++ b/src/util/cnd_monotonic.c
+@@ -132,7 +132,7 @@ u_cnd_monotonic_timedwait(struct u_cnd_monotonic *cond, mtx_t *mtx,
+    timespec_sub_saturate(&rel_time, abs_time, &now_time);
+    int rt = pthread_cond_timedwait_relative_np(&cond->cond, mtx, &rel_time);
+ #else
+-   int rt = pthread_cond_timedwait(&cond->cond, mtx, abs_time);
++   int rt = pthread_cond_timedwait(&cond->cond, (pthread_mutex_t*)mtx, abs_time);
+ #endif
+    if (rt == ETIMEDOUT)
+       return thrd_timedout;
+@@ -151,6 +151,6 @@ u_cnd_monotonic_wait(struct u_cnd_monotonic *cond, mtx_t *mtx)
+                             (PCRITICAL_SECTION)mtx, INFINITE);
+    return thrd_success;
+ #else
+-   return (pthread_cond_wait(&cond->cond, mtx) == 0) ? thrd_success : thrd_error;
++   return (pthread_cond_wait(&cond->cond, (pthread_mutex_t*)mtx) == 0) ? thrd_success : thrd_error;
+ #endif
+ }

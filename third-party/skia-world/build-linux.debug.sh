@@ -1,4 +1,3 @@
 export OUT=out/static-debug
-export ARGS='is_official_build=false skia_use_egl=true skia_use_x11=false skia_use_fontconfig=true skia_use_harfbuzz=true skia_use_system_harfbuzz=false skia_use_icu=true skia_use_system_icu=false' # extra_cflags_cc=["-fsanitize=address,undefined"]'
-
+export ARGS='is_official_build=false skia_use_system_expat=false skia_use_system_libwebp=false skia_use_libwebp_decode=true skia_use_libwebp_encode=true skia_use_system_libpng=false skia_use_system_libjpeg_turbo=false skia_use_zlib=true skia_use_system_zlib=false skia_use_freetype=true skia_use_system_freetype2=false skia_use_egl=true skia_use_x11=false skia_use_fontconfig=false skia_use_harfbuzz=true skia_use_system_harfbuzz=false skia_use_icu=true skia_use_system_icu=false extra_cflags=['\"'-I/home/il/projects/libpurist/third-party/prefix/include'\"']' # extra_cflags_cc=["-fsanitize=address,undefined"]'
 ./build-linux.sh

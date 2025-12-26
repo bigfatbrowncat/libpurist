@@ -1,0 +1,18 @@
+diff --git a/meson.build b/meson.build
+index 2efcc2a..c1bec44 100644
+--- a/meson.build
++++ b/meson.build
+@@ -70,11 +70,11 @@ src_libevdev = [event_names_h] + files(
+ 
+ mapfile = dir_src / 'libevdev.sym'
+ version_flag = '-Wl,--version-script,@0@'.format(mapfile)
+-lib_libevdev = library('evdev',
++lib_libevdev = static_library('evdev',
+ 	src_libevdev,
+ 	include_directories: [includes_include],
+ 	dependencies: [dep_rt],
+-	version: libevdev_so_version,
++#	version: libevdev_so_version,
+ 	link_args: version_flag,
+ 	link_depends: mapfile,
+ 	install: true

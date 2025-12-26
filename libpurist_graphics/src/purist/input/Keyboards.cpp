@@ -27,7 +27,7 @@ Keyboards::~Keyboards() {
 }
 
 void Keyboards::initialize() {
-    bool no_default = false;
+    bool no_default = true;
 
     if (no_default) {
         ctx = xkb_context_new(XKB_CONTEXT_NO_DEFAULT_INCLUDES);
@@ -43,9 +43,11 @@ void Keyboards::initialize() {
             xkb_context_set_log_verbosity(ctx, 10);
         }
 
-        #define DEFAULT_INCLUDE_PATH_PLACEHOLDER "__defaults__"
-        if (num_includes == 0)
+        #define DEFAULT_INCLUDE_PATH_PLACEHOLDER "/usr/share/X11/xkb/"
+        if (num_includes == 0) {
             includes[num_includes++] = DEFAULT_INCLUDE_PATH_PLACEHOLDER;
+            includes[num_includes++] = "/usr/share/X11/locale/";
+        }
 
         for (size_t i = 0; i < num_includes; i++) {
             const char *include = includes[i];
@@ -123,8 +125,13 @@ void Keyboards::initialize() {
     if (with_compose) {
         char* locale = setlocale(LC_CTYPE, NULL);
         compose_table =
-            xkb_compose_table_new_from_locale(ctx, locale,
-                                              XKB_COMPOSE_COMPILE_NO_FLAGS);
+//            xkb_compose_table_new_from_locale(ctx, locale,
+//                                              XKB_COMPOSE_COMPILE_NO_FLAGS);
+
+        compose_table =
+            xkb_compose_table_new_from_file(ctx, fopen("/usr/share/X11/locale/en_US.UTF-8/Compose", "r"), "en_US.UTF-8",
+                XKB_COMPOSE_FORMAT_TEXT_V1, XKB_COMPOSE_COMPILE_NO_FLAGS); 
+
         if (!compose_table) {
             throw std::runtime_error("Couldn't create compose from locale");
         }

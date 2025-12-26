@@ -108,6 +108,62 @@ static int match_config_to_visual(EGLDisplay egl_display, EGLint visual_id,
   return -1;
 }
 
+static void EGLAPIENTRY DebugMessageCallback(EGLenum error,
+                                         const char *command,
+                                         EGLint messageType,
+                                         EGLLabelKHR threadLabel,
+                                         EGLLabelKHR objectLabel,
+                                         const char *message)
+{
+	if (messageType == EGL_DEBUG_MSG_CRITICAL_KHR || 
+		messageType == EGL_DEBUG_MSG_ERROR_KHR) {
+
+		std::cout << "EGL Debug Message:" << std::endl;
+		std::cout << "  command: " << std::hex << command << std::endl;
+		std::cout << "  messageType: " << std::hex << messageType << std::endl;
+		std::cout << "  threadLabel: " << std::hex << threadLabel << std::endl;
+		std::cout << "  objectLabel: " << std::hex << objectLabel << std::endl;
+		std::cout << "  Message: " << message << std::endl;
+	}
+}
+
+// Function to set up the EGL KHR debug extension
+void SetupEGLDebug(EGLDisplay display)
+{
+    // 1. Get the function pointer for eglDebugMessageControlKHR
+    PFNEGLDEBUGMESSAGECONTROLKHRPROC eglDebugMessageControlKHR =
+        (PFNEGLDEBUGMESSAGECONTROLKHRPROC)eglGetProcAddress("eglDebugMessageControlKHR");
+
+    if (!eglDebugMessageControlKHR) {
+        std::cerr << "EGL_KHR_debug extension not available or function pointer not found." << std::endl;
+        return;
+    }
+
+    // 2. Define the attributes for message control
+    // Here we enable all message types (EGL_DEBUG_MSG_CRITICAL_KHR, EGL_DEBUG_MSG_ERROR_KHR,
+    // EGL_DEBUG_MSG_WARNING_KHR, EGL_DEBUG_MSG_INFO_KHR).
+    // An empty attribute list (EGL_NONE) enables all messages if the filter is set to true.
+    EGLAttrib attributes[] = {
+        EGL_DEBUG_MSG_CRITICAL_KHR, EGL_TRUE,
+        EGL_DEBUG_MSG_ERROR_KHR,    EGL_FALSE,
+        EGL_DEBUG_MSG_WARN_KHR,     EGL_FALSE,
+        EGL_DEBUG_MSG_INFO_KHR,     EGL_FALSE,
+        EGL_NONE
+    };
+
+    // 3. Register the callback function and set the message control attributes
+    EGLint result = eglDebugMessageControlKHR(
+        (EGLDEBUGPROCKHR)&DebugMessageCallback,
+        attributes // Pass the filter attributes
+    );
+
+    if (result != EGL_SUCCESS) {
+        std::cerr << "Failed to set EGL debug message control: " << std::hex << eglGetError() << std::endl;
+    } else {
+        std::cout << "EGL debug callback successfully set." << std::endl;
+    }
+}
+
 int Card::initGL()
 {
 	EGLint config_attribs[] = {
@@ -127,15 +183,29 @@ int Card::initGL()
 
 	EGLint major, minor;
 
+	SetupEGLDebug(nullptr);
+
+	if (!eglBindAPI(EGL_OPENGL_ES_API)) {
+		printf("failed to bind api EGL_OPENGL_ES_API\n");
+		return -1;
+	}
+
+
 	PFNEGLGETPLATFORMDISPLAYEXTPROC eglGetPlatformDisplayEXT = NULL;
 	eglGetPlatformDisplayEXT =
 		(PFNEGLGETPLATFORMDISPLAYEXTPROC) eglGetProcAddress("eglGetPlatformDisplayEXT");
 	assert(eglGetPlatformDisplayEXT != NULL);
 
 	glDisplay = eglGetPlatformDisplayEXT(EGL_PLATFORM_GBM_KHR, gbmDevice, NULL);
+	if (glDisplay == EGL_NO_DISPLAY) {
+		printf("eglGetPlatformDisplayEXT() failed\n");
+		return -1;
+	}
+
+	SetupEGLDebug(glDisplay);
 
 	if (!eglInitialize(glDisplay, &major, &minor)) {
-		printf("failed to initialize\n");
+		printf("eglInitialize() failed\n");
 		return -1;
 	}
 
@@ -145,10 +215,6 @@ int Card::initGL()
 	printf("EGL Vendor \"%s\"\n", eglQueryString(glDisplay, EGL_VENDOR));
 	printf("EGL Extensions \"%s\"\n", eglQueryString(glDisplay, EGL_EXTENSIONS));
 
-	if (!eglBindAPI(EGL_OPENGL_ES_API)) {
-		printf("failed to bind api EGL_OPENGL_ES_API\n");
-		return -1;
-	}
 
 	EGLint count = 0;
 	eglGetConfigs(glDisplay, NULL, 0, &count);
@@ -213,8 +279,10 @@ Card::~Card() {
 		glDisplay = EGL_NO_DISPLAY;
 	}
 
-	gbm_device_destroy(gbmDevice);
-	std::cout << "gbm_device_destroy() done" << std::endl;
+	if (gbmDevice != nullptr) {
+		gbm_device_destroy(gbmDevice);
+		std::cout << "gbm_device_destroy() done" << std::endl;
+	}
 
     // Closing the video card file
 	close(fd);

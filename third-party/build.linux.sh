@@ -1,6 +1,68 @@
 set -e
-echo "* Building libvterm..."
-(cd libvterm && make)
+#echo "* Building libvterm..."
+#(cd libvterm && make VERBOSE=1)
+
+(cd libxkbcommon && \
+ PKG_CONFIG_PATH="../prefix/lib/pkgconfig" CC=neo-clang CXX=neo-clang++ meson setup ../libxkbcommon-meson-build \
+ -Dbuildtype=release \
+ -Ddefault_library=static \
+ -Denable-x11=false \
+ -Denable-wayland=false \
+ -Denable-xkbregistry=false \
+ -Denable-bash-completion=false \
+ -Dbuildtype=debug \
+ --prefix=`pwd`/../prefix && \
+ meson compile -C ../libxkbcommon-meson-build && \
+ meson install -C ../libxkbcommon-meson-build
+)
+
+(cd drm && \
+ PKG_CONFIG_PATH="../prefix/lib/pkgconfig" CC=neo-clang CXX=neo-clang++ meson setup ../drm-meson-build \
+ -Dbuildtype=debug \
+ -Ddefault_library=static \
+ -Dtests=false \
+ --prefix=`pwd`/../prefix && \
+ meson compile -C ../drm-meson-build && \
+ meson install -C ../drm-meson-build \
+)
+
+(cd mesa && \
+ PKG_CONFIG_PATH="../prefix/lib/pkgconfig" CC=neo-clang CXX=neo-clang++ meson setup ../mesa-meson-build \
+ -Dgles2=enabled \
+ -Dplatforms= \
+ -Dgallium-drivers= \
+ -Dvulkan-drivers= \
+ -Dtools= \
+ -Dgbm=enabled \
+ -Dglx=disabled \
+ -Dexpat=disabled \
+ -Dzlib=disabled \
+ -Dshader-cache=disabled \
+ -Ddefault_library=static \
+ -Dbuildtype=debug \
+ --prefix=`pwd`/../prefix && \
+ meson compile -C ../mesa-meson-build && \
+ meson install -C ../mesa-meson-build
+)
+
+(mkdir -p check-cmake-build && cd check-cmake-build && \
+cmake -DCMAKE_INSTALL_PREFIX="../prefix" -DCMAKE_C_COMPILER="neo-clang" -DCMAKE_CXX_COMPILER="neo-clang++" -DCMAKE_SYSROOT=/usr/local/toolchain/aarch64-neobox-linux-musl-sysroot/ ../check &&
+cmake --build . --target help && cmake --build . && cmake --install . )
+
+(cd libevdev && \
+ PKG_CONFIG_PATH="../prefix/lib/pkgconfig" CC=neo-clang CXX=neo-clang++ meson setup ../libevdev-meson-build -Ddocumentation=disabled --prefix=`pwd`/../prefix && \
+ meson compile -C ../libevdev-meson-build && \
+ meson install -C ../libevdev-meson-build
+ )
+
+(cd libglvnd && \
+ CC=neo-clang CXX=neo-clang++ meson setup ../libglvnd-meson-build -Dx11=disabled --prefix=`pwd`/../prefix && \
+ meson compile -C ../libglvnd-meson-build && \
+ meson install -C ../libglvnd-meson-build
+ )
+
+ (cd libexecinfo && \
+ make DESTDIR=`pwd`/../prefix install-static install-headers)
 
 echo "* Building skia..."
 (cd skia-world && \
@@ -14,14 +76,9 @@ mkdir -p prefix/lib-release
 mkdir -p prefix/include/skia/
 
 cp_dir() {
-#    pwd
-#    echo ---- d1 --- "$1"
-#    echo ---- d2 --- "$2"
     dn2=$(dirname "$2")
     abs1=$(realpath -s --relative-to="$dn2" .)
-#    echo ---- abs1 --- "$abs1"
     trg="$abs1"/"$1"
-#    echo ---- trg --- "$trg"
     mkdir -p $(dirname "$2") && ln -fs "$trg" "$2"
 }
 export -f cp_dir

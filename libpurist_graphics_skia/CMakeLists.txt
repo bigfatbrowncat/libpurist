@@ -29,15 +29,15 @@ target_link_libraries(purist_graphics_skia PUBLIC
     purist_graphics
 
     skia
-    webpmux
-    webpdemux
+#    webpmux
+#    webpdemux
     webp
     jpeg
     png
-    freetype
-    GLX
-    fontconfig
-    z
+    freetype2
+#    GLX
+#    fontconfig
+#    z
     pthread
 )
 

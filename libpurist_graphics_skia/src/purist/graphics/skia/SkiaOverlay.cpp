@@ -7,6 +7,9 @@
 #include <include/core/SkFontStyle.h>
 #include <include/core/SkTypeface.h>
 
+
+#include <include/private/base/SkMalloc.h>
+
 // #ifdef __APPLE__
 // #  include <include/ports/SkFontMgr_mac_ct.h>
 // #else
@@ -27,20 +30,41 @@
 
 namespace purist::graphics::skia {
 
+// assumes fPtr was allocated via sk_malloc
+// static void sk_free_releaseproc(const void* ptr, void*) {
+//     sk_free(const_cast<void*>(ptr));
+// }
+
+// static sk_sp<SkData> MakeSkDataFromMalloc(const void* data, size_t length) {
+//     return sk_sp<SkData>(new SkData(data, length, sk_free_releaseproc, nullptr));
+// }
+
+
 void SkiaOverlay::createFontMgr(const std::vector<Resource>& res) {
   std::vector<sk_sp<SkData>> dataVec;
   for (size_t i = 0; i < res.size(); i++) {
-    auto data = SkData::MakeWithCopy(res[i].data(), res[i].size()); //MakeFromFileName("fonts/noto-sans/NotoSans-Regular.ttf");
-    dataVec.push_back(data);
+    std::cout << "Font data size: " << res[i].size() << std::endl;
+    //auto data = SkData::MakeWithCopy(res[i].data(), res[i].size()); //MakeFromFileName("fonts/noto-sans/NotoSans-Regular.ttf");
+
+    auto data = SkData::MakeUninitialized(res[i].size()); //MakeFromFileName("fonts/noto-sans/NotoSans-Regular.ttf");
+    memcpy(data->writable_data(), res[i].data(), res[i].size());
+
+    //sk_sp<SkData> data(nullptr);
+    //data = SkData::MakeFromFileName("/home/il/projects/libpurist/examples/text_input_skia/fonts/noto-sans/NotoSans-Regular.ttf");
+    if (data != nullptr) {
+      dataVec.push_back(data);
+    }
   }
 
   SkSpan<sk_sp<SkData>> dataSpan(dataVec);
 
   fontMgr = SkFontMgr_New_Custom_Data(dataSpan); //SkFontMgr_New_FontConfig(nullptr);
   //fontMgr = SkFontMgr_New_Custom_Directory(fontDirectory.c_str());
-    
-  int families = fontMgr->countFamilies();
-  std::cout << "Font families count: " << families << std::endl;
+  
+  if (fontMgr != nullptr) {
+    int families = fontMgr->countFamilies();
+    std::cout << "Font families count: " << families << std::endl;
+  }
 }
 
 SkiaOverlay::SkiaOverlay() {

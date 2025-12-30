@@ -1,0 +1,198 @@
+diff --git a/BUILD.gn b/BUILD.gn
+index 7a46385a74..4856a98591 100644
+--- a/BUILD.gn
++++ b/BUILD.gn
+@@ -3010,77 +3010,79 @@ if (skia_enable_tools) {
+     }
+   }
+ 
+-  test_lib("sk_app") {
+-    public_deps = [
+-      ":gpu_tool_utils",
+-      ":skia",
+-    ]
+-    sources = [
+-      "tools/sk_app/Application.h",
+-      "tools/sk_app/CommandSet.cpp",
+-      "tools/sk_app/CommandSet.h",
+-      "tools/sk_app/Window.cpp",
+-      "tools/sk_app/Window.h",
+-    ]
+-    libs = []
+-    frameworks = []
+-
+-    if (is_android) {
+-      sources += [
+-        "tools/sk_app/android/Window_android.cpp",
+-        "tools/sk_app/android/Window_android.h",
+-        "tools/sk_app/android/main_android.cpp",
+-        "tools/sk_app/android/surface_glue_android.cpp",
+-        "tools/sk_app/android/surface_glue_android.h",
+-      ]
+-      libs += [ "android" ]
+-    } else if (is_linux) {
+-      sources += [
+-        "tools/sk_app/unix/Window_unix.cpp",
+-        "tools/sk_app/unix/Window_unix.h",
+-        "tools/sk_app/unix/keysym2ucs.c",
+-        "tools/sk_app/unix/keysym2ucs.h",
+-        "tools/sk_app/unix/main_unix.cpp",
+-      ]
+-      libs += [
+-        "GL",  # Used by raster window context, so cannot be behind skia_use_gl.
+-        "X11",
+-      ]
+-    } else if (is_win) {
+-      sources += [
+-        "tools/sk_app/win/Window_win.cpp",
+-        "tools/sk_app/win/Window_win.h",
+-        "tools/sk_app/win/main_win.cpp",
+-      ]
+-    } else if (is_mac) {
+-      sources += [
+-        "tools/sk_app/mac/Window_mac.h",
+-        "tools/sk_app/mac/Window_mac.mm",
+-        "tools/sk_app/mac/main_mac.mm",
+-      ]
+-      frameworks += [
+-        "QuartzCore.framework",
+-        "Cocoa.framework",
+-        "Foundation.framework",
++  if (false) {
++    test_lib("sk_app") {
++      public_deps = [
++        ":gpu_tool_utils",
++        ":skia",
+       ]
+-    } else if (is_ios) {
+-      sources += [
+-        "tools/sk_app/ios/Window_ios.h",
+-        "tools/sk_app/ios/Window_ios.mm",
+-        "tools/sk_app/ios/main_ios.mm",
++      sources = [
++        "tools/sk_app/Application.h",
++        "tools/sk_app/CommandSet.cpp",
++        "tools/sk_app/CommandSet.h",
++        "tools/sk_app/Window.cpp",
++        "tools/sk_app/Window.h",
+       ]
+-      frameworks += [ "QuartzCore.framework" ]
+-    }
++      libs = []
++      frameworks = []
+ 
+-    deps = [
+-      ":tool_utils",
+-      "tools/window",
+-    ]
+-    if (is_android) {
+-      deps += [ "//third_party/native_app_glue" ]
+-    }
+-    if (skia_use_gl && skia_use_angle) {
+-      deps += [ "//third_party/angle2" ]
++      if (is_android) {
++        sources += [
++          "tools/sk_app/android/Window_android.cpp",
++          "tools/sk_app/android/Window_android.h",
++          "tools/sk_app/android/main_android.cpp",
++          "tools/sk_app/android/surface_glue_android.cpp",
++          "tools/sk_app/android/surface_glue_android.h",
++        ]
++        libs += [ "android" ]
++      } else if (is_linux) {
++        sources += [
++          "tools/sk_app/unix/Window_unix.cpp",
++          "tools/sk_app/unix/Window_unix.h",
++          "tools/sk_app/unix/keysym2ucs.c",
++          "tools/sk_app/unix/keysym2ucs.h",
++          "tools/sk_app/unix/main_unix.cpp",
++        ]
++        libs += [
++          "GL",  # Used by raster window context, so cannot be behind skia_use_gl.
++          "X11",
++        ]
++      } else if (is_win) {
++        sources += [
++          "tools/sk_app/win/Window_win.cpp",
++          "tools/sk_app/win/Window_win.h",
++          "tools/sk_app/win/main_win.cpp",
++        ]
++      } else if (is_mac) {
++        sources += [
++          "tools/sk_app/mac/Window_mac.h",
++          "tools/sk_app/mac/Window_mac.mm",
++          "tools/sk_app/mac/main_mac.mm",
++        ]
++        frameworks += [
++          "QuartzCore.framework",
++          "Cocoa.framework",
++          "Foundation.framework",
++        ]
++      } else if (is_ios) {
++        sources += [
++          "tools/sk_app/ios/Window_ios.h",
++          "tools/sk_app/ios/Window_ios.mm",
++          "tools/sk_app/ios/main_ios.mm",
++        ]
++        frameworks += [ "QuartzCore.framework" ]
++      }
++
++      deps = [
++        ":tool_utils",
++        "tools/window",
++      ]
++      if (is_android) {
++        deps += [ "//third_party/native_app_glue" ]
++      }
++      if (skia_use_gl && skia_use_angle) {
++        deps += [ "//third_party/angle2" ]
++      }
+     }
+   }
+ 
+@@ -3109,7 +3111,7 @@ if (skia_enable_tools) {
+   }
+ 
+   # sk_app can work without GL but viewer always runs raster through a GL window context.
+-  if (skia_use_gl) {
++  if (skia_use_gl && false) {
+     test_app("viewer") {
+       is_shared_library = is_android
+       sources = [
+@@ -3279,7 +3281,7 @@ if (skia_enable_tools) {
+     }
+   }
+ 
+-  if (is_linux || is_win || is_mac) {
++  if ((is_linux || is_win || is_mac) && false) {
+     test_app("editor") {
+       is_shared_library = is_android
+       deps = [ "modules/skplaintexteditor:editor_app" ]
+diff --git a/bench/SkSLBench.cpp b/bench/SkSLBench.cpp
+index 1ad9cbab2c..d016ee49d6 100644
+--- a/bench/SkSLBench.cpp
++++ b/bench/SkSLBench.cpp
+@@ -622,7 +622,7 @@ void main()
+ }
+ )");
+ 
+-#if defined(SK_BUILD_FOR_UNIX)
++#if defined(SK_BUILD_FOR_UNIX) && 0
+ 
+ #include <malloc.h>
+ static int64_t heap_bytes_used() {
+diff --git a/gn/BUILDCONFIG.gn b/gn/BUILDCONFIG.gn
+index cd4030ae0f..d0d9afec7a 100644
+--- a/gn/BUILDCONFIG.gn
++++ b/gn/BUILDCONFIG.gn
+@@ -19,8 +19,8 @@ declare_args() {
+   sanitize = ""
+ 
+   ar = "ar"
+-  cc = "cc"
+-  cxx = "c++"
++  cc = "neo-clang"
++  cxx = "neo-clang++"
+ 
+   win_sdk = "C:/Program Files (x86)/Windows Kits/10"
+   win_sdk_version = ""

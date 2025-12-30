@@ -56,34 +56,20 @@
                 "__EGL_VENDOR_LIBRARY_FILENAMES": "/usr/share/glvnd/egl_vendor.d/50_mesa.json",
                 "LD_LIBRARY_PATH": "/usr/lib/aarch64-linux-gnu"
             },
-
         },
         {
             "name": "term_skia",
-            "type": "cppdbg",
+            "type": "lldb",
             "request": "launch",
             "program": "${command:cmake.buildDirectory}/examples/term_skia/term_skia",
             "args": [],
-            "stopAtEntry": true,
             "cwd": "${workspaceFolder}",
-            "environment": [ 
-                { 
-                    "name": "ASAN_OPTIONS",
-                    "value": "halt_on_error=1:abort_on_error=1" 
-                },
-                { 
-                    "name": "LSAN_OPTIONS",
-                    "value": "suppressions=${workspaceFolder}/lsan-suppressions.supp"
-                }
-            ],
-            "MIMode": "gdb",
-            "setupCommands": [
-                {
-                    "description": "Enable pretty-printing for gdb",
-                    "text": "-enable-pretty-printing",
-                    "ignoreFailures": true
-                }
-            ]
+            "env": {
+                "GBM_BACKEND": "dri",
+                "GBM_BACKENDS_PATH": "/usr/lib/aarch64-linux-gnu/gbm",
+                "__EGL_VENDOR_LIBRARY_FILENAMES": "/usr/share/glvnd/egl_vendor.d/50_mesa.json",
+                "LD_LIBRARY_PATH": "/usr/lib/aarch64-linux-gnu"
+            }
         }
     ]
 }

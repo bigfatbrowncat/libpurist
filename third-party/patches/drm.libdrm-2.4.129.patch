@@ -1,0 +1,25 @@
+diff --git a/xf86drm.c b/xf86drm.c
+index d4bfec8a..5ac03f60 100644
+--- a/xf86drm.c
++++ b/xf86drm.c
+@@ -690,7 +690,20 @@ drmIoctl(int fd, unsigned long request, void *arg)
+     int ret;
+ 
+     do {
++        struct timespec start, end;
++        clock_gettime(CLOCK_MONOTONIC, &start);
++
+         ret = ioctl(fd, request, arg);
++
++        clock_gettime(CLOCK_MONOTONIC, &end);
++
++        // Calculate difference in seconds
++        double elapsed = (end.tv_sec - start.tv_sec) + 
++                        (end.tv_nsec - start.tv_nsec) / 1e9;
++        if (elapsed > 0.01) {
++            printf("Suspicious: ioctl took %f seconds\n", elapsed);
++        }
++
+     } while (ret == -1 && (errno == EINTR || errno == EAGAIN));
+     return ret;
+ }

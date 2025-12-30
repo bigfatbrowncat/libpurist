@@ -21,7 +21,7 @@ public:
 	SkiaEGLOverlay* asEGLOverlay() override { return nullptr; }
 	SkiaRasterOverlay* asRasterOverlay() override { return this; } 
 
-	void updateBuffer(uint32_t w, uint32_t h, void* pixels);
+	bool updateBuffer(uint32_t w, uint32_t h, void* pixels);
 };
 
 }

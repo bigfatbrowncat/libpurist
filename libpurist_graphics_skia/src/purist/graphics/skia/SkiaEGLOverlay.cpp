@@ -33,7 +33,7 @@ const sk_sp<GrDirectContext> SkiaEGLOverlay::getSkiaContext() const {
     return sContext;
 }
 
-void SkiaEGLOverlay::updateBuffer(uint32_t w, uint32_t h) {
+bool SkiaEGLOverlay::updateBuffer(uint32_t w, uint32_t h) {
     if (sContext == nullptr || sContext->abandoned()) {
         // TODO When the context is recreated, all SkImage objects become invalid! SO SOME SIGNAL SHOULD BE PASSED TO THE CLIENT!
 
@@ -44,6 +44,9 @@ void SkiaEGLOverlay::updateBuffer(uint32_t w, uint32_t h) {
     }
 
     assert(sSurface == nullptr || (sSurface->width() > 0 && sSurface->height() > 0));
+
+    bool refreshed = sSurface == nullptr || sSurface->width() != w || sSurface->height() != h;
+
     if (sSurface == nullptr || (uint32_t)sSurface->width() < w || (uint32_t)sSurface->height() < h) {
         std::cout << "Allocating EGL surface: " << w << "x" << h << std::endl;
         // auto interface = GrGLInterfaces::MakeEGL();
@@ -87,6 +90,8 @@ void SkiaEGLOverlay::updateBuffer(uint32_t w, uint32_t h) {
             throw std::runtime_error("Can not create Skia surface.");
         }
     }
+
+    return refreshed;
 }
 
 }

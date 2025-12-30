@@ -23,9 +23,11 @@ const sk_sp<GrDirectContext> SkiaRasterOverlay::getSkiaContext() const {
     return nullptr;
 }
 
-void SkiaRasterOverlay::updateBuffer(uint32_t w, uint32_t h, void* pixels) {
+bool SkiaRasterOverlay::updateBuffer(uint32_t w, uint32_t h, void* pixels) {
     // The surface updates each frame, but for a raster backend 
     // it doesn't look like a serious performance issue.
+
+    bool refreshed = sSurface == nullptr || sSurface->width() != w || sSurface->height() != h;
 
     SkImageInfo imageInfo = SkImageInfo::MakeN32Premul(w, h);
     size_t rowBytes = imageInfo.minRowBytes();
@@ -35,6 +37,8 @@ void SkiaRasterOverlay::updateBuffer(uint32_t w, uint32_t h, void* pixels) {
     if (sSurface == nullptr) {
         throw std::runtime_error("Can not create Skia surface.");
     }
+
+    return refreshed;
 }
 
 }

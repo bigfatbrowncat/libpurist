@@ -28,12 +28,13 @@ std::shared_ptr<SkiaOverlay> DisplayContentsHandlerForSkia::getSkiaOverlay() con
 void DisplayContentsHandlerForSkia::drawIntoBuffer(std::shared_ptr<Display> display, std::shared_ptr<TargetSurface> target) {
     int tw = target->getWidth(), th = target->getHeight();
 
+    bool refreshed;
     if (!target->getMappedBuffer()) {
         auto* eglOverlay = skiaOverlay->asEGLOverlay();
-        eglOverlay->updateBuffer(tw, th);
+        refreshed = eglOverlay->updateBuffer(tw, th);
     } else {
         auto* rasterOverlay = skiaOverlay->asRasterOverlay();
-        rasterOverlay->updateBuffer(tw, th, target->getMappedBuffer());
+        refreshed = rasterOverlay->updateBuffer(tw, th, target->getMappedBuffer());
     }
 
     auto sSurface = skiaOverlay->getSkiaSurface();
@@ -59,7 +60,7 @@ void DisplayContentsHandlerForSkia::drawIntoBuffer(std::shared_ptr<Display> disp
         std::swap(tw, th);
     }
     
-    userContentsHandler->drawIntoSurface(display, skiaOverlay, tw, th, *canvas);
+    userContentsHandler->drawIntoSurface(display, skiaOverlay, tw, th, *canvas, refreshed);
 
     canvas->restore();
 

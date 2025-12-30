@@ -29,7 +29,7 @@ public:
     virtual void drawIntoSurface(
         std::shared_ptr<purist::graphics::Display> display, 
         std::shared_ptr<SkiaOverlay> skiaOverlay,
-        int width, int height, SkCanvas& canvas) = 0;
+        int width, int height, SkCanvas& canvas, bool refreshed) = 0;
 };
 
 class DisplayContentsHandlerForSkia final : public DisplayContentsHandler {

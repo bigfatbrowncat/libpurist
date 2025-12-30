@@ -119,7 +119,10 @@ public:
 		return y;
 	}
 
-    void drawIntoSurface(std::shared_ptr<pg::Display> display, std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, int width, int height, SkCanvas& canvas) override {
+    void drawIntoSurface(std::shared_ptr<pg::Display> display, 
+		                 std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, 
+						 int width, int height, 
+						 SkCanvas& canvas, bool refreshed) override {
 		SkScalar w = width, h = height;
 
 		uint32_t hue_period = 1597;  // prime

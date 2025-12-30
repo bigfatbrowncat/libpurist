@@ -225,7 +225,12 @@ public:
     };
 
     int divider = 4;
-    lru_cache<row_key, sk_sp<SkSurface>> typesettingBox;
+    struct SurfaceAndImage {
+        sk_sp<SkSurface> surface;
+        sk_sp<SkImage> image;
+    };
+
+    lru_cache<row_key, SurfaceAndImage> typesettingBox;
     std::map<uint32_t, std::shared_ptr<Matrix<unsigned char>>> screenUpdateMatrices;  // The key is the display connector id
     
 
@@ -452,8 +457,6 @@ public:
 
     virtual ~TermDisplayContents() {
         vterm_free(vterm);
-        //invalidateTexture();
-        //SDL_FreeSurface(surface);
     }
     
     std::list<std::shared_ptr<pg::Mode>>::const_iterator chooseMode(std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, const std::list<std::shared_ptr<pg::Mode>>& modes) override {
@@ -535,9 +538,6 @@ public:
         SkScalar kx = ((SkScalar)buffer_width / (col_max - col_min) + epsilon) / font_width;
         SkScalar ky = ((SkScalar)buffer_height + epsilon) / font_height;
 
-        // SkScalar font_width_scaled = font_width * kx;
-        // SkScalar font_height_scaled = font_height * kx;
-
         SkColor4f color, bgcolor;
         UErrorCode status = U_ZERO_ERROR;
 
@@ -556,24 +556,20 @@ public:
                         for (int i = 0; cell.chars[i] != 0 && i < VTERM_MAX_CHARS_PER_CELL; i++) {
                             ustr.append((UChar32)cell.chars[i]);
                         }
-                        //SDL_Color color = (SDL_Color){128,128,128};
                         color = SkColor4f::FromColor(SkColorSetRGB(128, 128, 128));
 
-                        //SDL_Color bgcolor = (SDL_Color){0,0,0};
                         bgcolor = SkColor4f::FromColor(SkColorSetRGB(0, 0, 0));
 
                         if (VTERM_COLOR_IS_INDEXED(&cell.fg)) {
                             vterm_screen_convert_color_to_rgb(screen, &cell.fg);
                         }
                         if (VTERM_COLOR_IS_RGB(&cell.fg)) {
-                            // TODO color = (SDL_Color){cell.fg.rgb.red, cell.fg.rgb.green, cell.fg.rgb.blue};
                             color = SkColor4f::FromColor(SkColorSetRGB(cell.fg.rgb.red, cell.fg.rgb.green, cell.fg.rgb.blue));
                         }
                         if (VTERM_COLOR_IS_INDEXED(&cell.bg)) {
                             vterm_screen_convert_color_to_rgb(screen, &cell.bg);
                         }
                         if (VTERM_COLOR_IS_RGB(&cell.bg)) {
-                            // TODO bgcolor = (SDL_Color){cell.bg.rgb.red, cell.bg.rgb.green, cell.bg.rgb.blue};
                             bgcolor = SkColor4f::FromColor(SkColorSetRGB(cell.bg.rgb.red, cell.bg.rgb.green, cell.bg.rgb.blue));
                         }
 
@@ -586,9 +582,6 @@ public:
                         if (cell.attrs.italic) style |= TTF_STYLE_ITALIC;
                         if (cell.attrs.strike) style |= TTF_STYLE_STRIKETHROUGH; */
                         if (cell.attrs.blink) { /*TBD*/ }
-
-                        //SDL_Rect rect = { col * font_width, row * font_height, font_width * cell.width, font_height };
-
                         
                         // SkPaint bgpt(bgcolor);
                         // bgpt.setStyle(SkPaint::kFill_Style);
@@ -669,28 +662,39 @@ public:
                         letter_canvas.restore();
                     }
 
-                    std::optional<std::pair<row_key, sk_sp<SkSurface>>> returned_back = typesettingBox.put(rk, letter_surface);
+                    letter_image = letter_surface->makeImageSnapshot();
+
+                    std::optional<std::pair<row_key, SurfaceAndImage>> returned_back = typesettingBox.put(rk, { letter_surface, letter_image });
                     if (returned_back.has_value()) {
-                        auto& ret_surf = returned_back.value().second;
-                        auto ret_cnv= ret_surf->getCanvas();
+                        auto& ret_surf = returned_back.value().second.surface;
+                        auto ret_cnv = ret_surf->getCanvas();
                         ret_cnv->restoreToCount(0);
                         ret_cnv->resetMatrix();
                         //ret_cnv->clear(SK_ColorTRANSPARENT);
                         letter_surfaces.push_back(ret_surf);
                     }
                     
-                    letter_image = letter_surface->makeImageSnapshot();
 
                 } else {
-                    letter_image = typesettingBox.get(rk)->makeImageSnapshot();
+                    letter_image = typesettingBox.get(rk).image;
                 }
             }
         }
         return letter_image;
     }
 
-    void drawIntoSurface(std::shared_ptr<pg::Display> display, std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, int width, int height, SkCanvas& canvas) override {
-        
+    void drawIntoSurface(std::shared_ptr<pg::Display> display, 
+                         std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, 
+                         int width, int height, SkCanvas& canvas, bool refreshed) override {
+        std::pair<pid_t, int> rst;
+        rst = waitpid(this->pid, WNOHANG);
+        if (rst.first == pid) {
+            platform.lock()->stop();
+            return;
+            //BREAKING!!!
+            //throw std::runtime_error("rst.first == pid");
+        }
+
         processInput();
         // {
         //     std::lock_guard<std::mutex> lock(input_mutex);
@@ -741,13 +745,6 @@ public:
 
         //canvas.scale(kx, ky);
 
-        std::pair<pid_t, int> rst;
-        rst = waitpid(this->pid, WNOHANG);
-        if (rst.first == pid) {
-            platform.lock()->stop();
-            //BREAKING!!!
-            //throw std::runtime_error("rst.first == pid");
-        }
 
         const SkScalar gray_hsv[] { 0.0f, 0.0f, 0.7f };
         auto color = SkColor4f::FromColor(SkHSVToColor(255, gray_hsv));
@@ -762,14 +759,6 @@ public:
 
         ///////////////
 
-        // SDL_Event ev;
-        // while(SDL_PollEvent(&ev)) {
-        //     if (ev.type == SDL_QUIT || (ev.type == SDL_KEYDOWN && ev.key.keysym.sym == SDLK_ESCAPE && (ev.key.keysym.mod & KMOD_CTRL))) {
-        //         kill(pid, SIGTERM);
-        //     } else {
-        //         terminal.processEvent(ev);
-        //     }
-        // }
 
         // auto fullscreenSurface = skiaOverlay->getSkiaSurface()->makeSurface(
         //                 SkImageInfo::MakeN32Premul(font_width_scaled * matrix.getCols(), font_height_scaled * matrix.getRows())
@@ -897,13 +886,7 @@ public:
     }
 
     void onCharacter(pi::Keyboard& kbd, char32_t charCode, pi::Modifiers mods, pi::Leds leds) override { 
-        
-        // TODO const Uint8 *state = SDL_GetKeyboardState(NULL);
-        // int mod = VTERM_MOD_NONE;
-        // if (state[SDL_SCANCODE_LCTRL] || state[SDL_SCANCODE_RCTRL]) mod |= VTERM_MOD_CTRL;
-        // if (state[SDL_SCANCODE_LALT] || state[SDL_SCANCODE_RALT]) mod |= VTERM_MOD_ALT;
-        // if (state[SDL_SCANCODE_LSHIFT] || state[SDL_SCANCODE_RSHIFT]) mod |= VTERM_MOD_SHIFT;
-        
+                
         int mod = VTERM_MOD_NONE;
         if (mods.ctrl) mod |= VTERM_MOD_CTRL;
         if (mods.alt) mod |= VTERM_MOD_ALT;
@@ -916,13 +899,6 @@ public:
 
     }
     void onKeyPress(pi::Keyboard& kbd, uint32_t keysym, pi::Modifiers mods, pi::Leds leds, bool repeat) override { 
-        /*if (keysym == XKB_KEY_Escape) {
-            platform.lock()->stop();
-        } else {
-            textInput.onKeyPress(kbd, keysym, mods, leds, repeat);
-        }*/
-
-        //if (repeat) return;
 
         int mod = VTERM_MOD_NONE;
         if (mods.ctrl) mod |= VTERM_MOD_CTRL;

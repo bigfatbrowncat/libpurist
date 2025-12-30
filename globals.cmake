@@ -1,3 +1,6 @@
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 # Globally adding libasan for debug builds
 #add_compile_options($<$<CONFIG:DEBUG>:-fsanitize=address,undefined>)
 add_compile_options($<$<CONFIG:DEBUG>:-fsanitize=undefined>)

@@ -311,7 +311,8 @@ DisplayImpl::~DisplayImpl() {
 		//printf("drmHandleEvent in ~Display\n"); fflush(stdout);
 		int ret = drmHandleEvent(card.fd, &ev);
 		if (ret) {
-			printf("Oopsie!!! %d\n", ret); fflush(stdout);
+			fprintf(stderr, "drmHandleEvent failed %d\n", ret); fflush(stderr);
+			page_flips_pending = 0;	// This is a hack. If we can't process the events, let's just proceed.
 			break;
 		}
 	}

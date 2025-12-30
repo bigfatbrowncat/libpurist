@@ -52,7 +52,10 @@ void Card::initialize(std::shared_ptr<DisplayContentsHandler> contents)
 	uint64_t has_dumb;
 
 	// Opening the GPU file
-	int fd = open(node.c_str(), O_RDWR | O_CLOEXEC);
+    
+	// O_NONBLOCK here is kinda experimental. 
+	// Maybe it fixes ioctl lags, maybe not.
+  	int fd = open(node.c_str(), O_RDWR | O_CLOEXEC | O_NONBLOCK);
 	if (fd < 0) {
 		ret = -errno;
 		throw errcode_exception(ret, "cannot open '" + std::string(node) + "'");

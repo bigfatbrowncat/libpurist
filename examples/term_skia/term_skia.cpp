@@ -13,7 +13,6 @@
 #include "include/core/SkScalar.h"
 #include "include/core/SkImage.h"
 #include "include/core/SkRect.h"
-#include "include/core/SkSurface.h"
 #include <include/core/SkCanvas.h>
 #include <include/core/SkSurface.h>
 #include <include/core/SkBitmap.h>
@@ -34,6 +33,7 @@
 // System headers
 #include <termios.h>
 #include <unistd.h>
+#include <sys/time.h>
 
 // std headers
 #include <map>
@@ -48,7 +48,10 @@
 #include <vector>
 #include <cassert>
 #include <chrono>
-
+#include <optional>
+#include <mutex>
+#include <thread>
+#include <atomic>
 
 namespace p = purist;
 namespace pg = purist::graphics;
@@ -65,7 +68,8 @@ public:
         _max_size(max_size) {
     }
     
-    void put(const key_t& key, const value_t& value) {
+    std::optional<key_value_pair_t> put(const key_t& key, const value_t& value) {
+        std::optional<key_value_pair_t> res = std::nullopt;
         auto it = _cache_items_map.find(key);
         _cache_items_list.push_front(key_value_pair_t(key, value));
         if (it != _cache_items_map.end()) {
@@ -78,8 +82,10 @@ public:
             auto last = _cache_items_list.end();
             last--;
             _cache_items_map.erase(last->first);
+            res = std::make_optional(_cache_items_list.back());
             _cache_items_list.pop_back();
         }
+        return res;
     }
     
     const value_t& get(const key_t& key) {
@@ -131,6 +137,17 @@ public:
     int getRows() const { return rows; }
     int getCols() const { return cols; }
 };
+
+// For FullHD resolution:
+//const int rows = 24, cols = 80;       // Tiny    (3.33333)
+//const int rows = 30, cols = 100;    // Small   (3.33333)
+//const int rows = 40, cols = 136;    // Middle  (3.4)
+const int rows = 45, cols = 152;    // Large   (3.37777)
+//const int rows = 60, cols = 192;    // Huge    (3.2)
+//const int rows = 72, cols = 240;    // Gigantic  (3.33333)
+
+int FPS = 60;
+
 
 class TermDisplayContents : public pgs::SkiaDisplayContentsHandler, public pi::KeyboardHandler {
 public:
@@ -208,7 +225,7 @@ public:
     };
 
     int divider = 4;
-    lru_cache<row_key, sk_sp<SkImage>> typesettingBox;
+    lru_cache<row_key, sk_sp<SkSurface>> typesettingBox;
     std::map<uint32_t, std::shared_ptr<Matrix<unsigned char>>> screenUpdateMatrices;  // The key is the display connector id
     
 
@@ -321,7 +338,7 @@ public:
     }
 
     TermDisplayContents(std::weak_ptr<p::Platform> platform, uint32_t _rows, uint32_t _cols) 
-            : platform(platform), rows(_rows), cols(_cols), typesettingBox(_rows * divider * 6) { //4*54*2) {
+            : platform(platform), rows(_rows), cols(_cols), typesettingBox(_rows * divider * 4) { //4*54*2) {
 
         // Checking the arguments
         if (_cols == 0 || _rows == 0) {
@@ -353,9 +370,13 @@ public:
 
         vterm_screen_reset(screen, 1);
         
-        
+        //inputThread = std::make_shared<std::thread>(&TermDisplayContents::processInput, this);
+
+        //processInput();
         //matrix.fill(0);
     }
+
+    std::shared_ptr<std::thread> inputThread;
 
     void keyboard_unichar(uint32_t c, VTermModifier mod) {
         vterm_keyboard_unichar(vterm, c, mod);
@@ -380,6 +401,11 @@ public:
         return 0;
     }
     int moverect(VTermRect dest, VTermRect src) {
+        //std::lock_guard<std::mutex> lock(input_mutex);
+        //input_scroll_slowdown_flag = 1;
+        
+        //const uint64_t usec_per_frame = 1000000 / FPS;
+        //std::this_thread::sleep_for(std::chrono::milliseconds((long)usec_per_frame / 1000));
         return 0;
     }
     int movecursor(VTermPos pos, VTermPos oldpos, int visible) {
@@ -471,13 +497,17 @@ public:
 
         std::list<std::shared_ptr<pg::Mode>>::const_iterator res = modes.begin();
 
+        int max_width = 0;
 		for(auto mode = modes.begin(); mode != modes.end(); mode++) {
-			if ((*mode)->getFreq() == 30 && 
-                (*mode)->getWidth() > (*res)->getWidth() &&
-                (*mode)->getWidth() < 4000) {
-				res = mode;
+			if ((*mode)->getFreq() == FPS && (*mode)->getWidth() < 2000) {
+                if (max_width < (*mode)->getWidth()) {
+                    res = mode;
+                    max_width = (*mode)->getWidth();
+                }
 			}
 		}
+
+        FPS = (*res)->getFreq();
 
         return res;
     }
@@ -492,7 +522,8 @@ public:
         }
     }
 
-    sk_sp<SkSurface> letter_surface = nullptr;
+    //sk_sp<SkSurface> letter_surface = nullptr;
+    std::vector<sk_sp<SkSurface>> letter_surfaces;
 
     sk_sp<SkImage> drawCells(int col_min, int col_max, int row, //int row_min, int row_max, 
                    int buffer_width, int buffer_height,
@@ -582,10 +613,19 @@ public:
                     //static int cache_misses = 0;
                     //std::cout << "cache miss: " << cache_misses++ << std::endl;
                     //if (letter_surface == nullptr) {
-                        letter_surface = skiaOverlay->getSkiaSurface()->makeSurface(
-                            SkImageInfo::MakeN32Premul(((uint32_t)buffer_width) ,   // * (col_max - col_min)
-                                                                ((uint32_t)buffer_height))
-                        );
+                        
+                        if (letter_surfaces.empty()) {
+                            letter_surfaces.push_back(skiaOverlay->getSkiaSurface()->makeSurface(
+                                SkImageInfo::MakeN32Premul(((uint32_t)buffer_width) ,   // * (col_max - col_min)
+                                                                    ((uint32_t)buffer_height))
+                            ));
+                            std::cout << "Added new letter surface. In the cache: " << typesettingBox.size() << std::endl;
+                        }
+                        
+                        sk_sp<SkSurface> letter_surface = nullptr;
+                        letter_surface = letter_surfaces.back();
+                        letter_surfaces.pop_back();
+
                     //}
 
                     auto& letter_canvas = *letter_surface->getCanvas();
@@ -628,11 +668,21 @@ public:
                                                  SkPaint(SkColor4f::FromColor(letter_key.fgcolor)));
                         letter_canvas.restore();
                     }
+
+                    std::optional<std::pair<row_key, sk_sp<SkSurface>>> returned_back = typesettingBox.put(rk, letter_surface);
+                    if (returned_back.has_value()) {
+                        auto& ret_surf = returned_back.value().second;
+                        auto ret_cnv= ret_surf->getCanvas();
+                        ret_cnv->restoreToCount(0);
+                        ret_cnv->resetMatrix();
+                        //ret_cnv->clear(SK_ColorTRANSPARENT);
+                        letter_surfaces.push_back(ret_surf);
+                    }
+                    
                     letter_image = letter_surface->makeImageSnapshot();
 
-                    typesettingBox.put(rk, letter_image);
                 } else {
-                    letter_image = typesettingBox.get(rk);
+                    letter_image = typesettingBox.get(rk)->makeImageSnapshot();
                 }
             }
         }
@@ -640,10 +690,34 @@ public:
     }
 
     void drawIntoSurface(std::shared_ptr<pg::Display> display, std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, int width, int height, SkCanvas& canvas) override {
+        
         processInput();
+        // {
+        //     std::lock_guard<std::mutex> lock(input_mutex);
+        //     if (input_cache.size() > 0) {
+        //         input_write(input_cache.data(), input_cache.size());
+        //         input_cache = "";
+        //     }
+        // }
+
+        int single_print_size = cols * 2;
+        while (!input_scroll_slowdown_flag && input_cache.size() > single_print_size) {
+            auto s1 = input_cache.substr(0, single_print_size);
+            input_write(s1.data(), s1.size());
+            input_cache = input_cache.substr(s1.size());
+        }
+        
+        if (!input_scroll_slowdown_flag && input_cache.size() > 0) {
+            input_write(input_cache.data(), input_cache.size());
+            input_cache = "";
+        }
+        
+        input_scroll_slowdown_flag = 0;
+
+
         if (framebuffersCount < display->getFramebuffersCount()) {
             // Setting how many framebuffers we should redraw at once
-            framebuffersCount =  display->getFramebuffersCount();
+            framebuffersCount = display->getFramebuffersCount();
         }
 
         if (screenUpdateMatrices.find(display->getConnectorId()) == screenUpdateMatrices.end()) {
@@ -723,10 +797,10 @@ public:
         // Patching buffer_width so that a single character consists of an integer number of pixels
         int rem = buffer_width % cols_per_buffer;
         float hscale = 1.0f;
-        if (rem > 0) {
-            buffer_width += cols_per_buffer - rem;
-            hscale = (w / divider) / (float)buffer_width;
-        }
+        // if (rem > 0) {
+        //     buffer_width += cols_per_buffer - rem;
+        //     hscale = (w / divider) / (float)buffer_width;
+        // }
 
         int buffer_height = h / matrix.getRows();
         
@@ -757,14 +831,20 @@ public:
                         //canvas.drawImage(cells_image, buffer_width * col_part, buffer_height * row);
 
                         //void drawImageRect(const SkImage*, const SkRect& dst, const SkSamplingOptions&);
-                        SkRect dst = {
-                            (float)buffer_width * col_part * hscale, 
-                            (float)buffer_height * row,
-                            (float)buffer_width * (col_part + 1) * hscale,
-                            (float)buffer_height * (row + 1),
-                        };
+                        // SkRect dst = {
+                        //     (float)buffer_width * col_part * hscale, 
+                        //     (float)buffer_height * row,
+                        //     (float)buffer_width * (col_part + 1) * hscale,
+                        //     (float)buffer_height * (row + 1),
+                        // };
                         SkSamplingOptions so { SkFilterMode::kLinear };
-                        canvas.drawImageRect(cells_image, dst, so);
+//                        canvas.drawImageRect(cells_image, dst, so);
+                        SkPaint paint;
+                        // 128 is approximately 50% opacity (0-255 range)
+                        paint.setAlpha(128); 
+
+                        canvas.drawImage(cells_image, buffer_width * col_part, buffer_height * row);//, SkSamplingOptions(), &paint);
+
                     }
                 }
             }
@@ -806,7 +886,7 @@ public:
             canvas.drawRect(rect, cursor_paint);
         }
 
-        if (ringingFramebuffers) {
+        if (ringingFramebuffers > 0) {
             canvas.clear(color);
             for (auto& mat_pair : screenUpdateMatrices) {
                 auto& matrix = *(mat_pair.second);
@@ -913,18 +993,42 @@ public:
 
     void onKeyRelease(pi::Keyboard& kbd, uint32_t keysym, pi::Modifiers mods, pi::Leds leds) override { }
 
+    std::string input_cache;
+    std::mutex input_mutex;
+    std::atomic<int> input_scroll_slowdown_flag { 0 };
+
     void processInput() {
+
+        const uint64_t usec_per_frame = 1000000 / FPS;
+        const long usec_per_line = usec_per_frame / rows;
+
         fd_set readfds;
         FD_ZERO(&readfds);
         FD_SET(fd, &readfds);
-        timeval timeout = { 0, 0 };
-        if (select(fd + 1, &readfds, NULL, NULL, &timeout) > 0) {
-            char buf[cols * rows * 4]; //4096];
-            auto size = read(fd, buf, sizeof(buf));
-            if (size > 0) {
-                input_write(buf, size);
+        /*while (true)*/ /*for (int i = 0; i < rows; i++)*/ { 
+            timeval timeout;
+            {
+                //std::lock_guard<std::mutex> lock(input_mutex);
+                //timeout = { 0, usec_per_line / 4 };
+                timeout = { 0, 0 };
             }
+
+            while (select(fd + 1, &readfds, NULL, NULL, &timeout) > 0) {
+               //cache.size() < cols * rows * 2) {
+                char buf[cols]; //4096 - max
+                auto size = read(fd, buf, sizeof(buf));
+
+                if (size > 0) {
+                    //std::lock_guard<std::mutex> lock(input_mutex);
+                    input_cache.append(buf, size);
+                    if (input_cache.size() > cols * rows * 4) break;
+                }
+
+            }
+
         }
+
+
     }
 
     static void output_callback(const char* s, size_t len, void* user);
@@ -993,15 +1097,6 @@ int main(int argc, char **argv)
         bool enableOpenGL = true;
 
         auto purist = std::make_shared<p::Platform>(enableOpenGL);
-
-        //const int rows = 24, cols = 80;    // Tiny
-        //const int rows = 30, cols = 100;    // Small
-        //const int rows = 40, cols = 136;    // Middle
-        //const int rows = 45, cols = 152;    // Large
-        //const int rows = 60, cols = 200;    // Huge
-        
-        const int rows = 48, cols = 136;    // Middle 3x2
-
 
         auto contents = std::make_shared<TermDisplayContents>(purist, rows, cols);
         auto contents_handler_for_skia = std::make_shared<pgs::DisplayContentsHandlerForSkia>(contents, enableOpenGL);

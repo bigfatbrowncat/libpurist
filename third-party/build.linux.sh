@@ -1,6 +1,6 @@
 set -e
-#echo "* Building libvterm..."
-#(cd libvterm && make VERBOSE=1)
+echo "* Building libvterm..."
+(cd libvterm && CC=neo-clang CFLAGS="-g3 -Og" make VERBOSE=1)
 
 (cd libxkbcommon && \
  PKG_CONFIG_PATH="../prefix/lib/pkgconfig" CC=neo-clang CXX=neo-clang++ meson setup ../libxkbcommon-meson-build \

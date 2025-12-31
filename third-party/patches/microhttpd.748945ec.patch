@@ -1,0 +1,39 @@
+diff --git a/src/include/microhttpd.h b/src/include/microhttpd.h
+index ca3bb86..f093cbd 100644
+--- a/src/include/microhttpd.h
++++ b/src/include/microhttpd.h
+@@ -126,6 +126,8 @@ typedef intptr_t ssize_t;
+ #error Cygwin with winsock fd_set is not supported
+ #endif
+ 
++#include <sys/select.h>  // for fd_set
++
+ /**
+  * Current version of the library.
+  * 0x01093001 = 1.9.30-1.
+diff --git a/src/microhttpd/tsearch.c b/src/microhttpd/tsearch.c
+index 8889f32..191d808 100644
+--- a/src/microhttpd/tsearch.c
++++ b/src/microhttpd/tsearch.c
+@@ -12,7 +12,7 @@
+  */
+ 
+ #ifndef _MSC_FULL_VER
+-#include <sys/cdefs.h>
++//#include <sys/cdefs.h>
+ #endif //! _MSC_FULL_VER
+ #define _SEARCH_PRIVATE
+ #include "tsearch.h"
+diff --git a/src/microhttpd/tsearch.h b/src/microhttpd/tsearch.h
+index ec9c92d..cd8b454 100644
+--- a/src/microhttpd/tsearch.h
++++ b/src/microhttpd/tsearch.h
+@@ -10,7 +10,7 @@
+ #define _SEARCH_H_
+ 
+ #ifndef _MSC_FULL_VER
+-#include <sys/cdefs.h>
++//#include <sys/cdefs.h>
+ #endif  /* _MSC_FULL_VER */
+ #if !defined(__BEGIN_DECLS) || !defined(__END_DECLS)
+ #if defined(__cplusplus)

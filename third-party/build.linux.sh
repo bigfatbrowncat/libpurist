@@ -3,21 +3,20 @@ echo "* Building libvterm..."
 (cd libvterm && CC=neo-clang CFLAGS="-g3 -Og" make VERBOSE=1)
 
 (cd libxkbcommon && \
- PKG_CONFIG_PATH="../prefix/lib/pkgconfig" CC=neo-clang CXX=neo-clang++ meson setup ../libxkbcommon-meson-build \
+ PKG_CONFIG_PATH="`pwd`/../prefix/lib/pkgconfig" CC=neo-clang CXX=neo-clang++ meson setup ../libxkbcommon-meson-build \
  -Dbuildtype=release \
  -Ddefault_library=static \
  -Denable-x11=false \
  -Denable-wayland=false \
  -Denable-xkbregistry=false \
  -Denable-bash-completion=false \
- -Dbuildtype=debug \
  --prefix=`pwd`/../prefix && \
  meson compile -C ../libxkbcommon-meson-build && \
  meson install -C ../libxkbcommon-meson-build
 )
 
 (cd drm && \
- PKG_CONFIG_PATH="../prefix/lib/pkgconfig" CC=neo-clang CXX=neo-clang++ meson setup ../drm-meson-build \
+ PKG_CONFIG_PATH="`pwd`/../prefix/lib/pkgconfig" CC=neo-clang CXX=neo-clang++ meson setup ../drm-meson-build \
  -Dbuildtype=debug \
  -Ddefault_library=static \
  -Dtests=false \
@@ -27,7 +26,8 @@ echo "* Building libvterm..."
 )
 
 (cd mesa && \
- PKG_CONFIG_PATH="../prefix/lib/pkgconfig" CC=neo-clang CXX=neo-clang++ meson setup ../mesa-meson-build \
+ CFLAGS="-I`pwd`/../prefix/include" \
+ PKG_CONFIG_PATH="`pwd`../prefix/lib/pkgconfig" CC=neo-clang CXX=neo-clang++ meson setup ../mesa-meson-build \
  -Dgles2=enabled \
  -Dplatforms= \
  -Dgallium-drivers= \
@@ -46,7 +46,7 @@ echo "* Building libvterm..."
 )
 
 (mkdir -p check-cmake-build && cd check-cmake-build && \
-cmake -DCMAKE_INSTALL_PREFIX="../prefix" -DCMAKE_C_COMPILER="neo-clang" -DCMAKE_CXX_COMPILER="neo-clang++" -DCMAKE_SYSROOT=/usr/local/toolchain/aarch64-neobox-linux-musl-sysroot/ ../check &&
+cmake -DCMAKE_INSTALL_PREFIX="`pwd`/../prefix" -DCMAKE_C_COMPILER="neo-clang" -DCMAKE_CXX_COMPILER="neo-clang++" -DCMAKE_SYSROOT=/usr/local/toolchain/aarch64-neobox-linux-musl-sysroot/ ../check &&
 cmake --build . --target help && cmake --build . && cmake --install . )
 
 (cd libevdev && \

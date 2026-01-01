@@ -1,20 +1,13 @@
 [
   {
-    "name": "GCC 14.2.0 aarch64-linux-gnu",
-    "compilers": {
-      "C": "/usr/bin/aarch64-linux-gnu-gcc"
-    },
-    "isTrusted": true
-  },
-  {
-      "name": "Neo Clang",
+      "name": "Neo Clang (aarch64-linux-musl)",
       "compilers": {
           "C": "/usr/local/bin/neo-clang",
           "CXX": "/usr/local/bin/neo-clang++"
       },
       "isTrusted": true,
       "environmentVariables": {
-        "PKG_CONFIG_PATH": "${workspaceFolder}/third-party/prefix/lib/pkgconfig/"
+        "PKG_CONFIG_PATH": "${workspaceFolder}/third-party/prefix/lib/aarch64-linux-musl/pkgconfig/"
       }
   }
 ]

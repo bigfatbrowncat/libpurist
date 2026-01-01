@@ -51,6 +51,7 @@ pkg_search_module(DRM REQUIRED libdrm)
 pkg_search_module(GBM REQUIRED gbm)
 pkg_search_module(XKB_COMMON REQUIRED xkbcommon)
 pkg_search_module(GLES2 REQUIRED glesv2)
+pkg_search_module(GLVND REQUIRED libglvnd)
 
 target_compile_features(purist_graphics PUBLIC cxx_std_17)
 set_property(TARGET purist_graphics PROPERTY POSITION_INDEPENDENT_CODE ON)
@@ -63,7 +64,7 @@ target_include_directories(purist_graphics PUBLIC ${GLES2_INCLUDE_DIRS})
 target_include_directories(purist_graphics PUBLIC ${purist_third_party}/evdevw/include)
 target_include_directories(purist_graphics PUBLIC ${purist_graphics_SOURCE_DIR}/include)
 
-target_link_directories(purist_graphics PUBLIC ${purist_third_party}/prefix/lib)
+target_link_directories(purist_graphics PUBLIC ${purist_third_party}/prefix/lib/aarch64-linux-musl)
 
 target_link_libraries(purist_graphics PUBLIC 
     evdev
@@ -71,9 +72,9 @@ target_link_libraries(purist_graphics PUBLIC
 
     drm 
     gbm 
-    EGL 
-    GLdispatch
-    GLESv2
+    EGL         # from glvnd
+    GLdispatch  # from glvnd
+    GLESv2      # from glvnd
 )
 #    OpenGL
 

@@ -35,6 +35,7 @@ target_link_libraries(purist_graphics_skia PUBLIC
     jpeg
     png
     freetype2
+    piex
 #    GLX
 #    fontconfig
 #    z

@@ -171,6 +171,7 @@ public:
     SkScalar font_descent;
     uint32_t ringingFramebuffers = 0;
     bool cursorVisible = true;
+    bool cursorBlink = true;
 
     uint32_t rows, cols;
 
@@ -371,10 +372,37 @@ public:
         setStandardColorPalette(state);
 
         vterm_screen_set_default_colors(screen, &color_palette[7], &color_palette[0]);
+        
 
+        //         case VTERM_PROP_CURSORVISIBLE:
+        //     this->cursorVisible = val->boolean;
+        //     break;
+        // case VTERM_PROP_CURSORBLINK:
+        //     this->cursorBlink = val->boolean;
+        //     break;
+
+        // case VTERM_PROP_CURSORSHAPE:
+
+         
+//   int boolean;
+//   int number;
+//   VTermStringFragment string;
+//   VTermColor color;
+// } VTermValue;
+
+        VTermValue val;
+        val = { .boolean = true };
+        vterm_state_set_termprop(state, VTERM_PROP_CURSORVISIBLE, &val);
+        val = { .boolean = true };
+        vterm_state_set_termprop(state, VTERM_PROP_CURSORBLINK, &val);
+        val = { .number = VTERM_PROP_CURSORSHAPE_BLOCK };
+        vterm_state_set_termprop(state, VTERM_PROP_CURSORSHAPE, &val);
 
         vterm_screen_reset(screen, 1);
-        
+
+        //vterm_input_write(vterm, "\033[5 q", 5);  // Show cursor
+        //vterm_input_write(vterm, "\0337", 2);      // Save cursor
+
         //inputThread = std::make_shared<std::thread>(&TermDisplayContents::processInput, this);
 
         //processInput();
@@ -433,7 +461,16 @@ public:
         switch (prop) {
         case VTERM_PROP_CURSORVISIBLE:
             this->cursorVisible = val->boolean;
+            return true;
             break;
+        case VTERM_PROP_CURSORBLINK:
+            this->cursorBlink = val->boolean;
+            return true;
+            break;
+
+        case VTERM_PROP_CURSORSHAPE:
+            break;
+
         default:
             break;
         }
@@ -858,11 +895,15 @@ public:
             (float)(cursor_pos.row + 1) * buffer_height
         };
 
-        if (cursorVisible) {
+        if (cursorVisible || cursorBlink) {
             auto cur_time = std::chrono::system_clock::now();
             auto sec_since_epoch = std::chrono::duration_cast<std::chrono::milliseconds>(cur_time.time_since_epoch());
-            cursorPhase = (float)(sec_since_epoch.count() % cursorBlinkPeriodMSec) / cursorBlinkPeriodMSec;
-            float cursor_alpha = 0.5 * sin(2 * M_PI * (float)cursorPhase) + 0.5;
+            if (cursorBlink) {
+                cursorPhase = (float)(sec_since_epoch.count() % cursorBlinkPeriodMSec) / cursorBlinkPeriodMSec;
+            } else {
+                cursorPhase = 0.0f;
+            }
+            float cursor_alpha = 0.5 * cos(2 * M_PI * (float)cursorPhase) + 0.5;
             auto cursor_color = SkColor4f({ 
                 cur_color.fR,
                 cur_color.fG,

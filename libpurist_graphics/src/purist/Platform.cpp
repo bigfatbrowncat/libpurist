@@ -5,6 +5,7 @@
 #include "graphics/Card.h"
 #include "input/Keyboard.h"
 #include "input/Keyboards.h"
+#include "global_init.h"
 
 #include <xkbcommon/xkbcommon.h>
 
@@ -58,6 +59,8 @@ static std::unique_ptr<graphics::Card> probeCard(std::shared_ptr<graphics::Displ
 void Platform::run(std::shared_ptr<graphics::DisplayContentsHandler> contentsFactory, 
                    std::shared_ptr<input::KeyboardHandler> keyboardHandler) {
     
+    fix_ld_library_path();
+
     auto keyboards = std::make_shared<purist::input::Keyboards>();
     keyboards->initialize();
 

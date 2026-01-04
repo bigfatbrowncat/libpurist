@@ -12,6 +12,8 @@ add_library(purist_graphics STATIC
 
     # Private includes/sources
     src/purist/Platform.cpp
+    src/purist/global_init.cpp
+    src/purist/global_init.h
 
     src/purist/graphics/Card.cpp
     src/purist/graphics/Card.h

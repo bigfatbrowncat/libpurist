@@ -1,0 +1,46 @@
+diff --git a/Makefile b/Makefile
+index 6fa64db..87b7833 100644
+--- a/Makefile
++++ b/Makefile
+@@ -26,7 +26,7 @@ endif
+ CFILES=$(sort $(wildcard src/*.c))
+ HFILES=$(sort $(wildcard include/*.h))
+ OBJECTS=$(CFILES:.c=.lo)
+-LIBRARY=libvterm.la
++LIBRARY=libvterm.a
+ 
+ BINFILES_SRC=$(sort $(wildcard bin/*.c))
+ BINFILES=$(BINFILES_SRC:.c=)
+@@ -53,11 +53,11 @@ all: $(LIBRARY) $(BINFILES)
+ 
+ $(LIBRARY): $(OBJECTS)
+ 	@echo LINK $@
+-	@$(LIBTOOL) --mode=link --tag=CC $(CC) -rpath $(LIBDIR) -version-info $(VERSION_CURRENT):$(VERSION_REVISION):$(VERSION_AGE) -o $@ $^ $(LDFLAGS)
++	@$(AR) rcs $@ $^
+ 
+ src/%.lo: src/%.c $(HFILES_INT)
+ 	@echo CC $<
+-	@$(LIBTOOL) --mode=compile --tag=CC $(CC) $(CFLAGS) -o $@ -c $<
++	@$(CC) $(CFLAGS) -o $@ -c $<
+ 
+ src/encoding/%.inc: src/encoding/%.tbl
+ 	@echo TBL $<
+@@ -70,15 +70,15 @@ src/encoding.lo: $(INCFILES)
+ 
+ bin/%: bin/%.c $(LIBRARY)
+ 	@echo CC $<
+-	@$(LIBTOOL) --mode=link --tag=CC $(CC) $(CFLAGS) -o $@ $< -lvterm $(LDFLAGS)
++	@$(CC) $(CFLAGS) -o $@ $< $(LIBRARY) $(LDFLAGS)
+ 
+ t/harness.lo: t/harness.c $(HFILES)
+ 	@echo CC $<
+-	@$(LIBTOOL) --mode=compile --tag=CC $(CC) $(CFLAGS) -o $@ -c $<
++	@$(CC) $(CFLAGS) -o $@ -c $<
+ 
+ t/harness: t/harness.lo $(LIBRARY)
+ 	@echo LINK $@
+-	@$(LIBTOOL) --mode=link --tag=CC $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
++	@$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+ 
+ .PHONY: test
+ test: $(LIBRARY) t/harness

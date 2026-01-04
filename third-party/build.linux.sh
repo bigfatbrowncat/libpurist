@@ -1,6 +1,6 @@
 set -e
 echo "* Building libvterm..."
-(cd libvterm && CC=neo-clang CFLAGS="-g3 -Og" make VERBOSE=1)
+(cd libvterm && CC=neo-clang CFLAGS="-g3 -Og" make VERBOSE=1 DEBUG=1)
 
 (cd libxkbcommon && \
  PKG_CONFIG_PATH="`pwd`/../prefix/lib/pkgconfig" CC=neo-clang CXX=neo-clang++ meson setup ../libxkbcommon-meson-build \
@@ -40,6 +40,7 @@ echo "* Building libvterm..."
  -Dshader-cache=disabled \
  -Ddefault_library=static \
  -Dbuildtype=debug \
+ --libdir='lib/aarch64-linux-musl' \
  --prefix=`pwd`/../prefix && \
  meson compile -C ../mesa-meson-build && \
  meson install -C ../mesa-meson-build

@@ -175,6 +175,8 @@ public:
 
     uint32_t rows, cols;
 
+    std::shared_ptr<TermSubprocess> subprocess;
+
     struct litera_key {
         std::string utf8;
         int width, height;
@@ -372,20 +374,23 @@ public:
 
         // Checking the arguments
         if (_cols == 0 || _rows == 0) {
-            throw std::logic_error(std::string("Columns and rows count hade to be fositive"));
+            throw std::logic_error(std::string("Columns and rows count has to be positive"));
         }
         if (_cols % divider != 0) { 
             throw std::logic_error(std::string("Columns count ") + std::to_string(_cols) + std::string(" should be divideable by te number of substrings ") + std::to_string(divider));
         }
 
-        auto prog = getenv("SHELL");
-        auto subprocess = createSubprocessWithPty(_rows, _cols, prog, {"-"});
-        this->pid = subprocess.first;
-        fd = subprocess.second;
+        std::string prog = getenv("SHELL");
+        subprocess = std::make_shared<TermSubprocess>(_rows, _cols, prog, std::vector<std::string> {"-"});
+
+        //auto subprocess = createSubprocessWithPty(_rows, _cols, prog, {"-"});
+
+        //this->pid = subprocess.first;
+        //fd = subprocess.second;
 
         vterm = vterm_new(_rows, _cols);
         vterm_set_utf8(vterm, 1);
-        vterm_output_set_callback(vterm, output_callback, (void*)&fd);
+        vterm_output_set_callback(vterm, output_callback, (void*)subprocess.get());
 
         screen = vterm_obtain_screen(vterm);
         vterm_screen_set_callbacks(screen, &screen_callbacks, this);
@@ -750,16 +755,25 @@ public:
     void drawIntoSurface(std::shared_ptr<pg::Display> display, 
                          std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, 
                          int width, int height, SkCanvas& canvas, bool refreshed) override {
-        std::pair<pid_t, int> rst;
-        rst = waitpid(this->pid, WNOHANG);
-        if (rst.first == pid) {
+
+        if (subprocess->isExited()) {
             platform.lock()->stop();
             return;
-            //BREAKING!!!
-            //throw std::runtime_error("rst.first == pid");
         }
+        // std::pair<pid_t, int> rst;
+        // rst = waitpid(this->pid, WNOHANG);
+        // if (rst.first == pid) {
+        //     platform.lock()->stop();
+        //     return;
+        //     //BREAKING!!!
+        //     //throw std::runtime_error("rst.first == pid");
+        // }
 
-        processInput();
+        //processInput();
+        subprocess->readInputAndProcess([&](const std::string& input_str) {
+            input_write(input_str.data(), input_str.size());
+        });
+
         // {
         //     std::lock_guard<std::mutex> lock(input_mutex);
         //     if (input_cache.size() > 0) {
@@ -768,19 +782,19 @@ public:
         //     }
         // }
 
-        int single_print_size = cols * 2;
-        while (!input_scroll_slowdown_flag && input_cache.size() > single_print_size) {
-            auto s1 = input_cache.substr(0, single_print_size);
-            input_write(s1.data(), s1.size());
-            input_cache = input_cache.substr(s1.size());
-        }
+        // int single_print_size = cols * 2;
+        // while (!input_scroll_slowdown_flag && input_cache.size() > single_print_size) {
+        //     auto s1 = input_cache.substr(0, single_print_size);
+        //     input_write(s1.data(), s1.size());
+        //     input_cache = input_cache.substr(s1.size());
+        // }
         
-        if (!input_scroll_slowdown_flag && input_cache.size() > 0) {
-            input_write(input_cache.data(), input_cache.size());
-            input_cache = "";
-        }
+        // if (!input_scroll_slowdown_flag && input_cache.size() > 0) {
+        //     input_write(input_cache.data(), input_cache.size());
+        //     input_cache = "";
+        // }
         
-        input_scroll_slowdown_flag = 0;
+        // input_scroll_slowdown_flag = 0;
 
 
         if (framebuffersCount < display->getFramebuffersCount()) {
@@ -1036,43 +1050,6 @@ public:
 
     void onKeyRelease(pi::Keyboard& kbd, uint32_t keysym, pi::Modifiers mods, pi::Leds leds) override { }
 
-    std::string input_cache;
-    std::mutex input_mutex;
-    std::atomic<int> input_scroll_slowdown_flag { 0 };
-
-    void processInput() {
-
-        const uint64_t usec_per_frame = 1000000 / FPS;
-        const long usec_per_line = usec_per_frame / rows;
-
-        fd_set readfds;
-        FD_ZERO(&readfds);
-        FD_SET(fd, &readfds);
-        /*while (true)*/ /*for (int i = 0; i < rows; i++)*/ { 
-            timeval timeout;
-            {
-                //std::lock_guard<std::mutex> lock(input_mutex);
-                //timeout = { 0, usec_per_line / 4 };
-                timeout = { 0, 0 };
-            }
-
-            while (select(fd + 1, &readfds, NULL, NULL, &timeout) > 0) {
-               //cache.size() < cols * rows * 2) {
-                char buf[cols]; //4096 - max
-                auto size = read(fd, buf, sizeof(buf));
-
-                if (size > 0) {
-                    //std::lock_guard<std::mutex> lock(input_mutex);
-                    input_cache.append(buf, size);
-                    if (input_cache.size() > cols * rows * 4) break;
-                }
-
-            }
-
-        }
-
-
-    }
 
     static void output_callback(const char* s, size_t len, void* user);
     static int damage(VTermRect rect, void *user);
@@ -1090,7 +1067,12 @@ void TermDisplayContents::output_callback(const char* s, size_t len, void* user)
 {
     //std::string ss(s, len);
     //std::cout << "> " << ss << std::endl;
-    write(*(int*)user, s, len);
+    
+    TermSubprocess* subp = reinterpret_cast<TermSubprocess*>(user);
+    std::string str(s, len);
+    subp->write(str);
+    
+    //write(*(int*)user, s, len);
 }
 
 int TermDisplayContents::damage(VTermRect rect, void *user)

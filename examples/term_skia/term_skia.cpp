@@ -140,9 +140,9 @@ public:
 
 // For FullHD resolution:
 //const int rows = 24, cols = 80;       // Tiny    (3.33333)
-//const int rows = 30, cols = 100;    // Small   (3.33333)
+const int rows = 30, cols = 100;    // Small   (3.33333)
 //const int rows = 40, cols = 136;    // Middle  (3.4)
-const int rows = 45, cols = 152;    // Large   (3.37777)
+//const int rows = 45, cols = 152;    // Large   (3.37777)
 //const int rows = 60, cols = 192;    // Huge    (3.2)
 //const int rows = 72, cols = 240;    // Gigantic  (3.33333)
 
@@ -210,18 +210,42 @@ public:
         }
     };
 
-    struct row_key : public std::vector<litera_key> {
+    struct row_key : private std::vector<litera_key> {
+        int width, height;
+        bool operator == (const row_key& other) const {
+            return this->width == other.width &&
+                   this->height == other.height &&
+                   std::equal(this->begin(), this->end(), other.begin(), other.end());
+        }
+
         bool operator < (const row_key& other) const {
             if (this->size() != other.size()) {
                 throw std::logic_error(std::string("Incomparable keys - different length: ") + std::to_string(this->size()) + " and " +  std::to_string(other.size()));
             }
+
+            if (this->width < other.width) return true;
+            if (this->width > other.width) return false;
+
+            if (this->height < other.height) return true;
+            if (this->height > other.height) return false;
+
             for (size_t i = 0; i < size(); i++) {
                 if ((*this)[i] < other[i]) return true;
-                if (!((*this)[i] == other[i])) {
-                    return false;
-                }
+                if (!((*this)[i] == other[i])) return false;
             }
             return false;
+        }
+
+        litera_key& operator [] (size_t i) {
+            return std::vector<litera_key>::operator [] (i);
+        }
+
+        const litera_key& operator [] (size_t i) const {
+            return std::vector<litera_key>::operator [] (i);
+        }
+
+        void push_back(const litera_key& lk) {
+            std::vector<litera_key>::push_back(lk);
         }
     };
 
@@ -543,6 +567,7 @@ public:
                 if (max_width < (*mode)->getWidth()) {
                     res = mode;
                     max_width = (*mode)->getWidth();
+                    std::cout << "max_width: " << max_width << std::endl;
                 }
 			}
 		}
@@ -583,6 +608,8 @@ public:
         /*if (!texture)*/ {
             /*for (int row = row_min; row < row_max; row++)*/ {
                 row_key rk;
+                rk.width = buffer_width;
+                rk.height = buffer_height;
                 for (int col = col_min; col < col_max; col++) {
                     std::string utf8 = "";
                     VTermPos pos = { row, col };
@@ -710,10 +737,10 @@ public:
                         //ret_cnv->clear(SK_ColorTRANSPARENT);
                         letter_surfaces.push_back(ret_surf);
                     }
-                    
 
                 } else {
                     letter_image = typesettingBox.get(rk).image;
+                    assert(letter_image->width() == buffer_width && letter_image->height() == buffer_height);
                 }
             }
         }
@@ -787,11 +814,10 @@ public:
         auto color = SkColor4f::FromColor(SkHSVToColor(255, gray_hsv));
         //auto paint_gray = SkPaint(color_gray);
 
-        //const SkScalar black_hsv[] { 0.0f, 0.0f, 0.0f };
-        //auto bgcolor = SkColor4f::FromColor(SkHSVToColor(255, black_hsv));
-        //auto paint_black = SkPaint(color_black);
+        const SkScalar black_hsv[] { 0.0f, 0.0f, 0.0f };
+        auto bgcolor = SkColor4f::FromColor(SkHSVToColor(255, black_hsv));
 
-
+        //auto paint_black = SkPaint(bgcolor);
         //canvas.clear(bgcolor);
 
         ///////////////
@@ -821,12 +847,13 @@ public:
         int cols_per_buffer = cols / divider;
 
         // Patching buffer_width so that a single character consists of an integer number of pixels
+        bool presize_horizontal = false;
         int rem = buffer_width % cols_per_buffer;
         float hscale = 1.0f;
-        // if (rem > 0) {
-        //     buffer_width += cols_per_buffer - rem;
-        //     hscale = (w / divider) / (float)buffer_width;
-        // }
+        if (presize_horizontal && rem > 0) {
+             buffer_width += cols_per_buffer - rem;
+             hscale = (w / divider) / (float)buffer_width;
+        }
 
         int buffer_height = h / matrix.getRows();
         
@@ -857,19 +884,18 @@ public:
                         //canvas.drawImage(cells_image, buffer_width * col_part, buffer_height * row);
 
                         //void drawImageRect(const SkImage*, const SkRect& dst, const SkSamplingOptions&);
-                        // SkRect dst = {
-                        //     (float)buffer_width * col_part * hscale, 
-                        //     (float)buffer_height * row,
-                        //     (float)buffer_width * (col_part + 1) * hscale,
-                        //     (float)buffer_height * (row + 1),
-                        // };
-                        SkSamplingOptions so { SkFilterMode::kLinear };
-//                        canvas.drawImageRect(cells_image, dst, so);
-                        SkPaint paint;
-                        // 128 is approximately 50% opacity (0-255 range)
-                        paint.setAlpha(128); 
-
-                        canvas.drawImage(cells_image, buffer_width * col_part, buffer_height * row);//, SkSamplingOptions(), &paint);
+                        if (presize_horizontal) {
+                            SkRect dst = {
+                                (float)buffer_width * col_part * hscale, 
+                                (float)buffer_height * row,
+                                (float)buffer_width * (col_part + 1) * hscale,
+                                (float)buffer_height * (row + 1),
+                            };
+                            SkSamplingOptions so { SkFilterMode::kLinear };
+                            canvas.drawImageRect(cells_image, dst, so);
+                        } else {
+                            canvas.drawImage(cells_image, buffer_width * col_part, buffer_height * row);
+                        }
 
                     }
                 }
@@ -895,7 +921,7 @@ public:
             (float)(cursor_pos.row + 1) * buffer_height
         };
 
-        if (cursorVisible || cursorBlink) {
+        if (cursorVisible) {
             auto cur_time = std::chrono::system_clock::now();
             auto sec_since_epoch = std::chrono::duration_cast<std::chrono::milliseconds>(cur_time.time_since_epoch());
             if (cursorBlink) {

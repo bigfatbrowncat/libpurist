@@ -1,12 +1,17 @@
 #include "TermSubprocess.h"
 
-#include <cstring.h>
+// System headers
 #include <pty.h>
-#include <stdexcept>
 #include <sys/wait.h>
 #include <sys/select.h>
 #include <termios.h>
 #include <unistd.h>
+
+// C headers
+#include <cstring.h>
+
+// C++ std headers
+#include <stdexcept>
 
 std::pair<int, int> TermSubprocess::createSubprocessWithPty(uint16_t rows, uint16_t cols, const char* prog, const std::vector<std::string>& args, const char* TERM)
 {

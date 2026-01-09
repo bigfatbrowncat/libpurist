@@ -1,5 +1,6 @@
 #include "TermSubprocess.h"
 #include "lru_cache.h"
+#include "cells.h"
 
 // libpurist headers
 #include <purist/graphics/skia/DisplayContentsSkia.h>
@@ -55,32 +56,6 @@ namespace pi = purist::input;
 namespace pgs = purist::graphics::skia;
 
 
-template <typename T> class Matrix {
-    T* buf;
-    int rows, cols;
-public:
-    Matrix(int _rows, int _cols) : rows(_rows), cols(_cols) {
-        buf = new T[cols * rows];
-    }
-    ~Matrix() {
-        delete[] buf;
-    }
-    void fill(const T& by) {
-        for (int row = 0; row < rows; row++) {
-            for (int col = 0; col < cols; col++) {
-                buf[cols * row + col] = by;
-            }
-        }
-    }
-    T& operator()(int row, int col) {
-        if (row < 0 || col < 0 || row >= rows || col >= cols) throw std::runtime_error("invalid position");
-        //else
-        return buf[cols * row + col];
-    }
-    int getRows() const { return rows; }
-    int getCols() const { return cols; }
-};
-
 // For FullHD resolution:
 //const int rows = 24, cols = 80;       // Tiny    (3.33333)
 const int rows = 30, cols = 100;    // Small   (3.33333)
@@ -90,7 +65,6 @@ const int rows = 30, cols = 100;    // Small   (3.33333)
 //const int rows = 72, cols = 240;    // Gigantic  (3.33333)
 
 int FPS = 60;
-
 
 class TermDisplayContents : public pgs::SkiaDisplayContentsHandler, public pi::KeyboardHandler {
 public:
@@ -102,12 +76,8 @@ public:
 
     VTerm* vterm;
     VTermScreen* screen;
-    //SDL_Surface* surface = NULL;
-    //SDL_Texture* texture = NULL;
     int fd;
     pid_t pid;
-    //Matrix<unsigned char> matrix;
-    //TTF_Font* font;
     std::shared_ptr<SkFont> font;
     SkScalar font_width;
     SkScalar font_height;
@@ -201,7 +171,7 @@ public:
     };
 
     lru_cache<row_key, SurfaceAndImage> typesettingBox;
-    std::map<uint32_t, std::shared_ptr<Matrix<unsigned char>>> screenUpdateMatrices;  // The key is the display connector id
+    std::map<uint32_t, std::shared_ptr<cells<unsigned char>>> screenUpdateMatrices;  // The key is the display connector id
     
 
     const VTermScreenCallbacks screen_callbacks = {
@@ -346,22 +316,6 @@ public:
         vterm_screen_set_default_colors(screen, &color_palette[7], &color_palette[0]);
         
 
-        //         case VTERM_PROP_CURSORVISIBLE:
-        //     this->cursorVisible = val->boolean;
-        //     break;
-        // case VTERM_PROP_CURSORBLINK:
-        //     this->cursorBlink = val->boolean;
-        //     break;
-
-        // case VTERM_PROP_CURSORSHAPE:
-
-         
-//   int boolean;
-//   int number;
-//   VTermStringFragment string;
-//   VTermColor color;
-// } VTermValue;
-
         VTermValue val;
         val = { .boolean = true };
         vterm_state_set_termprop(state, VTERM_PROP_CURSORVISIBLE, &val);
@@ -372,13 +326,6 @@ public:
 
         vterm_screen_reset(screen, 1);
 
-        //vterm_input_write(vterm, "\033[5 q", 5);  // Show cursor
-        //vterm_input_write(vterm, "\0337", 2);      // Save cursor
-
-        //inputThread = std::make_shared<std::thread>(&TermDisplayContents::processInput, this);
-
-        //processInput();
-        //matrix.fill(0);
     }
 
     std::shared_ptr<std::thread> inputThread;
@@ -394,7 +341,7 @@ public:
     }
     int damage(int start_row, int start_col, int end_row, int end_col) {
         std::lock_guard<std::mutex> lock(matrixMutex);
-        //invalidateTexture();
+
         for (auto& mat_pair : screenUpdateMatrices) {
             auto& matrix = *(mat_pair.second);
             for (int row = start_row; row < end_row; row++) {
@@ -714,7 +661,7 @@ public:
         }
 
         if (screenUpdateMatrices.find(display->getConnectorId()) == screenUpdateMatrices.end()) {
-            screenUpdateMatrices[display->getConnectorId()] = std::make_shared<Matrix<unsigned char>>(rows, cols);
+            screenUpdateMatrices[display->getConnectorId()] = std::make_shared<cells<unsigned char>>(rows, cols);
             screenUpdateMatrices[display->getConnectorId()]->fill(framebuffersCount);
         }
         

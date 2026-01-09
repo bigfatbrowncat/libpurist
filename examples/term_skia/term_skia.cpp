@@ -1,4 +1,4 @@
-#include "process_tools.h"
+#include "TermSubprocess.h"
 
 // libpurist headers
 #include <purist/graphics/skia/DisplayContentsSkia.h>
@@ -760,41 +760,9 @@ public:
             platform.lock()->stop();
             return;
         }
-        // std::pair<pid_t, int> rst;
-        // rst = waitpid(this->pid, WNOHANG);
-        // if (rst.first == pid) {
-        //     platform.lock()->stop();
-        //     return;
-        //     //BREAKING!!!
-        //     //throw std::runtime_error("rst.first == pid");
-        // }
-
-        //processInput();
         subprocess->readInputAndProcess([&](const std::string& input_str) {
             input_write(input_str.data(), input_str.size());
         });
-
-        // {
-        //     std::lock_guard<std::mutex> lock(input_mutex);
-        //     if (input_cache.size() > 0) {
-        //         input_write(input_cache.data(), input_cache.size());
-        //         input_cache = "";
-        //     }
-        // }
-
-        // int single_print_size = cols * 2;
-        // while (!input_scroll_slowdown_flag && input_cache.size() > single_print_size) {
-        //     auto s1 = input_cache.substr(0, single_print_size);
-        //     input_write(s1.data(), s1.size());
-        //     input_cache = input_cache.substr(s1.size());
-        // }
-        
-        // if (!input_scroll_slowdown_flag && input_cache.size() > 0) {
-        //     input_write(input_cache.data(), input_cache.size());
-        //     input_cache = "";
-        // }
-        
-        // input_scroll_slowdown_flag = 0;
 
 
         if (framebuffersCount < display->getFramebuffersCount()) {

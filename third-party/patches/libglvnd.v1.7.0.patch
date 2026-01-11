@@ -1,3 +1,15 @@
+diff --git a/include/meson.build b/include/meson.build
+index 408e83a..823d7f2 100644
+--- a/include/meson.build
++++ b/include/meson.build
+@@ -98,6 +98,7 @@ if get_option('egl') and _headers
+     'EGL/egl.h',
+     'EGL/eglext.h',
+     'EGL/eglplatform.h',
++    'EGL/eglvendor.h',
+     subdir : 'EGL',
+   )
+ endif
 diff --git a/meson.build b/meson.build
 index 236c188..0153b5f 100644
 --- a/meson.build
@@ -26,6 +38,52 @@ index 61a526d..866ab8c 100644
  
      // Set up the mapping code, and populate the getprocaddress hashtable.
      __eglMappingInit();
+diff --git a/src/EGL/libeglvendor.c b/src/EGL/libeglvendor.c
+index acece59..1cddc7b 100644
+--- a/src/EGL/libeglvendor.c
++++ b/src/EGL/libeglvendor.c
+@@ -38,6 +38,8 @@ void LoadVendors(void)
+     char **tokens;
+     int i;
+ 
++    if (__eglVendorList.next != &__eglVendorList) return;
++
+     // First, check to see if a list of vendors was specified.
+     if (getuid() == geteuid() && getgid() == getegid()) {
+         env = getenv("__EGL_VENDOR_LIBRARY_FILENAMES");
+@@ -134,12 +136,31 @@ void __eglInitVendors(void)
+     glvnd_list_init(&__eglVendorList);
+ }
+ 
++static char* vendor_libraries = "libEGL_mesa.so.0";
++
++void __eglSetVendorLibraries(char* filenames_list) {
++    vendor_libraries = filenames_list;
++}
++
+ struct glvnd_list *__eglLoadVendors(void)
+ {
+-    __glvndPthreadFuncs.once(&loadVendorsOnceControl, LoadVendors);
++    //__glvndPthreadFuncs.once(&loadVendorsOnceControl, LoadVendors);
++
++    __EGLvendorInfo *vendor = LoadVendor(vendor_libraries, ".");
++
++    if (vendor != NULL) {
++        glvnd_list_append(&vendor->entry, &__eglVendorList);
++    }
++
+     return &__eglVendorList;
+ }
+ 
++// struct glvnd_list *__eglLoadVendor(const char *filename)
++// {
++//     return &__eglVendorList;
++// }
++
++
+ void __eglTeardownVendors(void)
+ {
+     __EGLvendorInfo *vendor;
 diff --git a/src/EGL/meson.build b/src/EGL/meson.build
 index c90f0ca..ffcc128 100644
 --- a/src/EGL/meson.build

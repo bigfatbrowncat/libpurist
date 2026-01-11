@@ -17,11 +17,69 @@ index 2d9200529ca..d29fa7fd11c 100644
  endif
  
  if cc.has_header_symbol('errno.h', 'program_invocation_name',
+diff --git a/src/gbm/main/backend.c b/src/gbm/main/backend.c
+index 321c7e10141..f88d8d2ac4b 100644
+--- a/src/gbm/main/backend.c
++++ b/src/gbm/main/backend.c
+@@ -49,10 +49,11 @@ struct gbm_backend_desc {
+ };
+ 
+ #define BACKEND_LIB_SUFFIX "_gbm"
+-static const char *backend_search_path_vars[] = {
+-   "GBM_BACKENDS_PATH",
+-   NULL
+-};
++static char *backend_search_paths = DEFAULT_BACKENDS_PATH;
++
++void gbm_set_backend_search_paths(char* paths) {
++   backend_search_paths = paths;
++}
+ 
+ static void
+ free_backend_desc(const struct gbm_backend_desc *backend_desc)
+@@ -109,8 +110,8 @@ static struct gbm_device *
+ load_backend_by_name(const char *name, int fd, bool warn_on_fail)
+ {
+    void *lib = loader_open_driver_lib(name, BACKEND_LIB_SUFFIX,
+-                                      backend_search_path_vars,
+-                                      DEFAULT_BACKENDS_PATH,
++                                      backend_search_paths,
++                                      //DEFAULT_BACKENDS_PATH,
+                                       warn_on_fail);
+ 
+    if (!lib)
+diff --git a/src/gbm/main/backend.h b/src/gbm/main/backend.h
+index 325c4123f90..9630cecc14d 100644
+--- a/src/gbm/main/backend.h
++++ b/src/gbm/main/backend.h
+@@ -36,4 +36,6 @@ _gbm_create_device(int fd);
+ void
+ _gbm_device_destroy(struct gbm_device *gbm);
+ 
++void gbm_set_backend_search_paths(char* paths);
++
+ #endif
 diff --git a/src/gbm/meson.build b/src/gbm/meson.build
-index 97e8d5fa044..e1ae56c343b 100644
+index 97e8d5fa044..20497db15a2 100644
 --- a/src/gbm/meson.build
 +++ b/src/gbm/meson.build
-@@ -21,7 +21,7 @@ if with_platform_android and get_option('platform-sdk-version') >= 30
+@@ -10,8 +10,14 @@ files_gbm = files(
+   'main/gbm.h',
+   'main/gbmint.h',
+ )
++
++cpu_family = host_machine.cpu_family() # e.g., x86_64
++system = host_machine.system()         # e.g., linux
++triple_musl = cpu_family + '-' + system + '-' + 'musl'
++triple_gnu = cpu_family + '-' + system + '-' + 'gnu'
++
+ args_gbm = [
+-  '-DDEFAULT_BACKENDS_PATH="@0@"'.format(gbm_backends_path),
++  '-DDEFAULT_BACKENDS_PATH="/usr/lib/' + triple_gnu + '/gbm:/usr/lib/' + triple_musl + '/gbm"',  #"@0@"'.format(gbm_backends_path),
+ ]
+ incs_gbm = [include_directories('main'), inc_loader, inc_gallium]
+ 
+@@ -21,7 +27,7 @@ if with_platform_android and get_option('platform-sdk-version') >= 30
    libgbm_name = 'gbm_mesa'
  endif
  
@@ -30,7 +88,7 @@ index 97e8d5fa044..e1ae56c343b 100644
    libgbm_name,
    files_gbm,
    include_directories : incs_gbm,
-@@ -30,7 +30,7 @@ libgbm = shared_library(
+@@ -30,7 +36,7 @@ libgbm = shared_library(
    link_with : [libloader],
    dependencies : [dep_libdrm, idep_xmlconfig],
    gnu_symbol_visibility : 'hidden',
@@ -39,6 +97,72 @@ index 97e8d5fa044..e1ae56c343b 100644
    install : true,
  )
  
+diff --git a/src/loader/loader.c b/src/loader/loader.c
+index 15bdcbfff07..e86aa0d22d5 100644
+--- a/src/loader/loader.c
++++ b/src/loader/loader.c
+@@ -836,7 +836,7 @@ loader_bind_extensions(void *data,
+  * \param driverName - a name like "i965", "radeon", "nouveau", etc.
+  * \param lib_suffix - a suffix to append to the driver name to generate the
+  * full library name.
+- * \param search_path_vars - NULL-terminated list of env vars that can be used
++ * \param search_paths - NULL-terminated list of possible search paths
+  * \param default_search_path - a colon-separted list of directories used if
+  * search_path_vars is NULL or none of the vars are set in the environment.
+  * \param warn_on_fail - Log a warning if the driver is not found.
+@@ -844,23 +844,23 @@ loader_bind_extensions(void *data,
+ void *
+ loader_open_driver_lib(const char *driver_name,
+                        const char *lib_suffix,
+-                       const char **search_path_vars,
+-                       const char *default_search_path,
++                       char *search_paths,
++                       //const char *default_search_path,
+                        bool warn_on_fail)
+ {
+    char path[PATH_MAX];
+-   const char *search_paths, *next, *end;
+-
+-   search_paths = NULL;
+-   if (__normal_user() && search_path_vars) {
+-      for (int i = 0; search_path_vars[i] != NULL; i++) {
+-         search_paths = os_get_option(search_path_vars[i]);
+-         if (search_paths)
+-            break;
+-      }
+-   }
+-   if (search_paths == NULL)
+-      search_paths = default_search_path;
++   const char /**search_paths,*/ *next, *end;
++
++   // search_paths = NULL;
++   // if (__normal_user() && search_path_vars) {
++   //    for (int i = 0; search_path_vars[i] != NULL; i++) {
++   //       search_paths = os_get_option(search_path_vars[i]);
++   //       if (search_paths)
++   //          break;
++   //    }
++   // }
++   // if (search_paths == NULL)
++   //    search_paths = default_search_path;
+ 
+    void *driver = NULL;
+    const char *dl_error = NULL;
+diff --git a/src/loader/loader.h b/src/loader/loader.h
+index 6748cb5269d..6313bc71478 100644
+--- a/src/loader/loader.h
++++ b/src/loader/loader.h
+@@ -68,8 +68,8 @@ loader_get_driver_for_fd(int fd);
+ void *
+ loader_open_driver_lib(const char *driver_name,
+                        const char *lib_suffix,
+-                       const char **search_path_vars,
+-                       const char *default_search_path,
++                       char *search_paths,
++                       //const char *default_search_path,
+                        bool warn_on_fail);
+ 
+ char *
 diff --git a/src/util/cnd_monotonic.c b/src/util/cnd_monotonic.c
 index 71d9ac0d247..4fbab736602 100644
 --- a/src/util/cnd_monotonic.c

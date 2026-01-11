@@ -1,3 +1,25 @@
+diff --git a/include/EGL/eglvendor.h b/include/EGL/eglvendor.h
+new file mode 100644
+index 0000000..0456a8b
+--- /dev/null
++++ b/include/EGL/eglvendor.h
+@@ -0,0 +1,16 @@
++#ifndef __eglvendor_h_
++#define __eglvendor_h_ 1
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++void __eglSetVendorLibraries(char* filenames_list);
++
++#ifdef __cplusplus
++}
++#endif
++
++#endif
++
++
 diff --git a/include/meson.build b/include/meson.build
 index 408e83a..823d7f2 100644
 --- a/include/meson.build

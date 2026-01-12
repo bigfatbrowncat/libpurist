@@ -66,7 +66,7 @@ target_include_directories(purist_graphics PUBLIC ${GLES2_INCLUDE_DIRS})
 target_include_directories(purist_graphics PUBLIC ${purist_third_party}/evdevw/include)
 target_include_directories(purist_graphics PUBLIC ${purist_graphics_SOURCE_DIR}/include)
 
-target_link_directories(purist_graphics PUBLIC ${purist_third_party}/prefix/lib/aarch64-linux-musl)
+target_link_directories(purist_graphics PUBLIC ${purist_third_party}/prefix/lib/${CMAKE_SYSTEM_PROCESSOR}-linux-musl)
 
 target_link_libraries(purist_graphics PUBLIC 
     evdev

@@ -57,10 +57,12 @@ namespace pgs = purist::graphics::skia;
 
 
 // For FullHD resolution:
-//const int rows = 24, cols = 80;       // Tiny    (3.33333)
-const int rows = 30, cols = 100;    // Small   (3.33333)
-//const int rows = 40, cols = 136;    // Middle  (3.4)
+const int rows = 12, cols = 40;       // Toy    (3.33333)
+//const int rows = 25, cols = 80;       // Tiny    (3.33333)
+//const int rows = 30, cols = 100;    // Small   (3.33333)
+//const int rows = 42, cols = 136;    // Middle  (3.4)
 //const int rows = 45, cols = 152;    // Large   (3.37777)
+//const int rows = 50, cols = 160;    // Larger    (3.2)
 //const int rows = 60, cols = 192;    // Huge    (3.2)
 //const int rows = 72, cols = 240;    // Gigantic  (3.33333)
 
@@ -670,7 +672,6 @@ public:
         SkScalar w = width, h = height;
 
         // Scale coeffitcients
-        SkScalar font_width_scaled = w / matrix.getCols(); //font_width / kx;
         //SkScalar font_height_scaled = h / matrix.getRows(); //font_height / ky;
 
         // SkScalar kx = (float)(font_width_scaled) / (font_width);
@@ -719,7 +720,7 @@ public:
         int cols_per_buffer = cols / divider;
 
         // Patching buffer_width so that a single character consists of an integer number of pixels
-        bool presize_horizontal = false;
+        bool presize_horizontal = true;
         int rem = buffer_width % cols_per_buffer;
         float hscale = 1.0f;
         if (presize_horizontal && rem > 0) {
@@ -728,9 +729,22 @@ public:
         }
 
         int buffer_height = h / matrix.getRows();
+
+        // Checking if the height is even
+        float vscale = 1.0f;
+        if (matrix.getRows() * buffer_height == h) {
+            vscale = 1.0f; // no scale
+        } else {
+            // Let the height be a bit over the necessary size, 
+            // because shrinking the screen buffer looks beautifullier than stretching
+            buffer_height ++;
+            vscale = h / (static_cast<float>(buffer_height) * matrix.getRows());
+        }
         
-        //canvas.scale(hscale, 1.0f);
+        canvas.scale(hscale, vscale);
         
+        SkScalar font_width_scaled = w / matrix.getCols() / hscale;
+
         {
             std::lock_guard<std::mutex> lock(matrixMutex);
             for (int col_part = 0; col_part < divider; col_part++) {
@@ -758,9 +772,9 @@ public:
                         //void drawImageRect(const SkImage*, const SkRect& dst, const SkSamplingOptions&);
                         if (presize_horizontal) {
                             SkRect dst = {
-                                (float)buffer_width * col_part * hscale, 
+                                (float)buffer_width * col_part, // * hscale, 
                                 (float)buffer_height * row,
-                                (float)buffer_width * (col_part + 1) * hscale,
+                                (float)buffer_width * (col_part + 1), // * hscale,
                                 (float)buffer_height * (row + 1),
                             };
                             SkSamplingOptions so { SkFilterMode::kLinear };

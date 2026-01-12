@@ -1,0 +1,8 @@
+(echo "Patching check" && cd check && git apply ../patches/check.0.15.2.patch)
+(echo "Patching drm" && cd drm && git apply ../patches/drm.libdrm-2.4.129.patch)
+(echo "Patching libevdev" && cd libevdev && git apply ../patches/libevdev.libevdev-1.13.5.patch)
+(echo "Patching libglvnd" && cd libglvnd && git apply ../patches/libglvnd.v1.7.0.patch)
+(echo "Patching libvterm" && cd libvterm && git apply ../patches/libvterm.2c01e1f5.patch)
+(echo "Patching mesa" && cd mesa && git apply ../patches/mesa.mesa-25.3.0.patch)
+(echo "Patching skia" && cd skia-world/skia && git apply ../../patches/skia.b6fe994d24.patch)
+(echo "Patching microhttpd" && cd skia-world/skia/third_party/externals/microhttpd && git apply ../../../../../patches/microhttpd.748945ec.patch)

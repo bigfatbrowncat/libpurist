@@ -1,5 +1,16 @@
 [
   {
+      "name": "Neo Clang (x86_64-linux-musl)",
+      "compilers": {
+          "C": "/usr/local/bin/neo-clang",
+          "CXX": "/usr/local/bin/neo-clang++"
+      },
+      "isTrusted": true,
+      "environmentVariables": {
+        "PKG_CONFIG_PATH": "${workspaceFolder}/third-party/prefix/lib/x86_64-linux-musl/pkgconfig/"
+      }
+  },
+  {
       "name": "Neo Clang (aarch64-linux-musl)",
       "compilers": {
           "C": "/usr/local/bin/neo-clang",

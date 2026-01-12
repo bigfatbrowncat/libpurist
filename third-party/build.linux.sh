@@ -1,10 +1,18 @@
 set -e
+
+echo ${ARCH:=x86_64}
+echo ${BUILD_TYPE:=release}
+
+echo "ARCH set to ${ARCH}"
 echo "* Building libvterm..."
+
+export PKG_CONFIG_PATH="`pwd`/prefix/lib/${ARCH}-linux-musl/pkgconfig/:`pwd`/prefix/lib/pkgconfig/"
+
 (cd libvterm && CC=neo-clang CFLAGS="-g3 -Og" make VERBOSE=1 DEBUG=1)
 
 (cd libxkbcommon && \
- PKG_CONFIG_PATH="`pwd`/../prefix/lib/pkgconfig" CC=neo-clang CXX=neo-clang++ meson setup ../libxkbcommon-meson-build \
- -Dbuildtype=release \
+ CC=neo-clang CXX=neo-clang++ meson setup ../libxkbcommon-meson-build \
+ -Dbuildtype=${BUILD_TYPE} \
  -Ddefault_library=static \
  -Denable-x11=false \
  -Denable-wayland=false \
@@ -15,9 +23,18 @@ echo "* Building libvterm..."
  meson install -C ../libxkbcommon-meson-build
 )
 
+(cd libpciaccess && \
+ CC=neo-clang CXX=neo-clang++ meson setup ../libpciaccess-meson-build \
+ -Dbuildtype=${BUILD_TYPE} \
+ -Ddefault_library=static \
+ --prefix=`pwd`/../prefix && \
+ meson compile -C ../libpciaccess-meson-build && \
+ meson install -C ../libpciaccess-meson-build \
+)
+
 (cd drm && \
- PKG_CONFIG_PATH="`pwd`/../prefix/lib/pkgconfig" CC=neo-clang CXX=neo-clang++ meson setup ../drm-meson-build \
- -Dbuildtype=debug \
+ CC=neo-clang CXX=neo-clang++ meson setup ../drm-meson-build \
+ -Dbuildtype=${BUILD_TYPE} \
  -Ddefault_library=static \
  -Dtests=false \
  --prefix=`pwd`/../prefix && \
@@ -27,7 +44,8 @@ echo "* Building libvterm..."
 
 (cd mesa && \
  CFLAGS="-I`pwd`/../prefix/include" \
- PKG_CONFIG_PATH="`pwd`../prefix/lib/pkgconfig" CC=neo-clang CXX=neo-clang++ meson setup ../mesa-meson-build \
+ CC=neo-clang CXX=neo-clang++ meson setup ../mesa-meson-build \
+ -Dbuildtype=${BUILD_TYPE} \
  -Dgles2=enabled \
  -Dplatforms= \
  -Dgallium-drivers= \
@@ -39,25 +57,24 @@ echo "* Building libvterm..."
  -Dzlib=disabled \
  -Dshader-cache=disabled \
  -Ddefault_library=static \
- -Dbuildtype=debug \
- --libdir='lib/aarch64-linux-musl' \
+ --libdir="lib/${ARCH}-linux-musl" \
  --prefix=`pwd`/../prefix && \
  meson compile -C ../mesa-meson-build && \
  meson install -C ../mesa-meson-build
 )
 
 (mkdir -p check-cmake-build && cd check-cmake-build && \
-cmake -DCMAKE_INSTALL_PREFIX="`pwd`/../prefix" -DCMAKE_C_COMPILER="neo-clang" -DCMAKE_CXX_COMPILER="neo-clang++" -DCMAKE_SYSROOT=/usr/local/toolchain/aarch64-neobox-linux-musl-sysroot/ ../check &&
+cmake -DCMAKE_INSTALL_PREFIX="`pwd`/../prefix" -DCMAKE_C_COMPILER="neo-clang" -DCMAKE_CXX_COMPILER="neo-clang++" -DCMAKE_SYSROOT="/usr/local/toolchain/${ARCH}-neobox-linux-musl-sysroot/" ../check &&
 cmake --build . --target help && cmake --build . && cmake --install . )
 
 (cd libevdev && \
- PKG_CONFIG_PATH="../prefix/lib/pkgconfig" CC=neo-clang CXX=neo-clang++ meson setup ../libevdev-meson-build -Ddocumentation=disabled --prefix=`pwd`/../prefix && \
+ CC=neo-clang CXX=neo-clang++ meson setup ../libevdev-meson-build -Dbuildtype=${BUILD_TYPE} -Ddocumentation=disabled --prefix=`pwd`/../prefix && \
  meson compile -C ../libevdev-meson-build && \
  meson install -C ../libevdev-meson-build
  )
 
 (cd libglvnd && \
- CC=neo-clang CXX=neo-clang++ meson setup ../libglvnd-meson-build -Dx11=disabled --prefix=`pwd`/../prefix && \
+ CC=neo-clang CXX=neo-clang++ meson setup ../libglvnd-meson-build -Dbuildtype=${BUILD_TYPE} -Dx11=disabled --prefix=`pwd`/../prefix && \
  meson compile -C ../libglvnd-meson-build && \
  meson install -C ../libglvnd-meson-build
  )

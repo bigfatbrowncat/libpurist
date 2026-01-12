@@ -141,7 +141,7 @@ void Keyboards::initialize() {
 void Keyboards::updateHardwareConfiguration(std::shared_ptr<input::KeyboardHandler> keyboardHandler) {
     // Probing keyboards
     std::shared_ptr<input::Keyboard> keyboard;
-    fs::path input_path = "/dev/input/by-id/";
+    fs::path input_path = "/dev/input/by-path/";
     std::string suffix = "-event-kbd";
     std::string device_path;
     if (fs::is_directory(input_path)) {

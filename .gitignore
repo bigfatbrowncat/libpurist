@@ -4,3 +4,5 @@ compile_commands.json
 /build-*
 /third-party/prefix
 /third-party/skia-world/out
+/third-party/*-cmake-build
+/third-party/*-meson-build

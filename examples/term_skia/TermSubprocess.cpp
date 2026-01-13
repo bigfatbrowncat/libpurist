@@ -23,6 +23,7 @@ std::pair<int, int> TermSubprocess::createSubprocessWithPty(uint16_t rows, uint1
     //else
     if (!pid) {
         setenv("TERM", TERM, 1);
+        setenv("COLORTERM", "truecolor", 1);
         char ** argv = new char *[args.size() + 2];
         argv[0] = strdup(prog);
         for (size_t i = 1; i <= args.size(); i++) {

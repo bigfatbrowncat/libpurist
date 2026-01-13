@@ -1,9 +1,9 @@
 set -e
 
-echo ${ARCH:=x86_64}
-echo ${BUILD_TYPE:=release}
-
-echo "ARCH set to ${ARCH}"
+echo "ARCH = "${ARCH:=x86_64}
+echo "BUILD_TYPE = "${BUILD_TYPE:=release}
+echo ""
+#echo "ARCH set to ${ARCH}"
 echo "* Building libvterm..."
 
 export PKG_CONFIG_PATH="`pwd`/prefix/lib/${ARCH}-linux-musl/pkgconfig/:`pwd`/prefix/lib/pkgconfig/"
@@ -26,6 +26,7 @@ export PKG_CONFIG_PATH="`pwd`/prefix/lib/${ARCH}-linux-musl/pkgconfig/:`pwd`/pre
 (cd libpciaccess && \
  CC=neo-clang CXX=neo-clang++ meson setup ../libpciaccess-meson-build \
  -Dbuildtype=${BUILD_TYPE} \
+ -Dzlib=disabled \
  -Ddefault_library=static \
  --prefix=`pwd`/../prefix && \
  meson compile -C ../libpciaccess-meson-build && \

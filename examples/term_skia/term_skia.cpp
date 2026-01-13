@@ -1,6 +1,7 @@
 #include "TermSubprocess.h"
 #include "lru_cache.h"
 #include "cells.h"
+#include "row_key.h"
 
 // libpurist headers
 #include <purist/graphics/skia/DisplayContentsSkia.h>
@@ -57,9 +58,9 @@ namespace pgs = purist::graphics::skia;
 
 
 // For FullHD resolution:
-const int rows = 12, cols = 40;       // Toy    (3.33333)
+//const int rows = 12, cols = 40;       // Toy    (3.33333)
 //const int rows = 25, cols = 80;       // Tiny    (3.33333)
-//const int rows = 30, cols = 100;    // Small   (3.33333)
+const int rows = 35, cols = 108;    // Small   (3.33333)
 //const int rows = 42, cols = 136;    // Middle  (3.4)
 //const int rows = 45, cols = 152;    // Large   (3.37777)
 //const int rows = 50, cols = 160;    // Larger    (3.2)
@@ -92,79 +93,7 @@ public:
 
     std::shared_ptr<TermSubprocess> subprocess;
 
-    struct litera_key {
-        std::string utf8;
-        int width, height;
-        SkColor fgcolor, bgcolor;
 
-        bool operator == (const litera_key& other) const {
-            return utf8 == other.utf8 &&
-                   width == other.width &&
-                   height == other.height &&
-                   fgcolor == other.fgcolor &&
-                   bgcolor == other.bgcolor;
-        }
-
-        bool operator < (const litera_key& other) const {
-            if (utf8 < other.utf8) return true;
-            else if (utf8 == other.utf8) {
-
-                if (width < other.width) return true;
-                else if (width == other.width) {
-
-                    if (height < other.height) return true;
-                    else if (height == other.height) {
-
-                        if (fgcolor < other.fgcolor) return true;
-                        else if (fgcolor == other.fgcolor) {
-
-                            if (bgcolor < other.bgcolor) return true;
-                        }
-                    }
-                }
-            }
-            return false;                   
-        }
-    };
-
-    struct row_key : private std::vector<litera_key> {
-        int width, height;
-        bool operator == (const row_key& other) const {
-            return this->width == other.width &&
-                   this->height == other.height &&
-                   std::equal(this->begin(), this->end(), other.begin(), other.end());
-        }
-
-        bool operator < (const row_key& other) const {
-            if (this->size() != other.size()) {
-                throw std::logic_error(std::string("Incomparable keys - different length: ") + std::to_string(this->size()) + " and " +  std::to_string(other.size()));
-            }
-
-            if (this->width < other.width) return true;
-            if (this->width > other.width) return false;
-
-            if (this->height < other.height) return true;
-            if (this->height > other.height) return false;
-
-            for (size_t i = 0; i < size(); i++) {
-                if ((*this)[i] < other[i]) return true;
-                if (!((*this)[i] == other[i])) return false;
-            }
-            return false;
-        }
-
-        litera_key& operator [] (size_t i) {
-            return std::vector<litera_key>::operator [] (i);
-        }
-
-        const litera_key& operator [] (size_t i) const {
-            return std::vector<litera_key>::operator [] (i);
-        }
-
-        void push_back(const litera_key& lk) {
-            std::vector<litera_key>::push_back(lk);
-        }
-    };
 
     int divider = 4;
     struct SurfaceAndImage {

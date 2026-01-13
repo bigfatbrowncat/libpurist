@@ -100,10 +100,12 @@ private:
     int divider = 4;
 
     lru_cache<row_key, SurfaceAndImage> typesettingBox;
+    std::vector<sk_sp<SkSurface>> letter_surfaces;
     std::map<uint32_t, std::shared_ptr<cells<unsigned char>>> screenUpdateMatrices;  // The key is the display connector id
 
     VTermPos cursor_pos;
     uint32_t framebuffersCount = 0;
+
 
     VTermColor color_palette[16];
 
@@ -272,6 +274,16 @@ private:
         }
     }
 
+    void keyboard_unichar(uint32_t c, VTermModifier mod) {
+        vterm_keyboard_unichar(vterm, c, mod);
+    }
+    void keyboard_key(VTermKey key, VTermModifier mod) {
+        vterm_keyboard_key(vterm, key, mod);
+    }
+    void input_write(const char* bytes, size_t len) {
+        vterm_input_write(vterm, bytes, len);
+    }
+
 
 public:
     SkiaTermEmulator(uint32_t _rows, uint32_t _cols, std::shared_ptr<TermSubprocess> subprocess) 
@@ -334,15 +346,6 @@ public:
         
     }
 
-    void keyboard_unichar(uint32_t c, VTermModifier mod) {
-        vterm_keyboard_unichar(vterm, c, mod);
-    }
-    void keyboard_key(VTermKey key, VTermModifier mod) {
-        vterm_keyboard_key(vterm, key, mod);
-    }
-    void input_write(const char* bytes, size_t len) {
-        vterm_input_write(vterm, bytes, len);
-    }
 
     static void output_callback(const char* s, size_t len, void* user)
     {
@@ -351,7 +354,6 @@ public:
         subp->write(str);
     }
 
-        std::vector<sk_sp<SkSurface>> letter_surfaces;
 
     sk_sp<SkImage> drawCells(int col_min, int col_max, int row, //int row_min, int row_max, 
                    int buffer_width, int buffer_height,
@@ -700,6 +702,89 @@ public:
         }
     }
 
+    void processCharacter(pi::Keyboard& kbd, char32_t charCode, pi::Modifiers mods, pi::Leds leds) { 
+                
+        int mod = VTERM_MOD_NONE;
+        if (mods.ctrl) mod |= VTERM_MOD_CTRL;
+        if (mods.alt) mod |= VTERM_MOD_ALT;
+        if (mods.shift) mod |= VTERM_MOD_SHIFT;
+
+
+        //for (int i = 0; i < strlen(ev.text.text); i++) {
+        keyboard_unichar(charCode, (VTermModifier)mod);   //ev.text.text[i], (VTermModifier)mod);
+        //}
+
+    }
+
+    void processKeyPress(pi::Keyboard& kbd, uint32_t keysym, pi::Modifiers mods, pi::Leds leds, bool repeat) { 
+
+        int mod = VTERM_MOD_NONE;
+        if (mods.ctrl) mod |= VTERM_MOD_CTRL;
+        if (mods.alt) mod |= VTERM_MOD_ALT;
+        if (mods.shift) mod |= VTERM_MOD_SHIFT;
+
+
+        switch (keysym) {
+        case XKB_KEY_Return:
+        case XKB_KEY_KP_Enter:
+            keyboard_key(VTERM_KEY_ENTER, (VTermModifier)mod);
+            break;
+        case XKB_KEY_BackSpace:
+            keyboard_key(VTERM_KEY_BACKSPACE, (VTermModifier)mod);
+            break;
+        case XKB_KEY_Escape:
+            keyboard_key(VTERM_KEY_ESCAPE, (VTermModifier)mod);
+            break;
+        case XKB_KEY_Tab:
+            keyboard_key(VTERM_KEY_TAB, (VTermModifier)mod);
+            break;
+        case XKB_KEY_Up:
+        case XKB_KEY_KP_Up:
+            keyboard_key(VTERM_KEY_UP, (VTermModifier)mod);
+            break;
+        case XKB_KEY_Down:
+        case XKB_KEY_KP_Down:
+            keyboard_key(VTERM_KEY_DOWN, (VTermModifier)mod);
+            break;
+        case XKB_KEY_Left:
+        case XKB_KEY_KP_Left:
+            keyboard_key(VTERM_KEY_LEFT, (VTermModifier)mod);
+            break;
+        case XKB_KEY_Right:
+        case XKB_KEY_KP_Right:
+            keyboard_key(VTERM_KEY_RIGHT, (VTermModifier)mod);
+            break;
+        case XKB_KEY_Page_Up:
+        case XKB_KEY_KP_Page_Up:
+            keyboard_key(VTERM_KEY_PAGEUP, (VTermModifier)mod);
+            break;
+        case XKB_KEY_Page_Down:
+        case XKB_KEY_KP_Page_Down:
+            keyboard_key(VTERM_KEY_PAGEDOWN, (VTermModifier)mod);
+            break;
+        case XKB_KEY_Home:
+        case XKB_KEY_KP_Home:
+            keyboard_key(VTERM_KEY_HOME, (VTermModifier)mod);
+            break;
+        case XKB_KEY_End:
+        case XKB_KEY_KP_End:
+            keyboard_key(VTERM_KEY_END, (VTermModifier)mod);
+            break;
+        case XKB_KEY_Delete:
+        case XKB_KEY_KP_Delete:
+            keyboard_key(VTERM_KEY_DEL, (VTermModifier)mod);
+            break;
+        default:
+            if (keysym >= XKB_KEY_F1 && keysym <= XKB_KEY_F35) {
+                VTermKey fsym = (VTermKey)VTERM_KEY_FUNCTION(keysym - XKB_KEY_F1 + 1);
+                keyboard_key(fsym, (VTermModifier)mod);
+            } else if (mods.ctrl && !mods.alt && !mods.shift && keysym < 127) {
+                keyboard_unichar(keysym, (VTermModifier)mod);
+            }
+            break;
+        }
+    }
+
     ~SkiaTermEmulator() {
         vterm_free(vterm);
     }
@@ -792,86 +877,11 @@ public:
 
 
     void onCharacter(pi::Keyboard& kbd, char32_t charCode, pi::Modifiers mods, pi::Leds leds) override { 
-                
-        int mod = VTERM_MOD_NONE;
-        if (mods.ctrl) mod |= VTERM_MOD_CTRL;
-        if (mods.alt) mod |= VTERM_MOD_ALT;
-        if (mods.shift) mod |= VTERM_MOD_SHIFT;
-
-
-        //for (int i = 0; i < strlen(ev.text.text); i++) {
-        termEmu->keyboard_unichar(charCode, (VTermModifier)mod);   //ev.text.text[i], (VTermModifier)mod);
-        //}
-
+        termEmu->processCharacter(kbd, charCode, mods, leds);
     }
 
     void onKeyPress(pi::Keyboard& kbd, uint32_t keysym, pi::Modifiers mods, pi::Leds leds, bool repeat) override { 
-
-        int mod = VTERM_MOD_NONE;
-        if (mods.ctrl) mod |= VTERM_MOD_CTRL;
-        if (mods.alt) mod |= VTERM_MOD_ALT;
-        if (mods.shift) mod |= VTERM_MOD_SHIFT;
-
-
-        switch (keysym) {
-        case XKB_KEY_Return:
-        case XKB_KEY_KP_Enter:
-            termEmu->keyboard_key(VTERM_KEY_ENTER, (VTermModifier)mod);
-            break;
-        case XKB_KEY_BackSpace:
-            termEmu->keyboard_key(VTERM_KEY_BACKSPACE, (VTermModifier)mod);
-            break;
-        case XKB_KEY_Escape:
-            termEmu->keyboard_key(VTERM_KEY_ESCAPE, (VTermModifier)mod);
-            break;
-        case XKB_KEY_Tab:
-            termEmu->keyboard_key(VTERM_KEY_TAB, (VTermModifier)mod);
-            break;
-        case XKB_KEY_Up:
-        case XKB_KEY_KP_Up:
-            termEmu->keyboard_key(VTERM_KEY_UP, (VTermModifier)mod);
-            break;
-        case XKB_KEY_Down:
-        case XKB_KEY_KP_Down:
-            termEmu->keyboard_key(VTERM_KEY_DOWN, (VTermModifier)mod);
-            break;
-        case XKB_KEY_Left:
-        case XKB_KEY_KP_Left:
-            termEmu->keyboard_key(VTERM_KEY_LEFT, (VTermModifier)mod);
-            break;
-        case XKB_KEY_Right:
-        case XKB_KEY_KP_Right:
-            termEmu->keyboard_key(VTERM_KEY_RIGHT, (VTermModifier)mod);
-            break;
-        case XKB_KEY_Page_Up:
-        case XKB_KEY_KP_Page_Up:
-            termEmu->keyboard_key(VTERM_KEY_PAGEUP, (VTermModifier)mod);
-            break;
-        case XKB_KEY_Page_Down:
-        case XKB_KEY_KP_Page_Down:
-            termEmu->keyboard_key(VTERM_KEY_PAGEDOWN, (VTermModifier)mod);
-            break;
-        case XKB_KEY_Home:
-        case XKB_KEY_KP_Home:
-            termEmu->keyboard_key(VTERM_KEY_HOME, (VTermModifier)mod);
-            break;
-        case XKB_KEY_End:
-        case XKB_KEY_KP_End:
-            termEmu->keyboard_key(VTERM_KEY_END, (VTermModifier)mod);
-            break;
-        case XKB_KEY_Delete:
-        case XKB_KEY_KP_Delete:
-            termEmu->keyboard_key(VTERM_KEY_DEL, (VTermModifier)mod);
-            break;
-        default:
-            if (keysym >= XKB_KEY_F1 && keysym <= XKB_KEY_F35) {
-                VTermKey fsym = (VTermKey)VTERM_KEY_FUNCTION(keysym - XKB_KEY_F1 + 1);
-                termEmu->keyboard_key(fsym, (VTermModifier)mod);
-            } else if (mods.ctrl && !mods.alt && !mods.shift && keysym < 127) {
-                termEmu->keyboard_unichar(keysym, (VTermModifier)mod);
-            }
-            break;
-        }
+        termEmu->processKeyPress(kbd, keysym, mods, leds, repeat);
     }
 
     void onKeyRelease(pi::Keyboard& kbd, uint32_t keysym, pi::Modifiers mods, pi::Leds leds) override { }

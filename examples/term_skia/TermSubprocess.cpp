@@ -5,6 +5,7 @@
 #include <sys/wait.h>
 #include <sys/select.h>
 #include <termios.h>
+#include <fcntl.h> // For fcntl, F_GETFL, F_SETFL, O_NONBLOCK
 #include <unistd.h>
 
 // C headers
@@ -30,7 +31,24 @@ std::pair<int, int> TermSubprocess::createSubprocessWithPty(uint16_t rows, uint1
         argv[args.size() + 1] = NULL;
         if (execvp(prog, argv) < 0) exit(-1);
     }
-    //else 
+
+
+    // 1. Get current flags
+    int flags = fcntl(fd, F_GETFL, 0);
+    if (flags == -1) {
+        perror("fcntl(F_GETFL)");
+        // Handle error
+    }
+
+    // 2. Add O_NONBLOCK flag
+    flags |= O_NONBLOCK;
+
+    // 3. Set new flags
+    if (fcntl(fd, F_SETFL, flags) == -1) {
+        perror("fcntl(F_SETFL)");
+        // Handle error
+    }
+
     return { pid, fd };
 }
 

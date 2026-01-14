@@ -35,15 +35,6 @@ namespace pi = purist::input;
 namespace pgs = purist::graphics::skia;
 
 
-// For FullHD resolution:
-//const int rows = 12, cols = 40;       // Toy    (3.33333)
-//const int rows = 25, cols = 80;       // Tiny    (3.33333)
-const int rows = 35, cols = 108;    // Small   (3.33333)
-//const int rows = 42, cols = 136;    // Middle  (3.4)
-//const int rows = 45, cols = 152;    // Large   (3.37777)
-//const int rows = 50, cols = 160;    // Larger    (3.2)
-//const int rows = 60, cols = 192;    // Huge    (3.2)
-//const int rows = 72, cols = 240;    // Gigantic  (3.33333)
 
 int FPS = 60;
 
@@ -145,10 +136,56 @@ public:
 
 };
 
+void print_sizes() {
+    std::cerr << "Valid sizes are: "
+            << "tiny, petite, small, middle, large, grand, huge, colossal" << std::endl;
+}
 
 int main(int argc, char **argv)
 {
     try {
+
+        //const int rows = 12, cols = 40;       // Tiny    (3.33333)
+        //const int rows = 25, cols = 80;       // Petite    (3.33333)
+        int rows = 35, cols = 108;    // Small   (3.33333)
+        //const int rows = 42, cols = 136;    // Middle  (3.4)
+        //const int rows = 45, cols = 152;    // Large   (3.37777)
+        //const int rows = 50, cols = 160;    // Grand    (3.2)
+        //const int rows = 60, cols = 192;    // Huge    (3.2)
+        //const int rows = 72, cols = 240;    // Gigantic  (3.33333)
+
+
+        if (argc == 2) {
+            auto s = std::string(argv[1]);
+            if (s == "--help" || s == "-h") {
+                std::cerr << "Usage: " << argv[0] << " [size]" << std::endl << std::endl;
+                print_sizes();
+                return 0;
+            }
+
+            if (s == "tiny" || s == "t") {
+                rows = 12; cols = 40;
+            } else if (s == "petite" || s == "p") {
+                rows = 25; cols = 80;
+            } else if (s == "small" || s == "s") {
+                rows = 35; cols = 108;
+            } else if (s == "middle" || s == "m") {
+                rows = 42; cols = 136;
+            } else if (s == "large" || s == "l") {
+                rows = 45; cols = 152;
+            } else if (s == "grand" || s == "g") {
+                rows = 50; cols = 160;
+            } else if (s == "huge" || s == "h") {
+                rows = 60; cols = 192;
+            } else if (s == "colossal" || s == "c") {
+                rows = 72; cols = 240;
+            } else {
+                std::cerr << "Invalid option: " << s << std::endl << std::endl;
+                print_sizes();
+                return 1;
+            }
+        }
+
         bool enableOpenGL = true;
 
         auto purist = std::make_shared<p::Platform>(enableOpenGL);

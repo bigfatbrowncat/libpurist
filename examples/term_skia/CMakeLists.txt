@@ -10,6 +10,8 @@ add_executable(term_skia
     term_skia.cpp
     TermSubprocess.cpp
     TermSubprocess.h
+    SkiaTermEmulator.cpp
+    SkiaTermEmulator.h
     ${HackNerdFontMono}
 )
 

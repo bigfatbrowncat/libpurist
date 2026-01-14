@@ -20,5 +20,5 @@ public:
     void readInputAndProcess(std::function<void(const std::string&)> cb);
     void write(const std::string& str);
     int getFd() const;
-
+    
 };

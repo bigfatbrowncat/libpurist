@@ -509,6 +509,8 @@ SkiaTermEmulator::SkiaTermEmulator(uint32_t _rows, uint32_t _cols, std::shared_p
     screen = vterm_obtain_screen(vterm);
     vterm_screen_set_callbacks(screen, &screen_callbacks, this);
 
+    vterm_screen_enable_altscreen(screen, 1);
+
     VTermState * state = vterm_obtain_state(vterm);
     
     setStandardColorPalette(state);

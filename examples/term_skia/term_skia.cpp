@@ -164,13 +164,13 @@ int main(int argc, char **argv)
             }
 
             if (s == "tiny" || s == "t") {
-                rows = 12; cols = 40;
-            } else if (s == "petite" || s == "p") {
-                rows = 25; cols = 80;
-            } else if (s == "small" || s == "s") {
-                rows = 35; cols = 108;
+                rows = 24; cols = 80;
+            } else if (s == "petite" || s == "p") {      // big for 6 inch
+                rows = 26; cols = 92;
+            } else if (s == "small" || s == "s") {       // small for 6 inch
+                rows = 32; cols = 108;
             } else if (s == "middle" || s == "m") {
-                rows = 42; cols = 136;
+                rows = 40; cols = 120;
             } else if (s == "large" || s == "l") {
                 rows = 45; cols = 152;
             } else if (s == "grand" || s == "g") {

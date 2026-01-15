@@ -582,15 +582,16 @@ void SkiaTermEmulator::processKeyPress(pi::Keyboard& kbd, uint32_t keysym, pi::M
     case XKB_KEY_KP_Enter:
         keyboard_key(VTERM_KEY_ENTER, (VTermModifier)mod);
         break;
+    case XKB_KEY_Tab:
+        keyboard_key(VTERM_KEY_TAB, (VTermModifier)mod);
+        break;
     case XKB_KEY_BackSpace:
         keyboard_key(VTERM_KEY_BACKSPACE, (VTermModifier)mod);
         break;
     case XKB_KEY_Escape:
         keyboard_key(VTERM_KEY_ESCAPE, (VTermModifier)mod);
         break;
-    case XKB_KEY_Tab:
-        keyboard_key(VTERM_KEY_TAB, (VTermModifier)mod);
-        break;
+
     case XKB_KEY_Up:
     case XKB_KEY_KP_Up:
         keyboard_key(VTERM_KEY_UP, (VTermModifier)mod);
@@ -607,13 +608,14 @@ void SkiaTermEmulator::processKeyPress(pi::Keyboard& kbd, uint32_t keysym, pi::M
     case XKB_KEY_KP_Right:
         keyboard_key(VTERM_KEY_RIGHT, (VTermModifier)mod);
         break;
-    case XKB_KEY_Page_Up:
-    case XKB_KEY_KP_Page_Up:
-        keyboard_key(VTERM_KEY_PAGEUP, (VTermModifier)mod);
+
+    case XKB_KEY_Insert:
+    case XKB_KEY_KP_Insert:
+        keyboard_key(VTERM_KEY_INS, (VTermModifier)mod);        
         break;
-    case XKB_KEY_Page_Down:
-    case XKB_KEY_KP_Page_Down:
-        keyboard_key(VTERM_KEY_PAGEDOWN, (VTermModifier)mod);
+    case XKB_KEY_Delete:
+    case XKB_KEY_KP_Delete:
+        keyboard_key(VTERM_KEY_DEL, (VTermModifier)mod);
         break;
     case XKB_KEY_Home:
     case XKB_KEY_KP_Home:
@@ -623,10 +625,38 @@ void SkiaTermEmulator::processKeyPress(pi::Keyboard& kbd, uint32_t keysym, pi::M
     case XKB_KEY_KP_End:
         keyboard_key(VTERM_KEY_END, (VTermModifier)mod);
         break;
-    case XKB_KEY_Delete:
-    case XKB_KEY_KP_Delete:
-        keyboard_key(VTERM_KEY_DEL, (VTermModifier)mod);
+    case XKB_KEY_Page_Up:
+    case XKB_KEY_KP_Page_Up:
+        keyboard_key(VTERM_KEY_PAGEUP, (VTermModifier)mod);
         break;
+    case XKB_KEY_Page_Down:
+    case XKB_KEY_KP_Page_Down:
+        keyboard_key(VTERM_KEY_PAGEDOWN, (VTermModifier)mod);
+        break;
+    
+    case XKB_KEY_KP_Multiply:
+        keyboard_key(VTERM_KEY_KP_MULT, (VTermModifier)mod);
+        break;
+    case XKB_KEY_KP_Add:
+        keyboard_key(VTERM_KEY_KP_PLUS, (VTermModifier)mod);
+        break;
+    case XKB_KEY_KP_Separator:
+        keyboard_key(VTERM_KEY_KP_COMMA, (VTermModifier)mod);
+        break;
+    case XKB_KEY_KP_Subtract:
+        keyboard_key(VTERM_KEY_KP_MINUS, (VTermModifier)mod);
+        break;
+    case XKB_KEY_KP_Decimal:
+        keyboard_key(VTERM_KEY_KP_PERIOD, (VTermModifier)mod);
+        break;
+    case XKB_KEY_KP_Divide:
+        keyboard_key(VTERM_KEY_KP_DIVIDE, (VTermModifier)mod);
+        break;
+    case XKB_KEY_KP_Equal:
+        keyboard_key(VTERM_KEY_KP_EQUAL, (VTermModifier)mod);
+        break;
+
+
     default:
         if (keysym >= XKB_KEY_F1 && keysym <= XKB_KEY_F35) {
             VTermKey fsym = (VTermKey)VTERM_KEY_FUNCTION(keysym - XKB_KEY_F1 + 1);

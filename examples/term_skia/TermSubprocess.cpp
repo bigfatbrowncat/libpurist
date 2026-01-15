@@ -102,6 +102,8 @@ void TermSubprocess::readInputAndProcess(std::function<void(const std::string&)>
         if (size > 0) {
             input_cache.append(buf, size);
             if (input_cache.size() > cols * rows * 4) break;
+        } else {
+            break; // Can't read. Maybe the client app closed... Anyway, passing through
         }
     }
 

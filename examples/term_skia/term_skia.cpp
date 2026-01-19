@@ -1,8 +1,6 @@
 #include "TermSubprocess.h"
 #include "SkiaTermEmulator.h"
-#include "lru_cache.h"
-#include "cells.h"
-#include "row_key.h"
+
 
 // libpurist headers
 #include <purist/graphics/skia/DisplayContentsSkia.h>
@@ -10,7 +8,7 @@
 #include <purist/graphics/Mode.h>
 #include <purist/input/KeyboardHandler.h>
 #include <purist/Platform.h>
-#include <purist/graphics/skia/icu_common.h>
+// #include <purist/graphics/skia/icu_common.h>
 #include <Resource.h>
 
 // Skia headers
@@ -19,15 +17,15 @@
 // C++ std headers
 #include <memory>
 #include <iostream>
-#include <iomanip>
-#include <sstream>
-#include <cmath>
-#include <stdexcept>
-#include <mutex>
-#include <vector>
-#include <cassert>
-#include <chrono>
-#include <optional>
+// #include <iomanip>
+// #include <sstream>
+// #include <cmath>
+// #include <stdexcept>
+// #include <mutex>
+// #include <vector>
+// #include <cassert>
+// #include <chrono>
+// #include <optional>
 
 namespace p = purist;
 namespace pg = purist::graphics;

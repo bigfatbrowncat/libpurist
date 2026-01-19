@@ -1,5 +1,11 @@
 #include "SkiaTermEmulator.h"
 
+// Skia headers
+#include <include/core/SkCanvas.h>
+#include <include/core/SkPaint.h>
+#include <include/core/SkFont.h>
+#include <include/core/SkFontMetrics.h>
+
 void SkiaTermEmulator::refreshRect(int start_row, int start_col, int end_row, int end_col) {
     for (auto& mat_pair : screenUpdateMatrices) {
         auto& matrix = *(mat_pair.second);
@@ -367,4 +373,8 @@ void SkiaTermEmulator::setTypeface(sk_sp<SkTypeface> typeface) {
 
     //typesettingBox.clear(); TODO!!!
     
+}
+
+SkiaTermEmulator::~SkiaTermEmulator() { 
+
 }

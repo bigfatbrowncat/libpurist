@@ -13,6 +13,7 @@
 
 // C++ std headers
 #include <stdexcept>
+#include <iostream>
 
 std::pair<int, int> TermSubprocess::createSubprocessWithPty(uint16_t rows, uint16_t cols, const char* prog, const std::vector<std::string>& args, const char* TERM)
 {
@@ -20,7 +21,7 @@ std::pair<int, int> TermSubprocess::createSubprocessWithPty(uint16_t rows, uint1
     struct winsize win = { rows, cols, 0, 0 };
     auto pid = forkpty(&fd, NULL, NULL, &win);
     if (pid < 0) throw std::runtime_error("forkpty failed");
-    //else
+
     if (!pid) {
         setenv("TERM", TERM, 1);
         setenv("COLORTERM", "truecolor", 1);
@@ -33,11 +34,10 @@ std::pair<int, int> TermSubprocess::createSubprocessWithPty(uint16_t rows, uint1
         if (execvp(prog, argv) < 0) exit(-1);
     }
 
-
     // 1. Get current flags
     int flags = fcntl(fd, F_GETFL, 0);
     if (flags == -1) {
-        perror("fcntl(F_GETFL)");
+        std::cerr << "fcntl(F_GETFL)" << std::endl;
         // Handle error
     }
 
@@ -46,7 +46,7 @@ std::pair<int, int> TermSubprocess::createSubprocessWithPty(uint16_t rows, uint1
 
     // 3. Set new flags
     if (fcntl(fd, F_SETFL, flags) == -1) {
-        perror("fcntl(F_SETFL)");
+        std::cerr << "fcntl(F_SETFL)" << std::endl;
         // Handle error
     }
 

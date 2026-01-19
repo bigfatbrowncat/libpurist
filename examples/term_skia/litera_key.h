@@ -1,3 +1,5 @@
+#pragma once
+
 #include <include/core/SkColor.h>
 
 #include <string>

@@ -10,23 +10,15 @@
 // libpurist headers
 #include <purist/graphics/skia/DisplayContentsSkia.h>
 #include <purist/graphics/Display.h>
-#include <purist/graphics/Mode.h>
-#include <purist/input/KeyboardHandler.h>
-#include <purist/Platform.h>
+// #include <purist/graphics/Mode.h>
+// #include <purist/input/KeyboardHandler.h>
+// #include <purist/Platform.h>
 #include <purist/graphics/skia/icu_common.h>
 
 // Skia headers
-#include <include/core/SkScalar.h>
-#include <include/core/SkRect.h>
-#include <include/core/SkCanvas.h>
 #include <include/core/SkSurface.h>
-#include <include/core/SkBitmap.h>
 #include <include/core/SkImage.h>
-#include <include/core/SkPaint.h>
 #include <include/core/SkFont.h>
-#include <include/core/SkData.h>
-#include <include/core/SkFontMetrics.h>
-#include <include/core/SkColor.h>
 
 // xkbcommon headers
 #include <xkbcommon/xkbcommon-keysyms.h>
@@ -34,27 +26,16 @@
 // C++ std headers
 #include <map>
 #include <memory>
-#include <iostream>
-#include <iomanip>
-#include <sstream>
 #include <cmath>
-#include <stdexcept>
 #include <mutex>
-#include <unordered_map>
 #include <vector>
 #include <cassert>
-#include <chrono>
 #include <optional>
-#include <mutex>
-#include <thread>
-#include <atomic>
 
 namespace p = purist;
 namespace pg = purist::graphics;
 namespace pi = purist::input;
 namespace pgs = purist::graphics::skia;
-
-class SkiaTermEmulator;
 
 
 class SkiaTermEmulator {
@@ -107,5 +88,5 @@ public:
     void setCursorBlink(bool value) { cursorBlink = value; }
     void bellBlink() { ringingFramebuffers = framebuffersCount; }
 
-    virtual ~SkiaTermEmulator() { }
+    virtual ~SkiaTermEmulator();
 };

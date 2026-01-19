@@ -57,40 +57,25 @@ namespace pg = purist::graphics;
 namespace pi = purist::input;
 namespace pgs = purist::graphics::skia;
 
+class SkiaTermEmulator;
 
-class SkiaTermEmulator {
-private:
-    struct SurfaceAndImage {
-        sk_sp<SkSurface> surface;
-        sk_sp<SkImage> image;
-    };
+struct VTermScreenCellWrapper {
+  std::vector<uint32_t> chars;
+  char width;
+  VTermScreenCellAttrs attrs;
+  SkColor4f foreColor, backColor;
+};
 
+class VTermWrapper {
     std::shared_ptr<TermSubprocess> subprocess;
-
-    float cursorPhase = 0;
-    uint32_t cursorBlinkPeriodMSec = 300;
-
-    sk_sp<SkTypeface> typeface;
-    std::shared_ptr<SkFont> font;
-    SkScalar font_width;
-    SkScalar font_height;
-    SkScalar font_descent;
-    uint32_t ringingFramebuffers = 0;
-    bool cursorVisible = true;
-    bool cursorBlink = true;
+    std::weak_ptr<SkiaTermEmulator> frontend;
 
     VTerm* vterm;
     VTermScreen* screen;
 
     uint32_t rows, cols;
-    int divider = 4;
-
-    lru_cache<row_key, SurfaceAndImage> typesettingBox;
-    std::vector<sk_sp<SkSurface>> letter_surfaces;
-    std::map<uint32_t, std::shared_ptr<cells<unsigned char>>> screenUpdateMatrices;  // The key is the display connector id
 
     VTermPos cursor_pos;
-    uint32_t framebuffersCount = 0;
 
     VTermColor color_palette[16];
 
@@ -128,20 +113,112 @@ private:
     void keyboard_key(VTermKey key, VTermModifier mod);
     void input_write(const char* bytes, size_t len);
 
+
+public:
+    void processCharacter(pi::Keyboard& kbd, char32_t charCode, pi::Modifiers mods, pi::Leds leds);
+    void processKeyPress(pi::Keyboard& kbd, uint32_t keysym, pi::Modifiers mods, pi::Leds leds, bool repeat);
+
+    //void setFrontend(std::weak_ptr<SkiaTermEmulator> frontend) { this->frontend = frontend; }
+
+    VTermScreenCellWrapper getCell(int32_t row, int32_t col) {
+        VTermPos pos = { row, col };
+        VTermScreenCell cell;
+        vterm_screen_get_cell(screen, pos, &cell);
+
+        VTermScreenCellWrapper res;
+        res.width = cell.width;
+        res.attrs = cell.attrs;
+
+        if (VTERM_COLOR_IS_INDEXED(&cell.fg)) {
+            vterm_screen_convert_color_to_rgb(screen, &cell.fg);
+        }
+        if (VTERM_COLOR_IS_RGB(&cell.fg)) {
+            res.foreColor = SkColor4f::FromColor(SkColorSetRGB(cell.fg.rgb.red, cell.fg.rgb.green, cell.fg.rgb.blue));
+        }
+
+        if (VTERM_COLOR_IS_INDEXED(&cell.bg)) {
+            vterm_screen_convert_color_to_rgb(screen, &cell.bg);
+        }
+        if (VTERM_COLOR_IS_RGB(&cell.bg)) {
+            res.backColor = SkColor4f::FromColor(SkColorSetRGB(cell.bg.rgb.red, cell.bg.rgb.green, cell.bg.rgb.blue));
+        }
+
+        //if (cell.chars[0] != 0xffffffff) {
+            for (int i = 0; cell.chars[i] != 0 && i < VTERM_MAX_CHARS_PER_CELL; i++) {
+                res.chars.push_back(cell.chars[i]);
+            }
+        //} else {
+        //    res.chars.push_back(0xffffffff);
+        //}
+        return res;
+    }
+
     static void output_callback(const char* s, size_t len, void* user);
+
+    void processInputFromSubprocess() {
+        subprocess->readInputAndProcess([&](const std::string& input_str) {
+            input_write(input_str.data(), input_str.size());
+        });
+    }
+
+    VTermPos getCursorPos() { return cursor_pos; }
+
+    VTermWrapper(uint32_t _rows, uint32_t _cols, 
+        std::shared_ptr<TermSubprocess> subprocess,
+        std::weak_ptr<SkiaTermEmulator> frontend);
+    virtual ~VTermWrapper();
+};
+
+class SkiaTermEmulator {
+private:
+    struct SurfaceAndImage {
+        sk_sp<SkSurface> surface;
+        sk_sp<SkImage> image;
+    };
+
+
+    float cursorPhase = 0;
+    uint32_t cursorBlinkPeriodMSec = 300;
+
+    sk_sp<SkTypeface> typeface;
+    std::shared_ptr<SkFont> font;
+    SkScalar font_width;
+    SkScalar font_height;
+    SkScalar font_descent;
+    uint32_t ringingFramebuffers = 0;
+    bool cursorVisible = true;
+    bool cursorBlink = true;
+
+    uint32_t rows, cols;
+    int divider = 4;
+
+    lru_cache<row_key, SurfaceAndImage> typesettingBox;
+    std::vector<sk_sp<SkSurface>> letter_surfaces;
+    std::map<uint32_t, std::shared_ptr<cells<unsigned char>>> screenUpdateMatrices;  // The key is the display connector id
+
+    uint32_t framebuffersCount = 0;
+
+    std::shared_ptr<VTermWrapper> vtermWrapper;
+
     sk_sp<SkImage> drawCells(int col_min, int col_max, int row, //int row_min, int row_max, 
                    int buffer_width, int buffer_height,
                    std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, const icu::Normalizer2* normalizer);
 
 public:
-    SkiaTermEmulator(uint32_t _rows, uint32_t _cols, std::shared_ptr<TermSubprocess> subprocess);
+    SkiaTermEmulator(uint32_t _rows, uint32_t _cols);
 
+    void setVTermWrapper(std::shared_ptr<VTermWrapper> vtermWrapper) {
+        this->vtermWrapper = vtermWrapper;
+    }
     void setTypeface(sk_sp<SkTypeface> typeface);
     void drawIntoSurface(std::shared_ptr<pg::Display> display, 
                          std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, 
                          int width, int height, SkCanvas& canvas, bool refreshed);
-    void processCharacter(pi::Keyboard& kbd, char32_t charCode, pi::Modifiers mods, pi::Leds leds);
-    void processKeyPress(pi::Keyboard& kbd, uint32_t keysym, pi::Modifiers mods, pi::Leds leds, bool repeat);
+    
+    void refreshRect(int start_row, int start_col, int end_row, int end_col);
+    void setCursorVisible(bool value) { cursorVisible = value; }
+    void setCursorBlink(bool value) { cursorBlink = value; }
+    void bellBlink() { ringingFramebuffers = framebuffersCount; }
 
-    ~SkiaTermEmulator();
+    virtual ~SkiaTermEmulator() { }
 };

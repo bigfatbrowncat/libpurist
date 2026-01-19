@@ -1,6 +1,6 @@
 #include "SkiaTermEmulator.h"
 
-int SkiaTermEmulator::damage(int start_row, int start_col, int end_row, int end_col) {
+void SkiaTermEmulator::refreshRect(int start_row, int start_col, int end_row, int end_col) {
     for (auto& mat_pair : screenUpdateMatrices) {
         auto& matrix = *(mat_pair.second);
         for (int row = start_row; row < end_row; row++) {
@@ -9,37 +9,38 @@ int SkiaTermEmulator::damage(int start_row, int start_col, int end_row, int end_
             }
         }
     }
+}
+
+
+int VTermWrapper::damage(int start_row, int start_col, int end_row, int end_col) {
+    frontend.lock()->refreshRect(start_row, start_col, end_row, end_col);
     return 0;
 }
 
-int SkiaTermEmulator::moverect(VTermRect dest, VTermRect src) {
+int VTermWrapper::moverect(VTermRect dest, VTermRect src) {
     return 0;
 }
 
-int SkiaTermEmulator::movecursor(VTermPos pos, VTermPos oldpos, int visible) {
+int VTermWrapper::movecursor(VTermPos pos, VTermPos oldpos, int visible) {
     // Issuing repainting for the old cursor position
-    for (auto& mat_pair : screenUpdateMatrices) {
-        auto& matrix = *(mat_pair.second);
-        matrix(cursor_pos.row, cursor_pos.col) = framebuffersCount;
-    }
+    frontend.lock()->refreshRect(cursor_pos.row, cursor_pos.col, cursor_pos.row + 1, cursor_pos.col + 1);
 
     cursor_pos = pos;
     
     // Issuing repainting for the new cursor position
-    for (auto& mat_pair : screenUpdateMatrices) {
-        auto& matrix = *(mat_pair.second);
-        matrix(cursor_pos.row, cursor_pos.col) = framebuffersCount;
-    }
+    frontend.lock()->refreshRect(cursor_pos.row, cursor_pos.col, cursor_pos.row + 1, cursor_pos.col + 1);
     return 0;
 }
-int SkiaTermEmulator::settermprop(VTermProp prop, VTermValue *val) {
+int VTermWrapper::settermprop(VTermProp prop, VTermValue *val) {
     switch (prop) {
     case VTERM_PROP_CURSORVISIBLE:
-        this->cursorVisible = val->boolean;
+        //this->cursorVisible = val->boolean;
+        frontend.lock()->setCursorVisible(val->boolean);
         return true;
         break;
     case VTERM_PROP_CURSORBLINK:
-        this->cursorBlink = val->boolean;
+        //this->cursorBlink = val->boolean;
+        frontend.lock()->setCursorBlink(val->boolean);
         return true;
         break;
 
@@ -52,63 +53,63 @@ int SkiaTermEmulator::settermprop(VTermProp prop, VTermValue *val) {
     return 0;
 }
 
-int SkiaTermEmulator::bell() {
-    ringingFramebuffers = framebuffersCount;
+int VTermWrapper::bell() {
+    frontend.lock()->bellBlink();
     return 0;
 }
-int SkiaTermEmulator::resize(int rows, int cols) {
-    return 0;
-}
-
-int SkiaTermEmulator::sb_pushline(int cols, const VTermScreenCell *cells) {
+int VTermWrapper::resize(int rows, int cols) {
     return 0;
 }
 
-int SkiaTermEmulator::sb_popline(int cols, VTermScreenCell *cells) {
+int VTermWrapper::sb_pushline(int cols, const VTermScreenCell *cells) {
     return 0;
 }
 
-int SkiaTermEmulator::vterm_cb_damage(VTermRect rect, void *user)
-{
-    return ((SkiaTermEmulator*)user)->damage(rect.start_row, rect.start_col, rect.end_row, rect.end_col);
+int VTermWrapper::sb_popline(int cols, VTermScreenCell *cells) {
+    return 0;
 }
 
-int SkiaTermEmulator::vterm_cb_moverect(VTermRect dest, VTermRect src, void *user)
+int VTermWrapper::vterm_cb_damage(VTermRect rect, void *user)
 {
-    return ((SkiaTermEmulator*)user)->moverect(dest, src);
+    return ((VTermWrapper*)user)->damage(rect.start_row, rect.start_col, rect.end_row, rect.end_col);
 }
 
-int SkiaTermEmulator::vterm_cb_movecursor(VTermPos pos, VTermPos oldpos, int visible, void *user)
+int VTermWrapper::vterm_cb_moverect(VTermRect dest, VTermRect src, void *user)
 {
-    return ((SkiaTermEmulator*)user)->movecursor(pos, oldpos, visible);
+    return ((VTermWrapper*)user)->moverect(dest, src);
 }
 
-int SkiaTermEmulator::vterm_cb_settermprop(VTermProp prop, VTermValue *val, void *user)
+int VTermWrapper::vterm_cb_movecursor(VTermPos pos, VTermPos oldpos, int visible, void *user)
 {
-    return ((SkiaTermEmulator*)user)->settermprop(prop, val);
+    return ((VTermWrapper*)user)->movecursor(pos, oldpos, visible);
 }
 
-int SkiaTermEmulator::vterm_cb_bell(void *user)
+int VTermWrapper::vterm_cb_settermprop(VTermProp prop, VTermValue *val, void *user)
 {
-    return ((SkiaTermEmulator*)user)->bell();
+    return ((VTermWrapper*)user)->settermprop(prop, val);
 }
 
-int SkiaTermEmulator::vterm_cb_resize(int rows, int cols, void *user)
+int VTermWrapper::vterm_cb_bell(void *user)
 {
-    return ((SkiaTermEmulator*)user)->resize(rows, cols);
+    return ((VTermWrapper*)user)->bell();
 }
 
-int SkiaTermEmulator::vterm_cb_sb_pushline(int cols, const VTermScreenCell *cells, void *user)
+int VTermWrapper::vterm_cb_resize(int rows, int cols, void *user)
 {
-    return ((SkiaTermEmulator*)user)->sb_pushline(cols, cells);
+    return ((VTermWrapper*)user)->resize(rows, cols);
 }
 
-int SkiaTermEmulator::vterm_cb_sb_popline(int cols, VTermScreenCell *cells, void *user)
+int VTermWrapper::vterm_cb_sb_pushline(int cols, const VTermScreenCell *cells, void *user)
 {
-    return ((SkiaTermEmulator*)user)->sb_popline(cols, cells);
+    return ((VTermWrapper*)user)->sb_pushline(cols, cells);
 }
 
-void SkiaTermEmulator::setStandardColorPalette(VTermState* state) {
+int VTermWrapper::vterm_cb_sb_popline(int cols, VTermScreenCell *cells, void *user)
+{
+    return ((VTermWrapper*)user)->sb_popline(cols, cells);
+}
+
+void VTermWrapper::setStandardColorPalette(VTermState* state) {
     VTermColor black;
     vterm_color_rgb(&black, 1, 1, 1);
     VTermColor red;
@@ -154,17 +155,19 @@ void SkiaTermEmulator::setStandardColorPalette(VTermState* state) {
     }
 }
 
-void SkiaTermEmulator::keyboard_unichar(uint32_t c, VTermModifier mod) {
+void VTermWrapper::keyboard_unichar(uint32_t c, VTermModifier mod) {
     vterm_keyboard_unichar(vterm, c, mod);
 }
-void SkiaTermEmulator::keyboard_key(VTermKey key, VTermModifier mod) {
+void VTermWrapper::keyboard_key(VTermKey key, VTermModifier mod) {
     vterm_keyboard_key(vterm, key, mod);
 }
-void SkiaTermEmulator::input_write(const char* bytes, size_t len) {
+void VTermWrapper::input_write(const char* bytes, size_t len) {
     vterm_input_write(vterm, bytes, len);
 }
 
-void SkiaTermEmulator::output_callback(const char* s, size_t len, void* user)
+
+
+void VTermWrapper::output_callback(const char* s, size_t len, void* user)
 {
     TermSubprocess* subp = reinterpret_cast<TermSubprocess*>(user);
     std::string str(s, len);
@@ -182,7 +185,9 @@ sk_sp<SkImage> SkiaTermEmulator::drawCells(int col_min, int col_max, int row, //
     SkScalar kx = ((SkScalar)buffer_width / (col_max - col_min) + epsilon) / font_width;
     SkScalar ky = ((SkScalar)buffer_height + epsilon) / font_height;
 
-    SkColor4f color, bgcolor;
+    //SkColor4f color = SkColor4f::FromColor(SkColorSetRGB(128, 128, 128));
+    //SkColor4f bgcolor = SkColor4f::FromColor(SkColorSetRGB(0, 0, 0));
+
     UErrorCode status = U_ZERO_ERROR;
 
     sk_sp<SkImage> letter_image = nullptr;
@@ -194,32 +199,30 @@ sk_sp<SkImage> SkiaTermEmulator::drawCells(int col_min, int col_max, int row, //
             rk.height = buffer_height;
             for (int col = col_min; col < col_max; col++) {
                 std::string utf8 = "";
-                VTermPos pos = { row, col };
-                VTermScreenCell cell;
-                vterm_screen_get_cell(screen, pos, &cell);
-                if (cell.chars[0] != 0xffffffff) {
+                VTermScreenCellWrapper cell = vtermWrapper->getCell(row, col);
+                if (cell.chars.size() > 0 && cell.chars[0] != 0xffffffff) {
                     icu::UnicodeString ustr;
                     for (int i = 0; cell.chars[i] != 0 && i < VTERM_MAX_CHARS_PER_CELL; i++) {
                         ustr.append((UChar32)cell.chars[i]);
                     }
-                    color = SkColor4f::FromColor(SkColorSetRGB(128, 128, 128));
 
-                    bgcolor = SkColor4f::FromColor(SkColorSetRGB(0, 0, 0));
+                    //color = cell.foreColor;
+                    //bgcolor = cell.backColor;
 
-                    if (VTERM_COLOR_IS_INDEXED(&cell.fg)) {
-                        vterm_screen_convert_color_to_rgb(screen, &cell.fg);
-                    }
-                    if (VTERM_COLOR_IS_RGB(&cell.fg)) {
-                        color = SkColor4f::FromColor(SkColorSetRGB(cell.fg.rgb.red, cell.fg.rgb.green, cell.fg.rgb.blue));
-                    }
-                    if (VTERM_COLOR_IS_INDEXED(&cell.bg)) {
-                        vterm_screen_convert_color_to_rgb(screen, &cell.bg);
-                    }
-                    if (VTERM_COLOR_IS_RGB(&cell.bg)) {
-                        bgcolor = SkColor4f::FromColor(SkColorSetRGB(cell.bg.rgb.red, cell.bg.rgb.green, cell.bg.rgb.blue));
-                    }
+                    // if (VTERM_COLOR_IS_INDEXED(&cell.fg)) {
+                    //     vterm_screen_convert_color_to_rgb(screen, &cell.fg);
+                    // }
+                    // if (VTERM_COLOR_IS_RGB(&cell.fg)) {
+                    //     color = SkColor4f::FromColor(SkColorSetRGB(cell.fg.rgb.red, cell.fg.rgb.green, cell.fg.rgb.blue));
+                    // }
+                    // // if (VTERM_COLOR_IS_INDEXED(&cell.bg)) {
+                    // //     vterm_screen_convert_color_to_rgb(screen, &cell.bg);
+                    // // }
+                    // if (VTERM_COLOR_IS_RGB(&cell.bg)) {
+                    //     bgcolor = SkColor4f::FromColor(SkColorSetRGB(cell.bg.rgb.red, cell.bg.rgb.green, cell.bg.rgb.blue));
+                    // }
 
-                    if (cell.attrs.reverse) std::swap(color, bgcolor);
+                    if (cell.attrs.reverse) std::swap(cell.foreColor, cell.backColor);
                     
                     /* TODO
                     int style = TTF_STYLE_NORMAL;
@@ -244,7 +247,7 @@ sk_sp<SkImage> SkiaTermEmulator::drawCells(int col_min, int col_max, int row, //
                     }
                 }
 
-                litera_key litkey { utf8, buffer_width, buffer_height, color.toSkColor(), bgcolor.toSkColor() };
+                litera_key litkey { utf8, buffer_width, buffer_height, cell.foreColor.toSkColor(), cell.backColor.toSkColor() };
                 rk.push_back(litkey);
             }
 
@@ -258,7 +261,7 @@ sk_sp<SkImage> SkiaTermEmulator::drawCells(int col_min, int col_max, int row, //
                             SkImageInfo::MakeN32Premul(((uint32_t)buffer_width) ,   // * (col_max - col_min)
                                                                 ((uint32_t)buffer_height))
                         ));
-                        std::cout << "Added new letter surface. In the cache: " << typesettingBox.size() << std::endl;
+                        //std::cout << "Added new letter surface. In the cache: " << typesettingBox.size() << std::endl;
                     }
                     
                     sk_sp<SkSurface> letter_surface = nullptr;
@@ -333,9 +336,7 @@ void SkiaTermEmulator::drawIntoSurface(std::shared_ptr<pg::Display> display,
                         std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, 
                         int width, int height, SkCanvas& canvas, bool refreshed) {
 
-    subprocess->readInputAndProcess([&](const std::string& input_str) {
-        input_write(input_str.data(), input_str.size());
-    });
+    vtermWrapper->processInputFromSubprocess();
 
 
     if (framebuffersCount < display->getFramebuffersCount()) {
@@ -398,6 +399,8 @@ void SkiaTermEmulator::drawIntoSurface(std::shared_ptr<pg::Display> display,
     
     SkScalar font_width_scaled = w / matrix.getCols() / hscale;
 
+    auto cursor_pos = vtermWrapper->getCursorPos();
+
     {
         //std::lock_guard<std::mutex> lock(matrixMutex);
         for (int col_part = 0; col_part < divider; col_part++) {
@@ -442,16 +445,18 @@ void SkiaTermEmulator::drawIntoSurface(std::shared_ptr<pg::Display> display,
     }
     
     // draw cursor
-    VTermScreenCell cell;
-    vterm_screen_get_cell(screen, cursor_pos, &cell);
+    //VTermScreenCell cell;
+    //vterm_screen_get_cell(screen, cursor_pos, &cell);
 
     auto cur_color = SkColor4f::FromColor(SkColorSetRGB(128, 128, 128));
-    if (VTERM_COLOR_IS_INDEXED(&cell.fg)) {
-        vterm_screen_convert_color_to_rgb(screen, &cell.fg);
-    }
-    if (VTERM_COLOR_IS_RGB(&cell.fg)) {
-        cur_color = SkColor4f::FromColor(SkColorSetRGB(cell.fg.rgb.red, cell.fg.rgb.green, cell.fg.rgb.blue));
-    }
+    // if (VTERM_COLOR_IS_INDEXED(&cell.fg)) {
+    //     vterm_screen_convert_color_to_rgb(screen, &cell.fg);
+    // }
+
+    VTermScreenCellWrapper cell = vtermWrapper->getCell(cursor_pos.row, cursor_pos.col);
+    //if (VTERM_COLOR_IS_RGB(&cell.fg)) {
+        cur_color = cell.foreColor; // SkColor4f::FromColor(SkColorSetRGB(cell.fg.rgb.red, cell.fg.rgb.green, cell.fg.rgb.blue));
+    //}
 
     SkRect rect = { 
         (float)cursor_pos.col * font_width_scaled, 
@@ -491,17 +496,11 @@ void SkiaTermEmulator::drawIntoSurface(std::shared_ptr<pg::Display> display,
     }
 }
 
-SkiaTermEmulator::SkiaTermEmulator(uint32_t _rows, uint32_t _cols, std::shared_ptr<TermSubprocess> subprocess) 
-    : subprocess(subprocess), rows(_rows), cols(_cols), typesettingBox(_rows * divider * 4) {
-
-    // Checking the arguments
-    if (_cols == 0 || _rows == 0) {
-        throw std::logic_error(std::string("Columns and rows count has to be positive"));
-    }
-    if (_cols % divider != 0) { 
-        throw std::logic_error(std::string("Columns count ") + std::to_string(_cols) + std::string(" should be divideable by te number of substrings ") + std::to_string(divider));
-    }
-
+VTermWrapper::VTermWrapper(uint32_t _rows, uint32_t _cols, 
+    std::shared_ptr<TermSubprocess> subprocess,
+    std::weak_ptr<SkiaTermEmulator> frontend)
+        : subprocess(subprocess), frontend(frontend), rows(_rows), cols(_cols) {
+    
     vterm = vterm_new(_rows, _cols);
     vterm_set_utf8(vterm, 1);
     vterm_output_set_callback(vterm, output_callback, (void*)subprocess.get());
@@ -530,6 +529,18 @@ SkiaTermEmulator::SkiaTermEmulator(uint32_t _rows, uint32_t _cols, std::shared_p
 
 }
 
+SkiaTermEmulator::SkiaTermEmulator(uint32_t _rows, uint32_t _cols) 
+    : rows(_rows), cols(_cols), typesettingBox(_rows * divider * 4) {
+
+    // Checking the arguments
+    if (_cols == 0 || _rows == 0) {
+        throw std::logic_error(std::string("Columns and rows count has to be positive"));
+    }
+    if (_cols % divider != 0) { 
+        throw std::logic_error(std::string("Columns count ") + std::to_string(_cols) + std::string(" should be divideable by te number of substrings ") + std::to_string(divider));
+    }
+}
+
 void SkiaTermEmulator::setTypeface(sk_sp<SkTypeface> typeface) {
     this->typeface = typeface;
 
@@ -555,7 +566,7 @@ void SkiaTermEmulator::setTypeface(sk_sp<SkTypeface> typeface) {
 
 
 
-void SkiaTermEmulator::processCharacter(pi::Keyboard& kbd, char32_t charCode, pi::Modifiers mods, pi::Leds leds) { 
+void VTermWrapper::processCharacter(pi::Keyboard& kbd, char32_t charCode, pi::Modifiers mods, pi::Leds leds) { 
             
     int mod = VTERM_MOD_NONE;
     if (mods.ctrl) mod |= VTERM_MOD_CTRL;
@@ -569,7 +580,7 @@ void SkiaTermEmulator::processCharacter(pi::Keyboard& kbd, char32_t charCode, pi
 
 }
 
-void SkiaTermEmulator::processKeyPress(pi::Keyboard& kbd, uint32_t keysym, pi::Modifiers mods, pi::Leds leds, bool repeat) { 
+void VTermWrapper::processKeyPress(pi::Keyboard& kbd, uint32_t keysym, pi::Modifiers mods, pi::Leds leds, bool repeat) { 
 
     int mod = VTERM_MOD_NONE;
     if (mods.ctrl) mod |= VTERM_MOD_CTRL;
@@ -668,6 +679,6 @@ void SkiaTermEmulator::processKeyPress(pi::Keyboard& kbd, uint32_t keysym, pi::M
     }
 }
 
-SkiaTermEmulator::~SkiaTermEmulator() {
+VTermWrapper::~VTermWrapper() {
     vterm_free(vterm);
 }

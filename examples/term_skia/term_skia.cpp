@@ -42,6 +42,7 @@ class TermDisplayContents : public pgs::SkiaDisplayContentsHandler, public pi::K
 public:
     std::weak_ptr<p::Platform> platform;
     std::shared_ptr<TermSubprocess> subprocess;
+    std::shared_ptr<VTermWrapper> vtermWrapper;
     std::shared_ptr<SkiaTermEmulator> termEmu;
        
     TermDisplayContents(std::weak_ptr<p::Platform> platform, uint32_t _rows, uint32_t _cols) 
@@ -50,8 +51,9 @@ public:
         std::string prog = getenv("SHELL");
         subprocess = std::make_shared<TermSubprocess>(_rows, _cols, prog, std::vector<std::string> {"-"});
 
-        termEmu = std::make_shared<SkiaTermEmulator>(_rows, _cols, subprocess);
-        
+        termEmu = std::make_shared<SkiaTermEmulator>(_rows, _cols);
+        vtermWrapper = std::make_shared<VTermWrapper>(_rows, _cols, subprocess, termEmu);
+        termEmu->setVTermWrapper(vtermWrapper);
     }
 
     void drawIntoSurface(std::shared_ptr<pg::Display> display, 
@@ -123,11 +125,11 @@ public:
 
 
     void onCharacter(pi::Keyboard& kbd, char32_t charCode, pi::Modifiers mods, pi::Leds leds) override { 
-        termEmu->processCharacter(kbd, charCode, mods, leds);
+        vtermWrapper->processCharacter(kbd, charCode, mods, leds);
     }
 
     void onKeyPress(pi::Keyboard& kbd, uint32_t keysym, pi::Modifiers mods, pi::Leds leds, bool repeat) override { 
-        termEmu->processKeyPress(kbd, keysym, mods, leds, repeat);
+        vtermWrapper->processKeyPress(kbd, keysym, mods, leds, repeat);
     }
 
     void onKeyRelease(pi::Keyboard& kbd, uint32_t keysym, pi::Modifiers mods, pi::Leds leds) override {

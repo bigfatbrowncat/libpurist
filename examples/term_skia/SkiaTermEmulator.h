@@ -1,7 +1,7 @@
 #pragma once
 
 #include "TermSubprocess.h"
-#include "VTermWrapper.h"
+#include "TextCellsMatrixModel.h"
 
 #include "lru_cache.h"
 #include "cells.h"
@@ -34,7 +34,6 @@
 
 namespace p = purist;
 namespace pg = purist::graphics;
-namespace pi = purist::input;
 namespace pgs = purist::graphics::skia;
 
 
@@ -66,17 +65,17 @@ private:
 
     uint32_t framebuffersCount = 0;
 
-    std::shared_ptr<VTermWrapper> vtermWrapper;
+    std::shared_ptr<TextCellsMatrixModel> model;
 
     sk_sp<SkImage> drawCells(int col_min, int col_max, int row, //int row_min, int row_max, 
                    int buffer_width, int buffer_height,
-                   std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, const icu::Normalizer2* normalizer);
+                   std::shared_ptr<pgs::SkiaOverlay> skiaOverlay);
 
 public:
     SkiaTermEmulator(uint32_t _rows, uint32_t _cols);
 
-    void setVTermWrapper(std::shared_ptr<VTermWrapper> vtermWrapper) {
-        this->vtermWrapper = vtermWrapper;
+    void setModel(std::shared_ptr<TextCellsMatrixModel> model) {
+        this->model = model;
     }
     void setTypeface(sk_sp<SkTypeface> typeface);
     void drawIntoSurface(std::shared_ptr<pg::Display> display, 

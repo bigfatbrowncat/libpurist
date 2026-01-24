@@ -156,14 +156,14 @@ void VTermWrapper::input_write(const char* bytes, size_t len) {
     vterm_input_write(vterm, bytes, len);
 }
 
-VTermScreenCellWrapper VTermWrapper::getCell(int32_t row, int32_t col) {
+TextCell VTermWrapper::getCell(int32_t row, int32_t col) {
     VTermPos pos = { row, col };
     VTermScreenCell cell;
     vterm_screen_get_cell(screen, pos, &cell);
 
-    VTermScreenCellWrapper res;
-    res.width = cell.width;
-    res.attrs = cell.attrs;
+    TextCell res;
+    //res.width = cell.width;
+    //res.attrs = cell.attrs;
 
     if (VTERM_COLOR_IS_INDEXED(&cell.fg)) {
         vterm_screen_convert_color_to_rgb(screen, &cell.fg);
@@ -179,13 +179,62 @@ VTermScreenCellWrapper VTermWrapper::getCell(int32_t row, int32_t col) {
         res.backColor = SkColor4f::FromColor(SkColorSetRGB(cell.bg.rgb.red, cell.bg.rgb.green, cell.bg.rgb.blue));
     }
 
-    //if (cell.chars[0] != 0xffffffff) {
+    if (cell.attrs.reverse) std::swap(res.foreColor, res.backColor);
+
+    // for (int i = 0; cell.chars[i] != 0 && i < VTERM_MAX_CHARS_PER_CELL; i++) {
+    //     res.chars.push_back(cell.chars[i]);
+    // }
+
+    if (cell.chars[0] != 0xffffffff) {
+        icu::UnicodeString ustr;
         for (int i = 0; cell.chars[i] != 0 && i < VTERM_MAX_CHARS_PER_CELL; i++) {
-            res.chars.push_back(cell.chars[i]);
+            ustr.append((UChar32)cell.chars[i]);
         }
-    //} else {
-    //    res.chars.push_back(0xffffffff);
-    //}
+
+        //color = cell.foreColor;
+        //bgcolor = cell.backColor;
+
+        // if (VTERM_COLOR_IS_INDEXED(&cell.fg)) {
+        //     vterm_screen_convert_color_to_rgb(screen, &cell.fg);
+        // }
+        // if (VTERM_COLOR_IS_RGB(&cell.fg)) {
+        //     color = SkColor4f::FromColor(SkColorSetRGB(cell.fg.rgb.red, cell.fg.rgb.green, cell.fg.rgb.blue));
+        // }
+        // // if (VTERM_COLOR_IS_INDEXED(&cell.bg)) {
+        // //     vterm_screen_convert_color_to_rgb(screen, &cell.bg);
+        // // }
+        // if (VTERM_COLOR_IS_RGB(&cell.bg)) {
+        //     bgcolor = SkColor4f::FromColor(SkColorSetRGB(cell.bg.rgb.red, cell.bg.rgb.green, cell.bg.rgb.blue));
+        // }
+
+        
+        /* TODO
+        int style = TTF_STYLE_NORMAL;
+        if (cell.attrs.bold) style |= TTF_STYLE_BOLD;
+        if (cell.attrs.underline) style |= TTF_STYLE_UNDERLINE;
+        if (cell.attrs.italic) style |= TTF_STYLE_ITALIC;
+        if (cell.attrs.strike) style |= TTF_STYLE_STRIKETHROUGH; */
+        //if (cell.attrs.blink) { /*TBD*/ }
+        
+        // SkPaint bgpt(bgcolor);
+        // bgpt.setStyle(SkPaint::kFill_Style);
+        // canvas.drawRect(rect, bgpt);
+
+        UErrorCode status = U_ZERO_ERROR;
+        auto normalizer = icu::Normalizer2::getNFKCInstance(status);
+        if (U_FAILURE(status)) throw std::runtime_error("unable to get NFKC normalizer");
+
+        if (ustr.length() > 0) {
+            auto ustr_normalized = normalizer->normalize(ustr, status);
+            if (U_SUCCESS(status)) {
+                ustr_normalized.toUTF8String(res.utf8);
+            } else {
+                ustr.toUTF8String(res.utf8);
+            }
+        }
+    }
+
+
     return res;
 }
 

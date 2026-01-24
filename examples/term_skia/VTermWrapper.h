@@ -1,6 +1,7 @@
 #pragma once
 
 #include "TermSubprocess.h"
+#include "TextCellsMatrixModel.h"
 
 // VTerm headers
 #include <vterm.h>
@@ -14,19 +15,14 @@
 
 // C++ std headers
 #include <vector>
+#include <string>
+#include <memory>
 
 namespace pi = purist::input;
 
-struct VTermScreenCellWrapper {
-  std::vector<uint32_t> chars;
-  char width;
-  VTermScreenCellAttrs attrs;
-  SkColor4f foreColor, backColor;
-};
-
 class SkiaTermEmulator;
 
-class VTermWrapper {
+class VTermWrapper : public TextCellsMatrixModel {
     std::shared_ptr<TermSubprocess> subprocess;
     std::weak_ptr<SkiaTermEmulator> frontend;
 
@@ -77,12 +73,14 @@ public:
     void processCharacter(pi::Keyboard& kbd, char32_t charCode, pi::Modifiers mods, pi::Leds leds);
     void processKeyPress(pi::Keyboard& kbd, uint32_t keysym, pi::Modifiers mods, pi::Leds leds, bool repeat);
 
-    VTermScreenCellWrapper getCell(int32_t row, int32_t col);
+    TextCell getCell(int32_t row, int32_t col) override;
     static void output_callback(const char* s, size_t len, void* user);
 
     void processInputFromSubprocess();
 
-    VTermPos getCursorPos() { return cursor_pos; }
+    TextCellsPos getCursorPos() override { 
+        return TextCellsPos { cursor_pos.row, cursor_pos.col }; 
+    }
 
     VTermWrapper(uint32_t _rows, uint32_t _cols, 
         std::shared_ptr<TermSubprocess> subprocess,

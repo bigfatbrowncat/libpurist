@@ -1,6 +1,6 @@
 #include "TermSubprocess.h"
 #include "SkiaTermEmulator.h"
-
+#include "VTermWrapper.h"
 
 // libpurist headers
 #include <purist/graphics/skia/DisplayContentsSkia.h>
@@ -17,21 +17,11 @@
 // C++ std headers
 #include <memory>
 #include <iostream>
-// #include <iomanip>
-// #include <sstream>
-// #include <cmath>
-// #include <stdexcept>
-// #include <mutex>
-// #include <vector>
-// #include <cassert>
-// #include <chrono>
-// #include <optional>
 
 namespace p = purist;
 namespace pg = purist::graphics;
 namespace pi = purist::input;
 namespace pgs = purist::graphics::skia;
-
 
 
 int FPS = 60;
@@ -51,12 +41,13 @@ public:
 
         termEmu = std::make_shared<SkiaTermEmulator>(_rows, _cols);
         vtermWrapper = std::make_shared<VTermWrapper>(_rows, _cols, subprocess, termEmu);
-        termEmu->setVTermWrapper(vtermWrapper);
+        termEmu->setModel(vtermWrapper);
     }
 
     void drawIntoSurface(std::shared_ptr<pg::Display> display, 
                         std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, 
                         int width, int height, SkCanvas& canvas, bool refreshed) override {
+        vtermWrapper->processInputFromSubprocess();
 
         if (subprocess->isExited()) {
             platform.lock()->stop();
@@ -163,22 +154,33 @@ int main(int argc, char **argv)
                 return 0;
             }
 
+// * 24 76
+//   30 96
+// * 32 104
+//   40 132
+// * 48 156
+//   60 196
+//   64 212
+//   80 264
+//   96 316
+
+
             if (s == "tiny" || s == "t") {
                 rows = 24; cols = 80;
             } else if (s == "petite" || s == "p") {      // big for 6 inch
-                rows = 26; cols = 92;
+                rows = 28; cols = 96;
             } else if (s == "small" || s == "s") {       // small for 6 inch
-                rows = 32; cols = 108;
+                rows = 36; cols = 120;
             } else if (s == "middle" || s == "m") {
-                rows = 40; cols = 120;
+                rows = 38; cols = 128;
             } else if (s == "large" || s == "l") {
-                rows = 45; cols = 152;
+                rows = 48; cols = 160;
             } else if (s == "grand" || s == "g") {
-                rows = 50; cols = 160;
+                rows = 57; cols = 192;
             } else if (s == "huge" || s == "h") {
-                rows = 60; cols = 192;
-            } else if (s == "colossal" || s == "c") {
                 rows = 72; cols = 240;
+            } else if (s == "colossal" || s == "c") {
+                rows = 76; cols = 256;
             } else {
                 std::cerr << "Invalid option: " << s << std::endl << std::endl;
                 print_sizes();

@@ -20,7 +20,7 @@ void SkiaTermEmulator::refreshRect(int start_row, int start_col, int end_row, in
 
 sk_sp<SkImage> SkiaTermEmulator::drawCells(int col_min, int col_max, int row, //int row_min, int row_max, 
                 int buffer_width, int buffer_height,
-                std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, const icu::Normalizer2* normalizer) {
+                std::shared_ptr<pgs::SkiaOverlay> skiaOverlay) {
 
     SkScalar epsilon = 0.0005f; // This very small value is added to the skale factor 
                                 // to make sure that the images will not have any gaps between them
@@ -42,53 +42,10 @@ sk_sp<SkImage> SkiaTermEmulator::drawCells(int col_min, int col_max, int row, //
             rk.height = buffer_height;
             for (int col = col_min; col < col_max; col++) {
                 std::string utf8 = "";
-                VTermScreenCellWrapper cell = vtermWrapper->getCell(row, col);
-                if (cell.chars.size() > 0 && cell.chars[0] != 0xffffffff) {
-                    icu::UnicodeString ustr;
-                    for (int i = 0; cell.chars[i] != 0 && i < VTERM_MAX_CHARS_PER_CELL; i++) {
-                        ustr.append((UChar32)cell.chars[i]);
-                    }
+                TextCell cell = model->getCell(row, col);
 
-                    //color = cell.foreColor;
-                    //bgcolor = cell.backColor;
+                utf8 = cell.utf8;
 
-                    // if (VTERM_COLOR_IS_INDEXED(&cell.fg)) {
-                    //     vterm_screen_convert_color_to_rgb(screen, &cell.fg);
-                    // }
-                    // if (VTERM_COLOR_IS_RGB(&cell.fg)) {
-                    //     color = SkColor4f::FromColor(SkColorSetRGB(cell.fg.rgb.red, cell.fg.rgb.green, cell.fg.rgb.blue));
-                    // }
-                    // // if (VTERM_COLOR_IS_INDEXED(&cell.bg)) {
-                    // //     vterm_screen_convert_color_to_rgb(screen, &cell.bg);
-                    // // }
-                    // if (VTERM_COLOR_IS_RGB(&cell.bg)) {
-                    //     bgcolor = SkColor4f::FromColor(SkColorSetRGB(cell.bg.rgb.red, cell.bg.rgb.green, cell.bg.rgb.blue));
-                    // }
-
-                    if (cell.attrs.reverse) std::swap(cell.foreColor, cell.backColor);
-                    
-                    /* TODO
-                    int style = TTF_STYLE_NORMAL;
-                    if (cell.attrs.bold) style |= TTF_STYLE_BOLD;
-                    if (cell.attrs.underline) style |= TTF_STYLE_UNDERLINE;
-                    if (cell.attrs.italic) style |= TTF_STYLE_ITALIC;
-                    if (cell.attrs.strike) style |= TTF_STYLE_STRIKETHROUGH; */
-                    if (cell.attrs.blink) { /*TBD*/ }
-                    
-                    // SkPaint bgpt(bgcolor);
-                    // bgpt.setStyle(SkPaint::kFill_Style);
-                    // canvas.drawRect(rect, bgpt);
-
-                    if (ustr.length() > 0) {
-                        auto ustr_normalized = normalizer->normalize(ustr, status);
-                        if (U_SUCCESS(status)) {
-                            ustr_normalized.toUTF8String(utf8);
-                        } else {
-                            ustr.toUTF8String(utf8);
-                        }
-
-                    }
-                }
 
                 litera_key litkey { utf8, buffer_width, buffer_height, cell.foreColor.toSkColor(), cell.backColor.toSkColor() };
                 rk.push_back(litkey);
@@ -179,9 +136,6 @@ void SkiaTermEmulator::drawIntoSurface(std::shared_ptr<pg::Display> display,
                         std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, 
                         int width, int height, SkCanvas& canvas, bool refreshed) {
 
-    vtermWrapper->processInputFromSubprocess();
-
-
     if (framebuffersCount < display->getFramebuffersCount()) {
         // Setting how many framebuffers we should redraw at once
         framebuffersCount = display->getFramebuffersCount();
@@ -209,9 +163,6 @@ void SkiaTermEmulator::drawIntoSurface(std::shared_ptr<pg::Display> display,
     assert(matrix.getCols() % divider == 0);
     int part_width = matrix.getCols() / divider;
 
-    UErrorCode status = U_ZERO_ERROR;
-    auto normalizer = icu::Normalizer2::getNFKCInstance(status);
-    if (U_FAILURE(status)) throw std::runtime_error("unable to get NFKC normalizer");
 
     int buffer_width = w / divider;
     int cols_per_buffer = cols / divider;
@@ -242,7 +193,7 @@ void SkiaTermEmulator::drawIntoSurface(std::shared_ptr<pg::Display> display,
     
     SkScalar font_width_scaled = w / matrix.getCols() / hscale;
 
-    auto cursor_pos = vtermWrapper->getCursorPos();
+    auto cursor_pos = model->getCursorPos();
 
     {
         //std::lock_guard<std::mutex> lock(matrixMutex);
@@ -264,7 +215,7 @@ void SkiaTermEmulator::drawIntoSurface(std::shared_ptr<pg::Display> display,
                     // Drawing
                     auto cells_image = drawCells(part_width * col_part,
                             part_width * (col_part + 1), row, 
-                            buffer_width, buffer_height, skiaOverlay, normalizer);
+                            buffer_width, buffer_height, skiaOverlay);
 
                     //canvas.drawImage(cells_image, buffer_width * col_part, buffer_height * row);
 
@@ -296,7 +247,7 @@ void SkiaTermEmulator::drawIntoSurface(std::shared_ptr<pg::Display> display,
     //     vterm_screen_convert_color_to_rgb(screen, &cell.fg);
     // }
 
-    VTermScreenCellWrapper cell = vtermWrapper->getCell(cursor_pos.row, cursor_pos.col);
+    TextCell cell = model->getCell(cursor_pos.row, cursor_pos.col);
     //if (VTERM_COLOR_IS_RGB(&cell.fg)) {
         cur_color = cell.foreColor; // SkColor4f::FromColor(SkColorSetRGB(cell.fg.rgb.red, cell.fg.rgb.green, cell.fg.rgb.blue));
     //}

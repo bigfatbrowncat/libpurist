@@ -23,6 +23,15 @@ public:
         if (row < 0 || col < 0 || row >= rows || col >= cols) throw std::runtime_error("invalid position");
         return buf[cols * row + col];
     }
+
+    void setRect(int row_top, int rows_count, int col_left, int cols_count, const T& value) {
+        for (int j = row_top; j < row_top + rows_count; j++) {
+            for (int i = col_left; i < col_left + cols_count; i++) {
+                buf[cols * j + i] = value;
+            }
+        }
+    }
+
     int getRows() const { return rows; }
     int getCols() const { return cols; }
 };

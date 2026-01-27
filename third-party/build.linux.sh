@@ -1,3 +1,4 @@
+#!/bin/bash
 set -e
 
 echo "ARCH = "${ARCH:=x86_64}
@@ -8,7 +9,8 @@ echo "* Building libvterm..."
 
 export PKG_CONFIG_PATH="`pwd`/prefix/lib/${ARCH}-linux-musl/pkgconfig/:`pwd`/prefix/lib/pkgconfig/"
 
-(cd libvterm && CC=neo-clang CFLAGS="-g3 -Og" make VERBOSE=1 DEBUG=1)
+#(cd libvterm && CC=neo-clang CFLAGS="-g3 -Og" make VERBOSE=1 DEBUG=1)
+(cd libvterm && CC=neo-clang CFLAGS="-g0 -O3" make VERBOSE=1)
 
 (cd libxkbcommon && \
  CC=neo-clang CXX=neo-clang++ meson setup ../libxkbcommon-meson-build \
@@ -82,6 +84,8 @@ cmake --build . --target help && cmake --build . && cmake --install . )
 
  (cd libexecinfo && \
  make DESTDIR=`pwd`/../prefix install-static install-headers)
+
+exit 0
 
 echo "* Building skia..."
 (cd skia-world && \

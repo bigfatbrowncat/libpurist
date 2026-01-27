@@ -1,7 +1,15 @@
 #include "VTermWrapper.h"
 #include "SkiaTermEmulator.h"
 
+#include "include/core/SkPicture.h"
+#include "include/core/SkData.h"
+#include "base64.hpp"
+
+#include <iostream>
+#include <string>
+
 int VTermWrapper::damage(int start_row, int start_col, int end_row, int end_col) {
+    text_cells.setRect(start_row, end_row - start_row, start_col, end_col - start_col, std::nullopt);
     frontend.lock()->refreshRect(start_row, start_col, end_row, end_col);
     return 0;
 }
@@ -51,11 +59,84 @@ int VTermWrapper::resize(int rows, int cols) {
 }
 
 int VTermWrapper::sb_pushline(int cols, const VTermScreenCell *cells) {
+    pushed_lines ++;
     return 0;
 }
 
 int VTermWrapper::sb_popline(int cols, VTermScreenCell *cells) {
     return 0;
+}
+
+int VTermWrapper::device_control_string(const char *command, size_t commandlen, VTermStringFragment frag) {
+    std::string dcs(command, commandlen);
+    std::cout << "DCS: " << dcs << std::endl;
+    return 1;
+}
+
+int VTermWrapper::application_program_command(VTermStringFragment frag) {
+    std::string apc(frag.str, frag.len);
+    //std::cout << "APC: " << apc << std::endl;
+
+    const std::string OPEN_MARK { "<skpicture>" };
+    const std::string CLOSE_MARK { "</skpicture>" };
+
+    bool complete = false;
+    std::string::size_type pos = 0;
+    ssize_t open_pos = -1;
+    ssize_t close_pos = -1;
+    do {
+        if (apc.substr(pos, OPEN_MARK.size()) == OPEN_MARK) {
+            //pos += OPEN_MARK.size();
+            open_pos = pos;
+        }
+        if (apc.substr(pos, CLOSE_MARK.size()) == CLOSE_MARK) {
+            pos += CLOSE_MARK.size();
+            close_pos = pos;
+        }
+        pos = apc.find("<", pos + 1);
+    } while (pos != std::string::npos);
+
+    if (open_pos == -1 && close_pos == -1) {
+        // We neither caught opening nor closing. Continuing the buffer
+        apc_buffer += apc;
+        complete = false;
+    } else if (open_pos == -1 && close_pos >= 0) {
+        // We caught only closing. Finalizing the buffer with the start of the message
+        apc_buffer += apc.substr(0, close_pos);
+        complete = true;
+    } else if (open_pos >= 0 && close_pos == -1) {
+        // We caught only opening. Resetting the buffer to the tail of the message
+        apc_buffer = apc.substr(open_pos);
+        complete = false;
+    } else if (open_pos >= 0 && close_pos > open_pos) {
+        // The full buffer is inside
+        apc_buffer += apc.substr(open_pos, close_pos - open_pos);
+        complete = true;
+    }
+
+    if (complete) {
+        if (apc_buffer.substr(0, OPEN_MARK.size()) == OPEN_MARK && 
+            apc_buffer.substr(apc_buffer.size() - CLOSE_MARK.size()) == CLOSE_MARK) {
+
+            apc_buffer = apc_buffer.substr(OPEN_MARK.size(), apc_buffer.size() - OPEN_MARK.size() - CLOSE_MARK.size());
+            
+            auto decoded = base64::from_base64(apc_buffer);
+            
+            sk_sp<SkData> data = SkData::MakeWithCopy(
+                decoded.data(), 
+                decoded.size()
+            );
+
+            // 2. Deserialize the data into an SkPicture
+            picture = SkPicture::MakeFromData(
+                data->data(), 
+                data->size()
+            );
+        }
+
+    }
+
+    return 1;
 }
 
 int VTermWrapper::vterm_cb_damage(VTermRect rect, void *user)
@@ -97,6 +178,36 @@ int VTermWrapper::vterm_cb_sb_popline(int cols, VTermScreenCell *cells, void *us
 {
     return ((VTermWrapper*)user)->sb_popline(cols, cells);
 }
+
+
+int VTermWrapper::vterm_fb_control(unsigned char control, void *user) {
+    return 0;
+}
+
+int VTermWrapper::vterm_fb_csi(const char *leader, const long args[], int argcount, const char *intermed, char command, void *user) {
+    return 0;
+}
+
+int VTermWrapper::vterm_fb_osc(int command, VTermStringFragment frag, void *user) {
+    return 0;
+}
+
+int VTermWrapper::vterm_fb_dcs(const char *command, size_t commandlen, VTermStringFragment frag, void *user) {
+    return ((VTermWrapper*)user)->device_control_string(command, commandlen, frag);
+}
+
+int VTermWrapper::vterm_fb_apc(VTermStringFragment frag, void *user) {
+    return ((VTermWrapper*)user)->application_program_command(frag);
+}
+
+int VTermWrapper::vterm_fb_pm(VTermStringFragment frag, void *user) {
+    return 0;
+}
+
+int VTermWrapper::vterm_fb_sos(VTermStringFragment frag, void *user) {
+    return 0;
+}
+
 
 void VTermWrapper::setStandardColorPalette(VTermState* state) {
     VTermColor black;
@@ -157,85 +268,92 @@ void VTermWrapper::input_write(const char* bytes, size_t len) {
 }
 
 TextCell VTermWrapper::getCell(int32_t row, int32_t col) {
-    VTermPos pos = { row, col };
-    VTermScreenCell cell;
-    vterm_screen_get_cell(screen, pos, &cell);
+    // static int goods = 0, misses = 0;
+    // if (goods % 100 == 0 || misses % 100 == 0) std::cout << "goods: " << goods << ", misses: " << misses << std::endl;
+    if (text_cells(row, col).has_value()) {
+        // goods ++;
+        return text_cells(row, col).value();
+    } else {
+        // misses ++;
+        VTermPos pos = { row, col };
+        VTermScreenCell cell;
+        vterm_screen_get_cell(screen, pos, &cell);
 
-    TextCell res;
-    //res.width = cell.width;
-    //res.attrs = cell.attrs;
+        TextCell res;
+        //res.width = cell.width;
+        //res.attrs = cell.attrs;
 
-    if (VTERM_COLOR_IS_INDEXED(&cell.fg)) {
-        vterm_screen_convert_color_to_rgb(screen, &cell.fg);
-    }
-    if (VTERM_COLOR_IS_RGB(&cell.fg)) {
-        res.foreColor = SkColor4f::FromColor(SkColorSetRGB(cell.fg.rgb.red, cell.fg.rgb.green, cell.fg.rgb.blue));
-    }
-
-    if (VTERM_COLOR_IS_INDEXED(&cell.bg)) {
-        vterm_screen_convert_color_to_rgb(screen, &cell.bg);
-    }
-    if (VTERM_COLOR_IS_RGB(&cell.bg)) {
-        res.backColor = SkColor4f::FromColor(SkColorSetRGB(cell.bg.rgb.red, cell.bg.rgb.green, cell.bg.rgb.blue));
-    }
-
-    if (cell.attrs.reverse) std::swap(res.foreColor, res.backColor);
-
-    // for (int i = 0; cell.chars[i] != 0 && i < VTERM_MAX_CHARS_PER_CELL; i++) {
-    //     res.chars.push_back(cell.chars[i]);
-    // }
-
-    if (cell.chars[0] != 0xffffffff) {
-        icu::UnicodeString ustr;
-        for (int i = 0; cell.chars[i] != 0 && i < VTERM_MAX_CHARS_PER_CELL; i++) {
-            ustr.append((UChar32)cell.chars[i]);
+        if (VTERM_COLOR_IS_INDEXED(&cell.fg)) {
+            vterm_screen_convert_color_to_rgb(screen, &cell.fg);
+        }
+        if (VTERM_COLOR_IS_RGB(&cell.fg)) {
+            res.foreColor = SkColor4f::FromColor(SkColorSetRGB(cell.fg.rgb.red, cell.fg.rgb.green, cell.fg.rgb.blue));
         }
 
-        //color = cell.foreColor;
-        //bgcolor = cell.backColor;
+        if (VTERM_COLOR_IS_INDEXED(&cell.bg)) {
+            vterm_screen_convert_color_to_rgb(screen, &cell.bg);
+        }
+        if (VTERM_COLOR_IS_RGB(&cell.bg)) {
+            res.backColor = SkColor4f::FromColor(SkColorSetRGB(cell.bg.rgb.red, cell.bg.rgb.green, cell.bg.rgb.blue));
+        }
 
-        // if (VTERM_COLOR_IS_INDEXED(&cell.fg)) {
-        //     vterm_screen_convert_color_to_rgb(screen, &cell.fg);
-        // }
-        // if (VTERM_COLOR_IS_RGB(&cell.fg)) {
-        //     color = SkColor4f::FromColor(SkColorSetRGB(cell.fg.rgb.red, cell.fg.rgb.green, cell.fg.rgb.blue));
-        // }
-        // // if (VTERM_COLOR_IS_INDEXED(&cell.bg)) {
-        // //     vterm_screen_convert_color_to_rgb(screen, &cell.bg);
-        // // }
-        // if (VTERM_COLOR_IS_RGB(&cell.bg)) {
-        //     bgcolor = SkColor4f::FromColor(SkColorSetRGB(cell.bg.rgb.red, cell.bg.rgb.green, cell.bg.rgb.blue));
+        if (cell.attrs.reverse) std::swap(res.foreColor, res.backColor);
+
+        // for (int i = 0; cell.chars[i] != 0 && i < VTERM_MAX_CHARS_PER_CELL; i++) {
+        //     res.chars.push_back(cell.chars[i]);
         // }
 
-        
-        /* TODO
-        int style = TTF_STYLE_NORMAL;
-        if (cell.attrs.bold) style |= TTF_STYLE_BOLD;
-        if (cell.attrs.underline) style |= TTF_STYLE_UNDERLINE;
-        if (cell.attrs.italic) style |= TTF_STYLE_ITALIC;
-        if (cell.attrs.strike) style |= TTF_STYLE_STRIKETHROUGH; */
-        //if (cell.attrs.blink) { /*TBD*/ }
-        
-        // SkPaint bgpt(bgcolor);
-        // bgpt.setStyle(SkPaint::kFill_Style);
-        // canvas.drawRect(rect, bgpt);
+        if (cell.chars[0] != 0xffffffff) {
+            icu::UnicodeString ustr;
+            for (int i = 0; cell.chars[i] != 0 && i < VTERM_MAX_CHARS_PER_CELL; i++) {
+                ustr.append((UChar32)cell.chars[i]);
+            }
 
-        UErrorCode status = U_ZERO_ERROR;
-        auto normalizer = icu::Normalizer2::getNFKCInstance(status);
-        if (U_FAILURE(status)) throw std::runtime_error("unable to get NFKC normalizer");
+            //color = cell.foreColor;
+            //bgcolor = cell.backColor;
 
-        if (ustr.length() > 0) {
-            auto ustr_normalized = normalizer->normalize(ustr, status);
-            if (U_SUCCESS(status)) {
-                ustr_normalized.toUTF8String(res.utf8);
-            } else {
-                ustr.toUTF8String(res.utf8);
+            // if (VTERM_COLOR_IS_INDEXED(&cell.fg)) {
+            //     vterm_screen_convert_color_to_rgb(screen, &cell.fg);
+            // }
+            // if (VTERM_COLOR_IS_RGB(&cell.fg)) {
+            //     color = SkColor4f::FromColor(SkColorSetRGB(cell.fg.rgb.red, cell.fg.rgb.green, cell.fg.rgb.blue));
+            // }
+            // // if (VTERM_COLOR_IS_INDEXED(&cell.bg)) {
+            // //     vterm_screen_convert_color_to_rgb(screen, &cell.bg);
+            // // }
+            // if (VTERM_COLOR_IS_RGB(&cell.bg)) {
+            //     bgcolor = SkColor4f::FromColor(SkColorSetRGB(cell.bg.rgb.red, cell.bg.rgb.green, cell.bg.rgb.blue));
+            // }
+
+            
+            /* TODO
+            int style = TTF_STYLE_NORMAL;
+            if (cell.attrs.bold) style |= TTF_STYLE_BOLD;
+            if (cell.attrs.underline) style |= TTF_STYLE_UNDERLINE;
+            if (cell.attrs.italic) style |= TTF_STYLE_ITALIC;
+            if (cell.attrs.strike) style |= TTF_STYLE_STRIKETHROUGH; */
+            //if (cell.attrs.blink) { /*TBD*/ }
+            
+            // SkPaint bgpt(bgcolor);
+            // bgpt.setStyle(SkPaint::kFill_Style);
+            // canvas.drawRect(rect, bgpt);
+
+            UErrorCode status = U_ZERO_ERROR;
+            auto normalizer = icu::Normalizer2::getNFKCInstance(status);
+            if (U_FAILURE(status)) throw std::runtime_error("unable to get NFKC normalizer");
+
+            if (ustr.length() > 0) {
+                auto ustr_normalized = normalizer->normalize(ustr, status);
+                if (U_SUCCESS(status)) {
+                    ustr_normalized.toUTF8String(res.utf8);
+                } else {
+                    ustr.toUTF8String(res.utf8);
+                }
             }
         }
+        text_cells(row, col) = res;
+        return res;
     }
-
-
-    return res;
 }
 
 
@@ -247,15 +365,21 @@ void VTermWrapper::output_callback(const char* s, size_t len, void* user)
 }
 
 void VTermWrapper::processInputFromSubprocess() {
-    subprocess->readInputAndProcess([&](const std::string& input_str) {
+    subprocess->readInputAndProcess([&](const std::string_view& input_str) {
         input_write(input_str.data(), input_str.size());
+        if (pushed_lines > 2*rows) {
+            pushed_lines = 0;
+            return false;
+        } else {
+            return true;
+        }
     });
 }
 
 VTermWrapper::VTermWrapper(uint32_t _rows, uint32_t _cols, 
     std::shared_ptr<TermSubprocess> subprocess,
     std::weak_ptr<SkiaTermEmulator> frontend)
-        : subprocess(subprocess), frontend(frontend), rows(_rows), cols(_cols) {
+        : subprocess(subprocess), frontend(frontend), rows(_rows), cols(_cols), text_cells(_rows, _cols) {
     
     vterm = vterm_new(_rows, _cols);
     vterm_set_utf8(vterm, 1);
@@ -267,6 +391,8 @@ VTermWrapper::VTermWrapper(uint32_t _rows, uint32_t _cols,
     vterm_screen_enable_altscreen(screen, 1);
 
     VTermState * state = vterm_obtain_state(vterm);
+
+    vterm_state_set_unrecognised_fallbacks(state, &state_fallbacks, this);
     
     setStandardColorPalette(state);
 

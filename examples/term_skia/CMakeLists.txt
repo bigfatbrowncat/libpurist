@@ -30,3 +30,5 @@ target_link_libraries(term_skia PUBLIC
 )
 
 add_dependencies(term_skia purist_graphics_skia)
+
+add_subdirectory(app_examples)

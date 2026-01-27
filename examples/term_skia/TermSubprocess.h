@@ -17,7 +17,7 @@ public:
     TermSubprocess(uint16_t rows, uint16_t cols, const std::string& prog, const std::vector<std::string>& args = { });
 
     bool isExited() const;
-    void readInputAndProcess(std::function<void(const std::string&)> cb);
+    void readInputAndProcess(std::function<bool(const std::string_view&)> cb);
     void write(const std::string& str);
     int getFd() const;
     

@@ -288,6 +288,11 @@ void SkiaTermEmulator::drawIntoSurface(std::shared_ptr<pg::Display> display,
         }
         ringingFramebuffers -= 1;
     }
+
+    auto picture = model->getPicture();
+    if (picture != nullptr) {
+        canvas.drawPicture(picture);
+    }
 }
 
 

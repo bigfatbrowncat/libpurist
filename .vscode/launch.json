@@ -70,6 +70,20 @@
                 //"__EGL_VENDOR_LIBRARY_FILENAMES": "/usr/share/glvnd/egl_vendor.d/50_mesa.json",
                 //"LD_LIBRARY_PATH": "/usr/lib/aarch64-linux-gnu"
             }
+        },
+        {
+            "name": "apc_test",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${command:cmake.buildDirectory}/examples/term_skia/app_examples/apc_test",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                //"GBM_BACKEND": "dri",
+                //"GBM_BACKENDS_PATH": "/usr/lib/aarch64-linux-gnu/gbm",
+                //"__EGL_VENDOR_LIBRARY_FILENAMES": "/usr/share/glvnd/egl_vendor.d/50_mesa.json",
+                //"LD_LIBRARY_PATH": "/usr/lib/aarch64-linux-gnu"
+            }
         }
     ]
 }

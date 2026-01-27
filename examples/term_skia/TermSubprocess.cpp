@@ -85,42 +85,30 @@ bool TermSubprocess::isExited() const {
     return rst.first == pid;
 }
 
-void TermSubprocess::readInputAndProcess(std::function<void(const std::string&)> cb) {
-    std::string input_cache;
-
-    // 1. Reading
-
+void TermSubprocess::readInputAndProcess(std::function<bool(const std::string_view&)> cb) {
+    
     fd_set readfds;
     FD_ZERO(&readfds);
     FD_SET(fd, &readfds);
     timeval timeout = { 0, 0 };
 
+    int total_size = 0;
     while (select(fd + 1, &readfds, NULL, NULL, &timeout) > 0) {
-        char buf[cols]; // one line. The maximum possible value for this buffer is 4096
+        char buf[4096];//cols]; // one line. The maximum possible value for this buffer is 4096
         auto size = read(fd, buf, sizeof(buf));
 
         if (size > 0) {
-            input_cache.append(buf, size);
-            if (input_cache.size() > cols * rows * 4) break;
+            if (!cb(std::string_view(buf, size))) {
+                break;
+            }
+            total_size += size;
+            if (total_size > 1024*1024 /* 1 MB */) {
+                // Enough for one frame
+                break;
+            }
         } else {
             break; // Can't read. Maybe the client app closed... Anyway, passing through
         }
-    }
-
-    // 2. Processing
-
-    int single_print_size = cols * 2;
-    while (input_cache.size() > single_print_size) {
-        auto s1 = input_cache.substr(0, single_print_size);
-        //input_write(s1.data(), s1.size());
-        cb(s1);
-        input_cache = input_cache.substr(s1.size());
-    }
-    
-    if (input_cache.size() > 0) {
-        //input_write(input_cache.data(), input_cache.size());
-        cb(input_cache);
-        input_cache = "";
     }
 
 }

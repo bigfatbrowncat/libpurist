@@ -85,7 +85,6 @@ cmake --build . --target help && cmake --build . && cmake --install . )
  (cd libexecinfo && \
  make DESTDIR=`pwd`/../prefix install-static install-headers)
 
-exit 0
 
 echo "* Building skia..."
 (cd skia-world && \

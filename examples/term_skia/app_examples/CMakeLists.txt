@@ -1,6 +1,6 @@
 embed_resources(NotoSansFont1 
     fonts/noto-sans1/NotoSans-Regular.ttf
-    fonts/noto-sans1/NotoSansHebrew-Regular.ttf
+#    fonts/noto-sans1/NotoSansHebrew-Regular.ttf
 )
 
 add_executable(apc_test

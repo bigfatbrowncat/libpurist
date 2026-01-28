@@ -67,6 +67,7 @@ target_include_directories(purist_graphics PUBLIC ${purist_third_party}/evdevw/i
 target_include_directories(purist_graphics PUBLIC ${purist_graphics_SOURCE_DIR}/include)
 
 target_link_directories(purist_graphics PUBLIC ${purist_third_party}/prefix/lib/${CMAKE_SYSTEM_PROCESSOR}-linux-musl)
+target_link_directories(purist_graphics PUBLIC ${purist_third_party}/prefix/lib)
 
 target_link_libraries(purist_graphics PUBLIC 
     evdev

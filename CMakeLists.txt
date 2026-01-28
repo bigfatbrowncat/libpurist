@@ -5,6 +5,7 @@ include(globals.cmake)
 project(purist)
 
 set(purist_third_party "${purist_SOURCE_DIR}/third-party")
+set(CMAKE_PREFIX_PATH "${purist_third_party}/prefix")
 
 include_directories(${purist_third_party}/embed-resource)
 add_subdirectory(${purist_third_party}/embed-resource)

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "TermSubprocess.h"
 #include "TextCellsMatrixModel.h"
 
 #include "lru_cache.h"
@@ -37,7 +36,7 @@ namespace pg = purist::graphics;
 namespace pgs = purist::graphics::skia;
 
 
-class SkiaTermEmulator {
+class SkiaTermRenderer {
 private:
     struct SurfaceAndImage {
         sk_sp<SkSurface> surface;
@@ -76,7 +75,7 @@ private:
                    std::shared_ptr<pgs::SkiaOverlay> skiaOverlay);
 
 public:
-    SkiaTermEmulator(uint32_t _rows, uint32_t _cols);
+    SkiaTermRenderer(uint32_t _rows, uint32_t _cols);
 
     void setModel(std::shared_ptr<TextCellsMatrixModel> model) {
         this->model = model;
@@ -91,5 +90,5 @@ public:
     void setCursorBlink(bool value) { cursorBlink = value; }
     void bellBlink() { ringingFramebuffers = framebuffersCount; }
 
-    virtual ~SkiaTermEmulator();
+    virtual ~SkiaTermRenderer();
 };

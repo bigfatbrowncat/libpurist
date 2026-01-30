@@ -24,7 +24,7 @@
 
 namespace pi = purist::input;
 
-class SkiaTermEmulator;
+class SkiaTermRenderer;
 
 class VTermWrapperUpdate : public TextCellsDataUpdate {
 protected:

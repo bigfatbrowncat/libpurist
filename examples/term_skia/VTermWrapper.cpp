@@ -1,10 +1,15 @@
 #include "VTermWrapper.h"
-#include "SkiaTermEmulator.h"
 
 #include "TextCellsMatrixModel.h"
 #include "include/core/SkPicture.h"
 #include "include/core/SkData.h"
 #include "base64.hpp"
+
+// libpurist headers
+#include <purist/graphics/skia/icu_common.h>
+
+// xkbcommon headers
+#include <xkbcommon/xkbcommon-keysyms.h>
 
 #include <iostream>
 #include <memory>

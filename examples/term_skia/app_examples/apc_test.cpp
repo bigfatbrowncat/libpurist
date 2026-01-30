@@ -166,7 +166,7 @@ int main() {
   font->setSize(32);
 
   const int VC = 100;
-  float fps_vals[VC];
+  float fps_vals[VC] = { 0 };
   int fps_val_index = 0;
 
   float fps_avg = 0.f;

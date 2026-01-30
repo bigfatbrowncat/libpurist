@@ -1,5 +1,5 @@
 #include "TermSubprocess.h"
-#include "SkiaTermEmulator.h"
+#include "SkiaTermRenderer.h"
 #include "VTermWrapper.h"
 
 // libpurist headers
@@ -32,7 +32,7 @@ public:
     std::weak_ptr<p::Platform> platform;
     std::shared_ptr<TermSubprocess> subprocess;
     std::shared_ptr<VTermWrapper> vtermWrapper;
-    std::shared_ptr<SkiaTermEmulator> termEmu;
+    std::shared_ptr<SkiaTermRenderer> termEmu;
 
     std::unique_ptr<std::thread> processThread;
        
@@ -49,7 +49,7 @@ public:
             std::cout << "I/O thread gracefully stopped." << std::endl;
         });
 
-        termEmu = std::make_shared<SkiaTermEmulator>(_rows, _cols);
+        termEmu = std::make_shared<SkiaTermRenderer>(_rows, _cols);
         termEmu->setModel(vtermWrapper);
 
     }

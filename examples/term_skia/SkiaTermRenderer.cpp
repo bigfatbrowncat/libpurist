@@ -1,4 +1,4 @@
-#include "SkiaTermEmulator.h"
+#include "SkiaTermRenderer.h"
 
 // Skia headers
 #include <include/core/SkCanvas.h>
@@ -6,7 +6,7 @@
 #include <include/core/SkFont.h>
 #include <include/core/SkFontMetrics.h>
 
-void SkiaTermEmulator::refreshRect(int start_row, int start_col, int end_row, int end_col) {
+void SkiaTermRenderer::refreshRect(int start_row, int start_col, int end_row, int end_col) {
     for (auto& mat_pair : screenUpdateMatrices) {
         auto& matrix = *(mat_pair.second);
         for (int row = start_row; row < end_row; row++) {
@@ -18,7 +18,7 @@ void SkiaTermEmulator::refreshRect(int start_row, int start_col, int end_row, in
 }
 
 
-sk_sp<SkImage> SkiaTermEmulator::drawCells(int col_min, int col_max, int row, //int row_min, int row_max, 
+sk_sp<SkImage> SkiaTermRenderer::drawCells(int col_min, int col_max, int row, //int row_min, int row_max, 
                 int buffer_width, int buffer_height,
                 std::shared_ptr<pgs::SkiaOverlay> skiaOverlay) {
 
@@ -132,7 +132,7 @@ sk_sp<SkImage> SkiaTermEmulator::drawCells(int col_min, int col_max, int row, //
     return letter_image;
 }
 
-void SkiaTermEmulator::drawIntoSurface(std::shared_ptr<pg::Display> display, 
+void SkiaTermRenderer::drawIntoSurface(std::shared_ptr<pg::Display> display, 
                         std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, 
                         int width, int height, SkCanvas& canvas, bool refreshed) {
 
@@ -324,7 +324,7 @@ void SkiaTermEmulator::drawIntoSurface(std::shared_ptr<pg::Display> display,
 }
 
 
-SkiaTermEmulator::SkiaTermEmulator(uint32_t _rows, uint32_t _cols) 
+SkiaTermRenderer::SkiaTermRenderer(uint32_t _rows, uint32_t _cols) 
     : rows(_rows), cols(_cols), typesettingBox(_rows * divider * 4), text_cells(_rows, _cols) {
 
     // Checking the arguments
@@ -336,7 +336,7 @@ SkiaTermEmulator::SkiaTermEmulator(uint32_t _rows, uint32_t _cols)
     }
 }
 
-void SkiaTermEmulator::setTypeface(sk_sp<SkTypeface> typeface) {
+void SkiaTermRenderer::setTypeface(sk_sp<SkTypeface> typeface) {
     this->typeface = typeface;
 
     SkScalar fontSize = 1;
@@ -359,6 +359,6 @@ void SkiaTermEmulator::setTypeface(sk_sp<SkTypeface> typeface) {
     
 }
 
-SkiaTermEmulator::~SkiaTermEmulator() { 
+SkiaTermRenderer::~SkiaTermRenderer() { 
 
 }

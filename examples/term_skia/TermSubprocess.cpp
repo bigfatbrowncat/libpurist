@@ -1,6 +1,7 @@
 #include "TermSubprocess.h"
 
 // System headers
+#include <cerrno>
 #include <pty.h>
 #include <sys/wait.h>
 #include <sys/select.h>
@@ -90,13 +91,14 @@ bool TermSubprocess::readInputAndProcess(std::function<bool(const std::string_vi
     fd_set readfds;
     FD_ZERO(&readfds);
     FD_SET(fd, &readfds);
-    timeval timeout = { 0, 0 };
+    timeval timeout = { 0, 1000 };
 
     int total_size = 0;
-    int res;
+    int res = 0;
+    int size = 0;
     while ((res = select(fd + 1, &readfds, NULL, NULL, &timeout)) > 0) {
         char buf[4096];//cols]; // one line. The maximum possible value for this buffer is 4096
-        auto size = read(fd, buf, sizeof(buf));
+        size = read(fd, buf, sizeof(buf));
 
         if (size > 0) {
             if (!cb(std::string_view(buf, size))) {
@@ -111,8 +113,28 @@ bool TermSubprocess::readInputAndProcess(std::function<bool(const std::string_vi
             break; // Can't read. Maybe the client app closed... Anyway, passing through
         }
     }
-    
-    return res == 0; 
+
+    if (res == 1 && size == -1 && errno == EIO) {
+        // On Linux, a read() on the master side of a pseudo-tty will return -1 
+        // and set ERRNO to EIO when all the handles to its slave side have been closed
+
+        // This is a graceful end of the child process
+        return false;
+    }
+
+    if (res == -1 || size == -1) {
+        if (errno == EBADF) {
+            throw std::runtime_error("EBADF happened. Some problem with the connection to the child process");
+        } else if (errno == ENOMEM) {
+            throw std::runtime_error("ENOMEM happened. That means out of memory error. Trying to continue...");
+        } else if (errno == EINVAL) {
+            throw std::runtime_error("EINVAL happened. Invalid arguments.");
+        } else {
+            throw std::runtime_error("Strange case. errno = " + std::to_string(errno));
+        }
+    }
+
+    return true;
 }
 
 void TermSubprocess::write(const std::string& str) {

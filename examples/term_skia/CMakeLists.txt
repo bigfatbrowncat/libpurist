@@ -12,8 +12,8 @@ add_executable(term_skia
     TermSubprocess.h
     VTermWrapper.cpp
     VTermWrapper.h
-    SkiaTermEmulator.cpp
-    SkiaTermEmulator.h
+    SkiaTermRenderer.cpp
+    SkiaTermRenderer.h
     ${HackNerdFontMono}
 )
 

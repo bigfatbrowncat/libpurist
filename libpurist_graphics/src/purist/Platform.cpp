@@ -3,14 +3,12 @@
 #include <purist/graphics/DisplayContentsHandler.h>
 
 #include "graphics/Card.h"
-#include "input/Keyboard.h"
 #include "input/Keyboards.h"
 #include "global_init.h"
 
 #include <xkbcommon/xkbcommon.h>
 
 #include <cassert>
-#include <cstdio>
 #include <cstring>
 #include <memory>
 #include <filesystem>
@@ -109,7 +107,7 @@ void Platform::run(std::shared_ptr<graphics::DisplayContentsHandler> contentsFac
 
     //card->runDrawingLoop();
 
-    printf("libpurist platform stopped.\n");
+    std::cout << "platform runloop ends." << std::endl;
 }
 
 void Platform::stop() {

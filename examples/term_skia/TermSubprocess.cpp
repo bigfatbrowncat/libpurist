@@ -85,7 +85,7 @@ bool TermSubprocess::isExited() const {
     return rst.first == pid;
 }
 
-void TermSubprocess::readInputAndProcess(std::function<bool(const std::string_view&)> cb) {
+bool TermSubprocess::readInputAndProcess(std::function<bool(const std::string_view&)> cb) {
     
     fd_set readfds;
     FD_ZERO(&readfds);
@@ -93,7 +93,8 @@ void TermSubprocess::readInputAndProcess(std::function<bool(const std::string_vi
     timeval timeout = { 0, 0 };
 
     int total_size = 0;
-    while (select(fd + 1, &readfds, NULL, NULL, &timeout) > 0) {
+    int res;
+    while ((res = select(fd + 1, &readfds, NULL, NULL, &timeout)) > 0) {
         char buf[4096];//cols]; // one line. The maximum possible value for this buffer is 4096
         auto size = read(fd, buf, sizeof(buf));
 
@@ -110,7 +111,8 @@ void TermSubprocess::readInputAndProcess(std::function<bool(const std::string_vi
             break; // Can't read. Maybe the client app closed... Anyway, passing through
         }
     }
-
+    
+    return res == 0; 
 }
 
 void TermSubprocess::write(const std::string& str) {

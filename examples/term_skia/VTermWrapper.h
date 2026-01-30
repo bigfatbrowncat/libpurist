@@ -20,32 +20,66 @@
 #include <string>
 #include <memory>
 #include <optional>
+#include <mutex>
 
 namespace pi = purist::input;
 
 class SkiaTermEmulator;
 
+class VTermWrapperUpdate : public TextCellsDataUpdate {
+protected:
+    friend class VTermWrapper;
+
+    std::optional<TextCellsPos> cursor_pos = std::nullopt;
+    std::optional<sk_sp<SkPicture>> picture = std::nullopt;
+    cells<std::optional<TextCell>> text_cells;
+    std::optional<bool> cursorVisible = std::nullopt;
+    std::optional<bool> cursorBlink = std::nullopt;
+    
+public:
+    VTermWrapperUpdate(int _rows, int _cols) : text_cells(_rows, _cols) { }
+
+    std::optional<TextCell> getCell(int32_t row, int32_t col) override;
+    std::optional<TextCellsPos> getCursorPos() override { 
+        return cursor_pos; //TextCellsPos { cursor_pos.row, cursor_pos.col }; 
+    }
+
+    std::optional<sk_sp<SkPicture>> getPicture() override {
+        return picture;
+    }
+
+    std::optional<bool> isCursorVisible() override {
+        return cursorVisible;
+    }
+
+    std::optional<bool> isCursorBlink() override {
+        return cursorBlink;
+    }
+
+};
+
+
 class VTermWrapper : public TextCellsMatrixModel {
 private:
     std::shared_ptr<TermSubprocess> subprocess;
-    std::weak_ptr<SkiaTermEmulator> frontend;
+    //std::weak_ptr<SkiaTermEmulator> frontend;
+
+    std::mutex swapMutex;
 
     VTerm* vterm;
     VTermScreen* screen;
 
     uint32_t rows, cols;
 
-    VTermPos cursor_pos;
-
     VTermColor color_palette[16];
 
     std::string apc_buffer;
-    sk_sp<SkPicture> picture;
 
-    cells<std::optional<TextCell>> text_cells;
+    std::shared_ptr<VTermWrapperUpdate> updateInProgress;
 
     int pushed_lines = 0;
 
+    // Modifying functions
     int damage(int start_row, int start_col, int end_row, int end_col);
     int moverect(VTermRect dest, VTermRect src);
     int movecursor(VTermPos pos, VTermPos oldpos, int visible);
@@ -54,10 +88,10 @@ private:
     int resize(int rows, int cols);
     int sb_pushline(int cols, const VTermScreenCell *cells);
     int sb_popline(int cols, VTermScreenCell *cells);
-
     int device_control_string(const char *command, size_t commandlen, VTermStringFragment frag);
     int application_program_command(VTermStringFragment frag);
 
+    // Callback handlers
     static int vterm_cb_damage(VTermRect rect, void *user);
     static int vterm_cb_moverect(VTermRect dest, VTermRect src, void *user);
     static int vterm_cb_movecursor(VTermPos pos, VTermPos oldpos, int visible, void *user);
@@ -78,6 +112,7 @@ private:
         vterm_cb_sb_popline
     };
 
+    // State Fallback handlers
     static int vterm_fb_control(unsigned char control, void *user);
     static int vterm_fb_csi(const char *leader, const long args[], int argcount, const char *intermed, char command, void *user);
     static int vterm_fb_osc(int command, VTermStringFragment frag, void *user);
@@ -96,6 +131,8 @@ private:
         vterm_fb_sos
     };
 
+    //////////////
+
     void setStandardColorPalette(VTermState* state);
     void keyboard_unichar(uint32_t c, VTermModifier mod);
     void keyboard_key(VTermKey key, VTermModifier mod);
@@ -105,23 +142,24 @@ public:
     void processCharacter(pi::Keyboard& kbd, char32_t charCode, pi::Modifiers mods, pi::Leds leds);
     void processKeyPress(pi::Keyboard& kbd, uint32_t keysym, pi::Modifiers mods, pi::Leds leds, bool repeat);
 
-    TextCell getCell(int32_t row, int32_t col) override;
+    std::shared_ptr<TextCellsDataUpdate> getContentsUpdate() override {
+        std::lock_guard<std::mutex> lock { swapMutex };
+        std::shared_ptr<TextCellsDataUpdate> dataReady = updateInProgress;
+        updateInProgress = std::make_shared<VTermWrapperUpdate>(rows, cols);
+        return dataReady;
+    }
+
     static void output_callback(const char* s, size_t len, void* user);
 
-    void processInputFromSubprocess();
-
-    TextCellsPos getCursorPos() override { 
-        return TextCellsPos { cursor_pos.row, cursor_pos.col }; 
-    }
-
-    sk_sp<SkPicture> getPicture() override {
-        return picture;
-    }
+    bool processInputFromSubprocess();
+    void refreshCell(int32_t row, int32_t col);
+    void refreshDataRect(int start_row, int start_col, int end_row, int end_col);
 
     //int getPushedLines() const { return pushed_lines; }
 
     VTermWrapper(uint32_t _rows, uint32_t _cols, 
-        std::shared_ptr<TermSubprocess> subprocess,
-        std::weak_ptr<SkiaTermEmulator> frontend);
+        std::shared_ptr<TermSubprocess> subprocess/*,
+        std::weak_ptr<SkiaTermEmulator> frontend*/);
+        
     virtual ~VTermWrapper();
 };

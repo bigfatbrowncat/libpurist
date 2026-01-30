@@ -112,7 +112,7 @@ size_t draw_picture(sk_sp<SkPicture> picture) {
 
   std::string apc_sequence = "\033_<skpicture>" + encoded + "</skpicture>\033\\";
 
-  {      
+  {
     struct termios term, original;
 
     // 1. Get current terminal settings
@@ -159,12 +159,18 @@ int main() {
   });
 
   sk_sp<SkTypeface> tf = getTypefaceByName("Noto Sans");
-  
+
   SkScalar fontSize = 1;
   font = std::make_shared<SkFont>(tf, fontSize);
   font->setHinting(SkFontHinting::kNone);
   font->setSize(32);
 
+  const int VC = 100;
+  float fps_vals[VC];
+  int fps_val_index = 0;
+
+  float fps_avg = 0.f;
+  
   for (int i = 0; ;i++) {
 
     int v = 30 * sin((float)i / 10);
@@ -175,8 +181,16 @@ int main() {
     auto new_time = std::chrono::high_resolution_clock::now();
     float usecs = std::chrono::duration_cast<std::chrono::microseconds>(new_time - time).count();
 
-    std::cout << "Rendering picture with size: " << pic_size << " bytes, at " << std::fixed << std::setprecision(5) << 1000000.0 / usecs << " fps. Hit Ctrl+C to stop...      \r";
-    
+    fps_vals[fps_val_index] = 1000000 / usecs;
+    fps_avg += fps_vals[fps_val_index] / VC;
+    fps_val_index = (fps_val_index + 1) % VC;
+    fps_avg -= fps_vals[fps_val_index] / VC;
+
+    //for (int k=0; k<10; k++) { fps_avg += fps_vals[k]; }
+    //fps_avg /= 10;
+
+    std::cout << "Rendering picture with size: " << pic_size << " bytes, at " << std::fixed << std::setprecision(1) << fps_avg << " fps. Hit Ctrl+C to stop...      \r";
+
     time = new_time;
   }
 

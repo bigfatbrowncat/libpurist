@@ -109,7 +109,7 @@ void Platform::run(std::shared_ptr<graphics::DisplayContentsHandler> contentsFac
 
     //card->runDrawingLoop();
 
-    printf("exiting\n");
+    printf("libpurist platform stopped.\n");
 }
 
 void Platform::stop() {

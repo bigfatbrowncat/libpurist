@@ -42,7 +42,7 @@ sk_sp<SkImage> SkiaTermEmulator::drawCells(int col_min, int col_max, int row, //
             rk.height = buffer_height;
             for (int col = col_min; col < col_max; col++) {
                 std::string utf8 = "";
-                TextCell cell = model->getCell(row, col);
+                const TextCell& cell = text_cells(row, col);
 
                 utf8 = cell.utf8;
 
@@ -145,6 +145,8 @@ void SkiaTermEmulator::drawIntoSurface(std::shared_ptr<pg::Display> display,
         screenUpdateMatrices[display->getConnectorId()] = std::make_shared<cells<unsigned char>>(rows, cols);
         screenUpdateMatrices[display->getConnectorId()]->fill(framebuffersCount);
     }
+
+    auto modelUpdate = model->getContentsUpdate();
     
     auto& matrix = *(screenUpdateMatrices[display->getConnectorId()]);
     
@@ -193,7 +195,30 @@ void SkiaTermEmulator::drawIntoSurface(std::shared_ptr<pg::Display> display,
     
     SkScalar font_width_scaled = w / matrix.getCols() / hscale;
 
-    auto cursor_pos = model->getCursorPos();
+    // Loading the update data into context
+    auto new_cursor_pos = modelUpdate->getCursorPos();
+    for (int col_part = 0; col_part < divider; col_part++) {
+        for (int row = 0; row < matrix.getRows(); row++) {
+            for (int col = part_width * col_part; col < part_width * (col_part + 1); col++) {
+                const auto& cell = modelUpdate->getCell(row, col);
+                if (cell.has_value()) { 
+                    matrix(row, col) = framebuffersCount;
+                    text_cells(row, col) = cell.value();
+                }
+
+                // Because the cursor is blinking, we are always repainting it
+                if (col == cursor_pos.col && row == cursor_pos.row) { matrix(row, col) = framebuffersCount; }
+                if (new_cursor_pos.has_value() && 
+                    col == new_cursor_pos.value().col && 
+                    row == new_cursor_pos.value().row) { matrix(row, col) = framebuffersCount; }
+            }
+        }
+    }
+
+    if (new_cursor_pos.has_value()) {
+        cursor_pos = new_cursor_pos.value();
+    }
+
 
     {
         //std::lock_guard<std::mutex> lock(matrixMutex);
@@ -204,9 +229,6 @@ void SkiaTermEmulator::drawIntoSurface(std::shared_ptr<pg::Display> display,
                 
                 for (int col = part_width * col_part; col < part_width * (col_part + 1); col++) {
                     if (matrix(row, col) > 0) { matrix(row, col) -= 1; damaged = true; }
-                    
-                    // Because the cursor is blinking, we are always repainting it
-                    if (col == cursor_pos.col && row == cursor_pos.row) { damaged = true; }
                 }
 
                 //if (damaged) std::cout << "damaged" << std::endl;
@@ -237,6 +259,7 @@ void SkiaTermEmulator::drawIntoSurface(std::shared_ptr<pg::Display> display,
             }
         }
     }
+
     
     // draw cursor
     //VTermScreenCell cell;
@@ -247,7 +270,7 @@ void SkiaTermEmulator::drawIntoSurface(std::shared_ptr<pg::Display> display,
     //     vterm_screen_convert_color_to_rgb(screen, &cell.fg);
     // }
 
-    TextCell cell = model->getCell(cursor_pos.row, cursor_pos.col);
+    TextCell cell = text_cells(cursor_pos.row, cursor_pos.col);
     //if (VTERM_COLOR_IS_RGB(&cell.fg)) {
         cur_color = cell.foreColor; // SkColor4f::FromColor(SkColorSetRGB(cell.fg.rgb.red, cell.fg.rgb.green, cell.fg.rgb.blue));
     //}
@@ -289,7 +312,12 @@ void SkiaTermEmulator::drawIntoSurface(std::shared_ptr<pg::Display> display,
         ringingFramebuffers -= 1;
     }
 
-    auto picture = model->getPicture();
+
+    auto new_picture = modelUpdate->getPicture();
+    if (new_picture.has_value()) {
+        picture = new_picture.value();
+    }
+
     if (picture != nullptr) {
         canvas.drawPicture(picture);
     }
@@ -297,7 +325,7 @@ void SkiaTermEmulator::drawIntoSurface(std::shared_ptr<pg::Display> display,
 
 
 SkiaTermEmulator::SkiaTermEmulator(uint32_t _rows, uint32_t _cols) 
-    : rows(_rows), cols(_cols), typesettingBox(_rows * divider * 4) {
+    : rows(_rows), cols(_cols), typesettingBox(_rows * divider * 4), text_cells(_rows, _cols) {
 
     // Checking the arguments
     if (_cols == 0 || _rows == 0) {

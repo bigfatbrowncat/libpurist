@@ -14,13 +14,23 @@ struct TextCellsPos {
 };
 
 struct TextCell {
-  std::string utf8;
+  std::string utf8 = "";
   SkColor4f foreColor, backColor;
+};
+
+class TextCellsDataUpdate {
+public:
+  virtual std::optional<TextCell> getCell(int32_t row, int32_t col) = 0;
+  virtual std::optional<TextCellsPos> getCursorPos() = 0;
+  virtual std::optional<sk_sp<SkPicture>> getPicture() = 0;
+  virtual std::optional<bool> isCursorVisible() = 0;
+  virtual std::optional<bool> isCursorBlink() = 0;
+
+  virtual ~TextCellsDataUpdate() { }
 };
 
 class TextCellsMatrixModel {
 public:
-    virtual TextCell getCell(int32_t row, int32_t col) = 0;
-    virtual TextCellsPos getCursorPos() = 0;
-    virtual sk_sp<SkPicture> getPicture() = 0;
+  virtual std::shared_ptr<TextCellsDataUpdate> getContentsUpdate() = 0;
+  virtual ~TextCellsMatrixModel() { }
 };

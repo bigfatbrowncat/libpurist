@@ -16,6 +16,7 @@
 
 // C++ std headers
 #include <memory>
+#include <thread>
 #include <iostream>
 
 namespace p = purist;
@@ -32,22 +33,31 @@ public:
     std::shared_ptr<TermSubprocess> subprocess;
     std::shared_ptr<VTermWrapper> vtermWrapper;
     std::shared_ptr<SkiaTermEmulator> termEmu;
+
+    std::unique_ptr<std::thread> processThread;
        
     TermDisplayContents(std::weak_ptr<p::Platform> platform, uint32_t _rows, uint32_t _cols) 
             : platform(platform) {
 
+    
         std::string prog = getenv("SHELL");
         subprocess = std::make_shared<TermSubprocess>(_rows, _cols, prog, std::vector<std::string> {"-"});
+        vtermWrapper = std::make_shared<VTermWrapper>(_rows, _cols, subprocess);
+
+        processThread = std::make_unique<std::thread>([&]() {
+            while (vtermWrapper->processInputFromSubprocess()) { }
+            std::cout << "I/O thread gracefully stopped." << std::endl;
+        });
 
         termEmu = std::make_shared<SkiaTermEmulator>(_rows, _cols);
-        vtermWrapper = std::make_shared<VTermWrapper>(_rows, _cols, subprocess, termEmu);
         termEmu->setModel(vtermWrapper);
+
     }
 
     void drawIntoSurface(std::shared_ptr<pg::Display> display, 
                         std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, 
                         int width, int height, SkCanvas& canvas, bool refreshed) override {
-        vtermWrapper->processInputFromSubprocess();
+        //vtermWrapper->processInputFromSubprocess();
 
         if (subprocess->isExited()) {
             platform.lock()->stop();
@@ -58,6 +68,7 @@ public:
     }
 
     virtual ~TermDisplayContents() {
+        processThread->join();
         termEmu = nullptr;
         subprocess = nullptr;
     }

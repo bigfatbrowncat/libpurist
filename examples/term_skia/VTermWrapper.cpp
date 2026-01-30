@@ -1,43 +1,67 @@
 #include "VTermWrapper.h"
 #include "SkiaTermEmulator.h"
 
+#include "TextCellsMatrixModel.h"
 #include "include/core/SkPicture.h"
 #include "include/core/SkData.h"
 #include "base64.hpp"
 
 #include <iostream>
+#include <memory>
 #include <string>
 
+void VTermWrapper::refreshDataRect(int start_row, int start_col, int end_row, int end_col) {
+    for (int row = start_row; row < end_row; row++) {
+        for (int col = start_col; col < end_col; col++) {
+            refreshCell(row, col);
+        }
+    }
+}
+
 int VTermWrapper::damage(int start_row, int start_col, int end_row, int end_col) {
-    text_cells.setRect(start_row, end_row - start_row, start_col, end_col - start_col, std::nullopt);
-    frontend.lock()->refreshRect(start_row, start_col, end_row, end_col);
+    std::lock_guard<std::mutex> lock { swapMutex };
+    this->refreshDataRect(start_row, start_col, end_row, end_col);
+
+    //frontend.lock()->refreshRect(start_row, start_col, end_row, end_col);
     return 0;
 }
 
 int VTermWrapper::moverect(VTermRect dest, VTermRect src) {
+    std::lock_guard<std::mutex> lock { swapMutex };
     return 0;
 }
 
 int VTermWrapper::movecursor(VTermPos pos, VTermPos oldpos, int visible) {
+    std::lock_guard<std::mutex> lock { swapMutex };
     // Issuing repainting for the old cursor position
-    frontend.lock()->refreshRect(cursor_pos.row, cursor_pos.col, cursor_pos.row + 1, cursor_pos.col + 1);
+    // frontend.lock()->refreshRect(
+    //     dataInProgress->cursor_pos.row, 
+    //     dataInProgress->cursor_pos.col, 
+    //     dataInProgress->cursor_pos.row + 1, 
+    //     dataInProgress->cursor_pos.col + 1);
 
-    cursor_pos = pos;
+    updateInProgress->cursor_pos = TextCellsPos { pos.row, pos.col };
     
     // Issuing repainting for the new cursor position
-    frontend.lock()->refreshRect(cursor_pos.row, cursor_pos.col, cursor_pos.row + 1, cursor_pos.col + 1);
+    // frontend.lock()->refreshRect(
+    //     dataInProgress->cursor_pos.row,
+    //     dataInProgress->cursor_pos.col, 
+    //     dataInProgress->cursor_pos.row + 1, 
+    //     dataInProgress->cursor_pos.col + 1);
+        
     return 0;
 }
 int VTermWrapper::settermprop(VTermProp prop, VTermValue *val) {
+    std::lock_guard<std::mutex> lock { swapMutex };
     switch (prop) {
     case VTERM_PROP_CURSORVISIBLE:
-        //this->cursorVisible = val->boolean;
-        frontend.lock()->setCursorVisible(val->boolean);
+        updateInProgress->cursorVisible = val->boolean;
+        //frontend.lock()->setCursorVisible(val->boolean);
         return true;
         break;
     case VTERM_PROP_CURSORBLINK:
-        //this->cursorBlink = val->boolean;
-        frontend.lock()->setCursorBlink(val->boolean);
+        updateInProgress->cursorBlink = val->boolean;
+        //frontend.lock()->setCursorBlink(val->boolean);
         return true;
         break;
 
@@ -51,31 +75,36 @@ int VTermWrapper::settermprop(VTermProp prop, VTermValue *val) {
 }
 
 int VTermWrapper::bell() {
-    frontend.lock()->bellBlink();
+    std::lock_guard<std::mutex> lock { swapMutex };
+    //frontend.lock()->bellBlink();
     return 0;
 }
 int VTermWrapper::resize(int rows, int cols) {
+    std::lock_guard<std::mutex> lock { swapMutex };
     return 0;
 }
 
 int VTermWrapper::sb_pushline(int cols, const VTermScreenCell *cells) {
+    std::lock_guard<std::mutex> lock { swapMutex };
     pushed_lines ++;
     return 0;
 }
 
 int VTermWrapper::sb_popline(int cols, VTermScreenCell *cells) {
+    std::lock_guard<std::mutex> lock { swapMutex };
     return 0;
 }
 
 int VTermWrapper::device_control_string(const char *command, size_t commandlen, VTermStringFragment frag) {
+    std::lock_guard<std::mutex> lock { swapMutex };
     std::string dcs(command, commandlen);
     std::cout << "DCS: " << dcs << std::endl;
     return 1;
 }
 
 int VTermWrapper::application_program_command(VTermStringFragment frag) {
+    std::lock_guard<std::mutex> lock { swapMutex };
     std::string apc(frag.str, frag.len);
-    //std::cout << "APC: " << apc << std::endl;
 
     const std::string OPEN_MARK { "<skpicture>" };
     const std::string CLOSE_MARK { "</skpicture>" };
@@ -128,7 +157,7 @@ int VTermWrapper::application_program_command(VTermStringFragment frag) {
             );
 
             // 2. Deserialize the data into an SkPicture
-            picture = SkPicture::MakeFromData(
+            updateInProgress->picture = SkPicture::MakeFromData(
                 data->data(), 
                 data->size()
             );
@@ -138,6 +167,8 @@ int VTermWrapper::application_program_command(VTermStringFragment frag) {
 
     return 1;
 }
+
+/////////////////////
 
 int VTermWrapper::vterm_cb_damage(VTermRect rect, void *user)
 {
@@ -267,95 +298,89 @@ void VTermWrapper::input_write(const char* bytes, size_t len) {
     vterm_input_write(vterm, bytes, len);
 }
 
-TextCell VTermWrapper::getCell(int32_t row, int32_t col) {
-    // static int goods = 0, misses = 0;
-    // if (goods % 100 == 0 || misses % 100 == 0) std::cout << "goods: " << goods << ", misses: " << misses << std::endl;
-    if (text_cells(row, col).has_value()) {
-        // goods ++;
-        return text_cells(row, col).value();
-    } else {
-        // misses ++;
-        VTermPos pos = { row, col };
-        VTermScreenCell cell;
-        vterm_screen_get_cell(screen, pos, &cell);
+void VTermWrapper::refreshCell(int32_t row, int32_t col) {
+    VTermPos pos = { row, col };
+    VTermScreenCell cell;
+    vterm_screen_get_cell(screen, pos, &cell);
 
-        TextCell res;
-        //res.width = cell.width;
-        //res.attrs = cell.attrs;
+    TextCell res;
+    //res.width = cell.width;
+    //res.attrs = cell.attrs;
 
-        if (VTERM_COLOR_IS_INDEXED(&cell.fg)) {
-            vterm_screen_convert_color_to_rgb(screen, &cell.fg);
+    if (VTERM_COLOR_IS_INDEXED(&cell.fg)) {
+        vterm_screen_convert_color_to_rgb(screen, &cell.fg);
+    }
+    if (VTERM_COLOR_IS_RGB(&cell.fg)) {
+        res.foreColor = SkColor4f::FromColor(SkColorSetRGB(cell.fg.rgb.red, cell.fg.rgb.green, cell.fg.rgb.blue));
+    }
+
+    if (VTERM_COLOR_IS_INDEXED(&cell.bg)) {
+        vterm_screen_convert_color_to_rgb(screen, &cell.bg);
+    }
+    if (VTERM_COLOR_IS_RGB(&cell.bg)) {
+        res.backColor = SkColor4f::FromColor(SkColorSetRGB(cell.bg.rgb.red, cell.bg.rgb.green, cell.bg.rgb.blue));
+    }
+
+    if (cell.attrs.reverse) std::swap(res.foreColor, res.backColor);
+
+    // for (int i = 0; cell.chars[i] != 0 && i < VTERM_MAX_CHARS_PER_CELL; i++) {
+    //     res.chars.push_back(cell.chars[i]);
+    // }
+
+    if (cell.chars[0] != 0xffffffff) {
+        icu::UnicodeString ustr = "";
+        for (int i = 0; cell.chars[i] != 0 && i < VTERM_MAX_CHARS_PER_CELL; i++) {
+            ustr.append((UChar32)cell.chars[i]);
         }
-        if (VTERM_COLOR_IS_RGB(&cell.fg)) {
-            res.foreColor = SkColor4f::FromColor(SkColorSetRGB(cell.fg.rgb.red, cell.fg.rgb.green, cell.fg.rgb.blue));
-        }
 
-        if (VTERM_COLOR_IS_INDEXED(&cell.bg)) {
-            vterm_screen_convert_color_to_rgb(screen, &cell.bg);
-        }
-        if (VTERM_COLOR_IS_RGB(&cell.bg)) {
-            res.backColor = SkColor4f::FromColor(SkColorSetRGB(cell.bg.rgb.red, cell.bg.rgb.green, cell.bg.rgb.blue));
-        }
+        //color = cell.foreColor;
+        //bgcolor = cell.backColor;
 
-        if (cell.attrs.reverse) std::swap(res.foreColor, res.backColor);
-
-        // for (int i = 0; cell.chars[i] != 0 && i < VTERM_MAX_CHARS_PER_CELL; i++) {
-        //     res.chars.push_back(cell.chars[i]);
+        // if (VTERM_COLOR_IS_INDEXED(&cell.fg)) {
+        //     vterm_screen_convert_color_to_rgb(screen, &cell.fg);
+        // }
+        // if (VTERM_COLOR_IS_RGB(&cell.fg)) {
+        //     color = SkColor4f::FromColor(SkColorSetRGB(cell.fg.rgb.red, cell.fg.rgb.green, cell.fg.rgb.blue));
+        // }
+        // // if (VTERM_COLOR_IS_INDEXED(&cell.bg)) {
+        // //     vterm_screen_convert_color_to_rgb(screen, &cell.bg);
+        // // }
+        // if (VTERM_COLOR_IS_RGB(&cell.bg)) {
+        //     bgcolor = SkColor4f::FromColor(SkColorSetRGB(cell.bg.rgb.red, cell.bg.rgb.green, cell.bg.rgb.blue));
         // }
 
-        if (cell.chars[0] != 0xffffffff) {
-            icu::UnicodeString ustr;
-            for (int i = 0; cell.chars[i] != 0 && i < VTERM_MAX_CHARS_PER_CELL; i++) {
-                ustr.append((UChar32)cell.chars[i]);
-            }
+        
+        /* TODO
+        int style = TTF_STYLE_NORMAL;
+        if (cell.attrs.bold) style |= TTF_STYLE_BOLD;
+        if (cell.attrs.underline) style |= TTF_STYLE_UNDERLINE;
+        if (cell.attrs.italic) style |= TTF_STYLE_ITALIC;
+        if (cell.attrs.strike) style |= TTF_STYLE_STRIKETHROUGH; */
+        //if (cell.attrs.blink) { /*TBD*/ }
+        
+        // SkPaint bgpt(bgcolor);
+        // bgpt.setStyle(SkPaint::kFill_Style);
+        // canvas.drawRect(rect, bgpt);
 
-            //color = cell.foreColor;
-            //bgcolor = cell.backColor;
+        UErrorCode status = U_ZERO_ERROR;
+        auto normalizer = icu::Normalizer2::getNFKCInstance(status);
+        if (U_FAILURE(status)) throw std::runtime_error("unable to get NFKC normalizer");
 
-            // if (VTERM_COLOR_IS_INDEXED(&cell.fg)) {
-            //     vterm_screen_convert_color_to_rgb(screen, &cell.fg);
-            // }
-            // if (VTERM_COLOR_IS_RGB(&cell.fg)) {
-            //     color = SkColor4f::FromColor(SkColorSetRGB(cell.fg.rgb.red, cell.fg.rgb.green, cell.fg.rgb.blue));
-            // }
-            // // if (VTERM_COLOR_IS_INDEXED(&cell.bg)) {
-            // //     vterm_screen_convert_color_to_rgb(screen, &cell.bg);
-            // // }
-            // if (VTERM_COLOR_IS_RGB(&cell.bg)) {
-            //     bgcolor = SkColor4f::FromColor(SkColorSetRGB(cell.bg.rgb.red, cell.bg.rgb.green, cell.bg.rgb.blue));
-            // }
-
-            
-            /* TODO
-            int style = TTF_STYLE_NORMAL;
-            if (cell.attrs.bold) style |= TTF_STYLE_BOLD;
-            if (cell.attrs.underline) style |= TTF_STYLE_UNDERLINE;
-            if (cell.attrs.italic) style |= TTF_STYLE_ITALIC;
-            if (cell.attrs.strike) style |= TTF_STYLE_STRIKETHROUGH; */
-            //if (cell.attrs.blink) { /*TBD*/ }
-            
-            // SkPaint bgpt(bgcolor);
-            // bgpt.setStyle(SkPaint::kFill_Style);
-            // canvas.drawRect(rect, bgpt);
-
-            UErrorCode status = U_ZERO_ERROR;
-            auto normalizer = icu::Normalizer2::getNFKCInstance(status);
-            if (U_FAILURE(status)) throw std::runtime_error("unable to get NFKC normalizer");
-
-            if (ustr.length() > 0) {
-                auto ustr_normalized = normalizer->normalize(ustr, status);
-                if (U_SUCCESS(status)) {
-                    ustr_normalized.toUTF8String(res.utf8);
-                } else {
-                    ustr.toUTF8String(res.utf8);
-                }
+        if (ustr.length() > 0) {
+            auto ustr_normalized = normalizer->normalize(ustr, status);
+            if (U_SUCCESS(status)) {
+                ustr_normalized.toUTF8String(res.utf8);
+            } else {
+                ustr.toUTF8String(res.utf8);
             }
         }
-        text_cells(row, col) = res;
-        return res;
     }
+    updateInProgress->text_cells(row, col) = res;
 }
 
+std::optional<TextCell> VTermWrapperUpdate::getCell(int32_t row, int32_t col) {
+    return text_cells(row, col);
+}
 
 void VTermWrapper::output_callback(const char* s, size_t len, void* user)
 {
@@ -364,8 +389,8 @@ void VTermWrapper::output_callback(const char* s, size_t len, void* user)
     subp->write(str);
 }
 
-void VTermWrapper::processInputFromSubprocess() {
-    subprocess->readInputAndProcess([&](const std::string_view& input_str) {
+bool VTermWrapper::processInputFromSubprocess() {
+    return subprocess->readInputAndProcess([&](const std::string_view& input_str) {
         input_write(input_str.data(), input_str.size());
         if (pushed_lines > 2*rows) {
             pushed_lines = 0;
@@ -377,9 +402,9 @@ void VTermWrapper::processInputFromSubprocess() {
 }
 
 VTermWrapper::VTermWrapper(uint32_t _rows, uint32_t _cols, 
-    std::shared_ptr<TermSubprocess> subprocess,
-    std::weak_ptr<SkiaTermEmulator> frontend)
-        : subprocess(subprocess), frontend(frontend), rows(_rows), cols(_cols), text_cells(_rows, _cols) {
+                           std::shared_ptr<TermSubprocess> subprocess/*, std::weak_ptr<SkiaTermEmulator> frontend*/)
+        : subprocess(subprocess), /*frontend(frontend), */rows(_rows), cols(_cols), 
+          updateInProgress(std::make_shared<VTermWrapperUpdate>(_rows, _cols)) {
     
     vterm = vterm_new(_rows, _cols);
     vterm_set_utf8(vterm, 1);

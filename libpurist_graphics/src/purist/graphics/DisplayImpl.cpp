@@ -12,6 +12,8 @@
 #include <cstring>
 #include <cassert>
 
+#include <iostream>
+
 namespace purist::graphics {
 
 void DisplayImpl::setCrtc(FrameBufferImpl *buf) {
@@ -298,6 +300,7 @@ int DisplayImpl::connectDisplayToNotOccupiedCrtc(const ModeResources& res, const
 }
 
 DisplayImpl::~DisplayImpl() {
+	//std::cout << "DisplayImpl::~DisplayImpl" << std::endl;
     drmEventContext ev;
 
 	/* init variables */
@@ -306,17 +309,12 @@ DisplayImpl::~DisplayImpl() {
 	ev.page_flip_handler = DisplayImpl::modeset_page_flip_event;
 
 	destroying_in_progress = true;
-	if (page_flips_pending > 0) { fprintf(stderr, "wait for pending page-flip to complete at connector %d...\n", connector_id); }
-	while (page_flips_pending > 0) {
-		//printf("drmHandleEvent in ~Display\n"); fflush(stdout);
-		int ret = drmHandleEvent(card.fd, &ev);
-		if (ret) {
-			fprintf(stderr, "drmHandleEvent failed %d\n", ret); fflush(stderr);
-			page_flips_pending = 0;	// This is a hack. If we can't process the events, let's just proceed.
-			break;
-		}
+	int ret = 0;
+	while (page_flips_pending > 0 && ret == 0) {
+		fprintf(stderr, "wait for pending page-flips to complete at connector %d...\n", connector_id); 
+		ret = drmHandleEvent(card.fd, &ev);
 	}
-	assert(page_flips_pending == 0);
+	page_flips_pending = 0;
 
 	/* restore saved CRTC configuration */
 	if (saved_crtc != nullptr) //crtc_set_successfully)

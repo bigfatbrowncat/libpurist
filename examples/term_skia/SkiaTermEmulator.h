@@ -53,8 +53,12 @@ private:
     SkScalar font_height;
     SkScalar font_descent;
     uint32_t ringingFramebuffers = 0;
+    
     bool cursorVisible = true;
     bool cursorBlink = true;
+    TextCellsPos cursor_pos { 0, 0 };
+    cells<TextCell> text_cells;
+    sk_sp<SkPicture> picture;
 
     uint32_t rows, cols;
     int divider = 4;

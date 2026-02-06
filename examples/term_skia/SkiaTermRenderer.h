@@ -58,12 +58,17 @@ private:
     TextCellsPos cursor_pos { 0, 0 };
     cells<TextCell> text_cells;
     sk_sp<SkPicture> picture;
+    int picture_shifted_up_lines = 0;
 
     uint32_t rows, cols;
     int divider = 4;
 
     lru_cache<row_key, SurfaceAndImage> typesettingBox;
     std::vector<sk_sp<SkSurface>> letter_surfaces;
+    
+    sk_sp<SkSurface> graphic_layer;
+    sk_sp<SkSurface> text_layer;
+    
     std::map<uint32_t, std::shared_ptr<cells<unsigned char>>> screenUpdateMatrices;  // The key is the display connector id
 
     uint32_t framebuffersCount = 0;
@@ -73,6 +78,15 @@ private:
     sk_sp<SkImage> drawCells(int col_min, int col_max, int row, //int row_min, int row_max, 
                    int buffer_width, int buffer_height,
                    std::shared_ptr<pgs::SkiaOverlay> skiaOverlay);
+
+    void drawGraphicsLayer(std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, 
+                      int width, int height, int row_height, 
+                      std::shared_ptr<TextCellsDataUpdate> modelUpdate);
+    
+    void drawTextLayer(std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, 
+                       cells<unsigned char>& matrix,
+                       int width, int height, int row_height, 
+                       std::shared_ptr<TextCellsDataUpdate> modelUpdate);
 
 public:
     SkiaTermRenderer(uint32_t _rows, uint32_t _cols);

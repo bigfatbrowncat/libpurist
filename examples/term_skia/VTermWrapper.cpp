@@ -81,6 +81,7 @@ int VTermWrapper::settermprop(VTermProp prop, VTermValue *val) {
 
 int VTermWrapper::bell() {
     std::lock_guard<std::mutex> lock { swapMutex };
+    updateInProgress->bellIsSet = true;
     //frontend.lock()->bellBlink();
     return 0;
 }
@@ -92,11 +93,18 @@ int VTermWrapper::resize(int rows, int cols) {
 int VTermWrapper::sb_pushline(int cols, const VTermScreenCell *cells) {
     std::lock_guard<std::mutex> lock { swapMutex };
     pushed_lines ++;
+    updateInProgress->pictureShiftedUpLines ++;
     return 0;
 }
 
 int VTermWrapper::sb_popline(int cols, VTermScreenCell *cells) {
     std::lock_guard<std::mutex> lock { swapMutex };
+    return 0;
+}
+
+int VTermWrapper::sb_clear() {
+    std::lock_guard<std::mutex> lock { swapMutex };
+    updateInProgress->picture = nullptr;
     return 0;
 }
 
@@ -161,6 +169,8 @@ int VTermWrapper::application_program_command(VTermStringFragment frag) {
                 decoded.size()
             );
 
+            updateInProgress->pictureShiftedUpLines = 0; // Resetting it
+
             // 2. Deserialize the data into an SkPicture
             updateInProgress->picture = SkPicture::MakeFromData(
                 data->data(), 
@@ -215,6 +225,10 @@ int VTermWrapper::vterm_cb_sb_popline(int cols, VTermScreenCell *cells, void *us
     return ((VTermWrapper*)user)->sb_popline(cols, cells);
 }
 
+int VTermWrapper::vterm_cb_sb_clear(void *user)
+{
+    return ((VTermWrapper*)user)->sb_clear();
+}
 
 int VTermWrapper::vterm_fb_control(unsigned char control, void *user) {
     return 0;

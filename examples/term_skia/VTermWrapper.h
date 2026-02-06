@@ -35,6 +35,8 @@ protected:
     cells<std::optional<TextCell>> text_cells;
     std::optional<bool> cursorVisible = std::nullopt;
     std::optional<bool> cursorBlink = std::nullopt;
+    int pictureShiftedUpLines = 0;
+    bool bellIsSet = false;
     
 public:
     VTermWrapperUpdate(int _rows, int _cols) : text_cells(_rows, _cols) { }
@@ -47,6 +49,12 @@ public:
     std::optional<sk_sp<SkPicture>> getPicture() override {
         return picture;
     }
+
+    int getPictureShiftedUpLines() override {
+        return pictureShiftedUpLines;
+    }
+
+    bool isBellSet() override { return bellIsSet; }
 
     std::optional<bool> isCursorVisible() override {
         return cursorVisible;
@@ -88,6 +96,7 @@ private:
     int resize(int rows, int cols);
     int sb_pushline(int cols, const VTermScreenCell *cells);
     int sb_popline(int cols, VTermScreenCell *cells);
+    int sb_clear();
     int device_control_string(const char *command, size_t commandlen, VTermStringFragment frag);
     int application_program_command(VTermStringFragment frag);
 
@@ -100,6 +109,7 @@ private:
     static int vterm_cb_resize(int rows, int cols, void *user);
     static int vterm_cb_sb_pushline(int cols, const VTermScreenCell *cells, void *user);
     static int vterm_cb_sb_popline(int cols, VTermScreenCell *cells, void *user);
+    static int vterm_cb_sb_clear(void *user);
 
     const VTermScreenCallbacks screen_callbacks = {
         vterm_cb_damage,
@@ -109,7 +119,8 @@ private:
         vterm_cb_bell,
         vterm_cb_resize,
         vterm_cb_sb_pushline,
-        vterm_cb_sb_popline
+        vterm_cb_sb_popline,
+        vterm_cb_sb_clear
     };
 
     // State Fallback handlers

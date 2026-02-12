@@ -133,66 +133,154 @@ sk_sp<SkImage> SkiaTermRenderer::drawCells(int col_min, int col_max, int row, //
     return letter_image;
 }
 
-void SkiaTermRenderer::drawGraphicsLayer(std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, 
+void SkiaTermRenderer::drawGraphicsLayer(std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, SkCanvas& canvas,
                                     int width, int height, int row_height, 
                                     std::shared_ptr<TextCellsDataUpdate> modelUpdate) {
     // Drawing the picture
 
-    auto new_picture = modelUpdate->getPicture();
-    auto new_picture_shift = modelUpdate->getPictureShiftedUpLines();
-    
-    bool picture_changed = false;
-    if (new_picture.has_value()) {
-        picture = new_picture.value();
-        picture_shifted_up_lines = 0;
-        picture_changed = true;
-    }
 
-    picture_shifted_up_lines += new_picture_shift;
 
-    if (picture_changed || new_picture_shift != 0) {
+    if (picture_framebuffers_to_paint > 0) {
         // Clearing the graphic surface
-        if (graphic_layer == nullptr || 
-            graphic_layer->width() != width || 
-            graphic_layer->height() != height) {
+        // if (graphic_layer == nullptr || 
+        //     graphic_layer->width() != width || 
+        //     graphic_layer->height() != height) {
 
-            graphic_layer = skiaOverlay->getSkiaSurface()->makeSurface(
-                                SkImageInfo::MakeN32Premul(((uint32_t)width),  
-                                                           ((uint32_t)height)));
-        }
+        //     graphic_layer = skiaOverlay->getSkiaSurface()->makeSurface(
+        //                         SkImageInfo::MakeN32Premul(((uint32_t)width),  
+        //                                                    ((uint32_t)height)));
+        // }
 
-        auto glc = graphic_layer->getCanvas();
+        auto& glc = canvas; //*skiaOverlay->getSkiaSurface()->getCanvas(); //graphic_layer->getCanvas();
         
-        glc->restoreToCount(0);
-        glc->resetMatrix();
-        glc->clear(SK_ColorTRANSPARENT);
-        glc->translate(0, -row_height * picture_shifted_up_lines);
-        glc->drawPicture(picture);
+        //glc->restoreToCount(0);
+        //glc->resetMatrix();
+        //glc->clear(SK_ColorTRANSPARENT);
+        glc.save();
+        glc.translate(0, -row_height * picture_shifted_up_lines);
+        glc.drawPicture(picture);
+        glc.restore();
+        picture_framebuffers_to_paint --;
     }
 }
 
-void SkiaTermRenderer::drawTextLayer(std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, 
+void SkiaTermRenderer::setupDrawing(cells<unsigned char>& matrix,
+                    int width, int height, int row_height, 
+                    std::shared_ptr<TextCellsDataUpdate> modelUpdate) {
+
+    const SkScalar w = width, h = height;
+
+    assert(matrix.getCols() % divider == 0);
+    int part_width = matrix.getCols() / divider;
+
+    // Loading the update data into context
+    // Checking what cells have to be repainted
+    
+    auto new_cursor_pos = modelUpdate->getCursorPos();
+    auto new_picture = modelUpdate->getPicture();
+    auto new_picture_shifted_up_lines = modelUpdate->getPictureShiftedUpLines();
+
+    int32_t old_picture_left, old_picture_top, old_picture_right, old_picture_bottom;
+
+    if (picture != nullptr) {
+        SkRect old_picture_bounds = picture->cullRect();
+        old_picture_left = static_cast<int32_t>(old_picture_bounds.fLeft * matrix.getCols() / w);
+        old_picture_top = static_cast<int32_t>(old_picture_bounds.fTop * matrix.getRows() / h) - picture_shifted_up_lines;
+        old_picture_right = static_cast<int32_t>(old_picture_bounds.fRight * matrix.getCols() / w);
+        old_picture_bottom = static_cast<int32_t>(old_picture_bounds.fBottom * matrix.getRows() / h) - picture_shifted_up_lines;
+    }
+
+    for (int col_part = 0; col_part < divider; col_part++) {
+        for (int row = 0; row < matrix.getRows(); row++) {
+            for (int col = part_width * col_part; col < part_width * (col_part + 1); col++) {
+                const auto& cell = modelUpdate->getCell(row, col);
+                if (cell.has_value()) { 
+                    matrix(row, col) = framebuffersCount;
+                    text_cells(row, col) = cell.value();
+                }
+
+                // Because the cursor is blinking, we are always repainting the point that contains it
+                // If the cursor has moved, we need to invalidate both its old and its new position
+                if (col == cursor_pos.col && row == cursor_pos.row) { matrix(row, col) = framebuffersCount; }
+                if (new_cursor_pos.has_value() && 
+                    col == new_cursor_pos.value().col && 
+                    row == new_cursor_pos.value().row) { matrix(row, col) = framebuffersCount; }
+
+                // Checking if the picture changed
+                if (new_picture.has_value() || new_picture_shifted_up_lines != 0) {
+                    //if (picture != nullptr) {
+                        // Invalidating everything covered with the old image
+                        if (col >= old_picture_left && col <= old_picture_right &&
+                            row >= old_picture_top && row <= old_picture_bottom) {
+                            
+                            matrix(row, col) = framebuffersCount;
+                        }
+                    //}
+                    
+                    // Invalidating everything covered with the new image
+                    // if (col >= new_picture_left && col <= new_picture_right &&
+                    //     row >= new_picture_top && row <= new_picture_bottom) {
+                        
+                    //     matrix(row, col) = framebuffersCount;
+                    // }
+                }
+            }
+        }
+    }
+
+    // Setting the new cursor position
+    if (new_cursor_pos.has_value()) {
+        cursor_pos = new_cursor_pos.value();
+    }
+
+    // Setting the new picture and its state
+    if (new_picture.has_value() || new_picture_shifted_up_lines != 0) {
+        if (new_picture.has_value()) {
+            picture = new_picture.value();
+            picture_shifted_up_lines = 0;
+        }
+        picture_shifted_up_lines += new_picture_shifted_up_lines;
+        picture_framebuffers_to_paint = framebuffersCount;
+    }
+
+    // Checking if any position under the currently active picture is modified
+    if (picture != nullptr) {
+        SkRect picture_bounds = picture->cullRect();
+        int32_t picture_left = static_cast<int32_t>(picture_bounds.fLeft * matrix.getCols() / w);
+        int32_t picture_top = static_cast<int32_t>(picture_bounds.fTop * matrix.getRows() / h) - picture_shifted_up_lines;
+        int32_t picture_right = static_cast<int32_t>(picture_bounds.fRight * matrix.getCols() / w);
+        int32_t picture_bottom = static_cast<int32_t>(picture_bounds.fBottom * matrix.getRows() / h) - picture_shifted_up_lines;
+
+        for (int col_part = 0; col_part < divider; col_part++) {
+            for (int row = 0; row < matrix.getRows(); row++) {
+                for (int col = part_width * col_part; col < part_width * (col_part + 1); col++) {
+                    const auto& cell = modelUpdate->getCell(row, col);
+                        
+                    if (col >= picture_left && col <= picture_right &&
+                        row >= picture_top && row <= picture_bottom) {
+                        
+                        if (matrix(row, col) > 0) {
+                            // If any text position inside the new picture is 
+                            // going to be redrawn, we have to redraw the picture too
+                            picture_framebuffers_to_paint = framebuffersCount;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+
+}
+
+void SkiaTermRenderer::drawTextLayer(std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, SkCanvas& canvas,
                     cells<unsigned char>& matrix,
                     int width, int height, int row_height, 
                     std::shared_ptr<TextCellsDataUpdate> modelUpdate) {
 
-    // Creating the text surface if necessary
-    if (text_layer == nullptr || 
-        text_layer->width() != width || 
-        text_layer->height() != height) {
 
-        text_layer = skiaOverlay->getSkiaSurface()->makeSurface(
-                            SkImageInfo::MakeN32Premul(((uint32_t)width),  
-                                                        ((uint32_t)height)));
-    }
-
-    auto& tlc = *text_layer->getCanvas();
-    tlc.resetMatrix();
-
-
-    
-    SkScalar w = width, h = height;
-
+    const SkScalar w = width, h = height;
 
     const SkScalar gray_hsv[] { 0.0f, 0.0f, 0.7f };
     auto color = SkColor4f::FromColor(SkHSVToColor(255, gray_hsv));
@@ -228,36 +316,16 @@ void SkiaTermRenderer::drawTextLayer(std::shared_ptr<pgs::SkiaOverlay> skiaOverl
         row_height ++;
         vscale = h / (static_cast<float>(row_height) * matrix.getRows());
     }
-    
-    tlc.scale(hscale, vscale);
-    
+
     SkScalar font_width_scaled = w / matrix.getCols() / hscale;
 
-    // Loading the update data into context
-    auto new_cursor_pos = modelUpdate->getCursorPos();
-    for (int col_part = 0; col_part < divider; col_part++) {
-        for (int row = 0; row < matrix.getRows(); row++) {
-            for (int col = part_width * col_part; col < part_width * (col_part + 1); col++) {
-                const auto& cell = modelUpdate->getCell(row, col);
-                if (cell.has_value()) { 
-                    matrix(row, col) = framebuffersCount;
-                    text_cells(row, col) = cell.value();
-                }
 
-                // Because the cursor is blinking, we are always repainting it
-                if (col == cursor_pos.col && row == cursor_pos.row) { matrix(row, col) = framebuffersCount; }
-                if (new_cursor_pos.has_value() && 
-                    col == new_cursor_pos.value().col && 
-                    row == new_cursor_pos.value().row) { matrix(row, col) = framebuffersCount; }
-            }
-        }
-    }
+    ///////////////////// Painting ////////////////////
 
-    if (new_cursor_pos.has_value()) {
-        cursor_pos = new_cursor_pos.value();
-    }
-
-
+    auto& tlc = canvas; //*skiaOverlay->getSkiaSurface()->getCanvas();
+    tlc.save();
+    tlc.scale(hscale, vscale);
+    
     {
         //std::lock_guard<std::mutex> lock(matrixMutex);
         for (int col_part = 0; col_part < divider; col_part++) {
@@ -352,6 +420,7 @@ void SkiaTermRenderer::drawTextLayer(std::shared_ptr<pgs::SkiaOverlay> skiaOverl
         ringingFramebuffers -= 1;
     }
 
+    tlc.restore();
 }
 
 
@@ -374,28 +443,29 @@ void SkiaTermRenderer::drawIntoSurface(std::shared_ptr<pg::Display> display,
 
     int row_height = height / matrix.getRows();
 
-    drawTextLayer(skiaOverlay, matrix, width, height, row_height, modelUpdate);
-    drawGraphicsLayer(skiaOverlay, width, height, row_height, modelUpdate);
+    setupDrawing(matrix, width, height, row_height, modelUpdate);
+    drawTextLayer(skiaOverlay, canvas, matrix, width, height, row_height, modelUpdate);
+    drawGraphicsLayer(skiaOverlay, canvas, width, height, row_height, modelUpdate);
 
     //canvas.restoreToCount(0);
     //canvas.resetMatrix();
-    canvas.clear(SK_ColorTRANSPARENT);
+    // canvas.clear(SK_ColorTRANSPARENT);
 
-    if (text_layer != nullptr) {
-        canvas.drawImage(text_layer->makeImageSnapshot(), 0, 0);
-    }
+    // if (text_layer != nullptr) {
+    //     canvas.drawImage(text_layer->makeImageSnapshot(), 0, 0);
+    // }
 
-    if (graphic_layer != nullptr) {
-        canvas.drawImage(graphic_layer->makeImageSnapshot(), 0, 0);
-    }
+    // if (graphic_layer != nullptr) {
+    //     canvas.drawImage(graphic_layer->makeImageSnapshot(), 0, 0);
+    // }
 }
 
 
 SkiaTermRenderer::SkiaTermRenderer(uint32_t _rows, uint32_t _cols) 
     : rows(_rows), cols(_cols), 
       typesettingBox(_rows * divider * 4), 
-      text_cells(_rows, _cols),
-      graphic_layer(nullptr) {
+      text_cells(_rows, _cols)//,
+      /*graphic_layer(nullptr)*/ {
 
     // Checking the arguments
     if (_cols == 0 || _rows == 0) {

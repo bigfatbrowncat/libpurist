@@ -100,7 +100,7 @@ public:
 
         int max_width = 0;
 		for(auto mode = modes.begin(); mode != modes.end(); mode++) {
-			if ((*mode)->getFreq() == FPS && (*mode)->getWidth() < 2000) {
+			if ((*mode)->getFreq() == FPS && (*mode)->getWidth() < 4000) {
                 if (max_width < (*mode)->getWidth()) {
                     res = mode;
                     max_width = (*mode)->getWidth();

@@ -58,6 +58,7 @@ private:
     TextCellsPos cursor_pos { 0, 0 };
     cells<TextCell> text_cells;
     sk_sp<SkPicture> picture;
+    int picture_framebuffers_to_paint = 0;
     int picture_shifted_up_lines = 0;
 
     uint32_t rows, cols;
@@ -66,8 +67,8 @@ private:
     lru_cache<row_key, SurfaceAndImage> typesettingBox;
     std::vector<sk_sp<SkSurface>> letter_surfaces;
     
-    sk_sp<SkSurface> graphic_layer;
-    sk_sp<SkSurface> text_layer;
+    //sk_sp<SkSurface> graphic_layer;
+    //sk_sp<SkSurface> text_layer;
     
     std::map<uint32_t, std::shared_ptr<cells<unsigned char>>> screenUpdateMatrices;  // The key is the display connector id
 
@@ -79,11 +80,15 @@ private:
                    int buffer_width, int buffer_height,
                    std::shared_ptr<pgs::SkiaOverlay> skiaOverlay);
 
-    void drawGraphicsLayer(std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, 
+    void setupDrawing(cells<unsigned char>& matrix,
+                    int width, int height, int row_height, 
+                    std::shared_ptr<TextCellsDataUpdate> modelUpdate);
+
+    void drawGraphicsLayer(std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, SkCanvas& canvas,
                       int width, int height, int row_height, 
                       std::shared_ptr<TextCellsDataUpdate> modelUpdate);
     
-    void drawTextLayer(std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, 
+    void drawTextLayer(std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, SkCanvas& canvas,
                        cells<unsigned char>& matrix,
                        int width, int height, int row_height, 
                        std::shared_ptr<TextCellsDataUpdate> modelUpdate);

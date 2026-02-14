@@ -8,16 +8,16 @@
 #include <include/core/SkFontMetrics.h>
 
 void SkiaTermRenderer::refreshRect(int start_row, int start_col, int end_row, int end_col) {
-    for (auto& mat_pair : screenUpdateMatrices) {
-        auto& matrix = *(mat_pair.second);
+    auto& matrix = *updateMatrix;
+    // for (auto& mat_pair : screenUpdateMatrices) {
+    //     auto& matrix = *(mat_pair.second);
         for (int row = start_row; row < end_row; row++) {
             for (int col = start_col; col < end_col; col++) {
                 matrix(row, col) = framebuffersCount;
             }
         }
-    }
+    // }
 }
-
 
 sk_sp<SkImage> SkiaTermRenderer::drawCells(int col_min, int col_max, int row, //int row_min, int row_max, 
                 int buffer_width, int buffer_height,
@@ -134,28 +134,18 @@ sk_sp<SkImage> SkiaTermRenderer::drawCells(int col_min, int col_max, int row, //
 }
 
 void SkiaTermRenderer::drawGraphicsLayer(std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, SkCanvas& canvas,
-                                    int width, int height, int row_height, 
+                                    int width, int height,
                                     std::shared_ptr<TextCellsDataUpdate> modelUpdate) {
+
+    auto& matrix = *updateMatrix;
+
+    int row_height = height / matrix.getRows();
+    
     // Drawing the picture
-
-
-
     if (picture_framebuffers_to_paint > 0) {
-        // Clearing the graphic surface
-        // if (graphic_layer == nullptr || 
-        //     graphic_layer->width() != width || 
-        //     graphic_layer->height() != height) {
-
-        //     graphic_layer = skiaOverlay->getSkiaSurface()->makeSurface(
-        //                         SkImageInfo::MakeN32Premul(((uint32_t)width),  
-        //                                                    ((uint32_t)height)));
-        // }
 
         auto& glc = canvas; //*skiaOverlay->getSkiaSurface()->getCanvas(); //graphic_layer->getCanvas();
         
-        //glc->restoreToCount(0);
-        //glc->resetMatrix();
-        //glc->clear(SK_ColorTRANSPARENT);
         glc.save();
         glc.translate(0, -row_height * picture_shifted_up_lines);
         glc.drawPicture(picture);
@@ -164,11 +154,12 @@ void SkiaTermRenderer::drawGraphicsLayer(std::shared_ptr<pgs::SkiaOverlay> skiaO
     }
 }
 
-void SkiaTermRenderer::setupDrawing(cells<unsigned char>& matrix,
-                    int width, int height, int row_height, 
+void SkiaTermRenderer::setupDrawing(int width, int height,
                     std::shared_ptr<TextCellsDataUpdate> modelUpdate) {
 
+    auto& matrix = *updateMatrix;
     const SkScalar w = width, h = height;
+    int row_height = height / matrix.getRows();
 
     assert(matrix.getCols() % divider == 0);
     int part_width = matrix.getCols() / divider;
@@ -208,21 +199,12 @@ void SkiaTermRenderer::setupDrawing(cells<unsigned char>& matrix,
 
                 // Checking if the picture changed
                 if (new_picture.has_value() || new_picture_shifted_up_lines != 0) {
-                    //if (picture != nullptr) {
-                        // Invalidating everything covered with the old image
-                        if (col >= old_picture_left && col <= old_picture_right &&
-                            row >= old_picture_top && row <= old_picture_bottom) {
-                            
-                            matrix(row, col) = framebuffersCount;
-                        }
-                    //}
-                    
-                    // Invalidating everything covered with the new image
-                    // if (col >= new_picture_left && col <= new_picture_right &&
-                    //     row >= new_picture_top && row <= new_picture_bottom) {
+                    // Invalidating everything covered with the old image
+                    if (col >= old_picture_left && col <= old_picture_right &&
+                        row >= old_picture_top && row <= old_picture_bottom) {
                         
-                    //     matrix(row, col) = framebuffersCount;
-                    // }
+                        matrix(row, col) = framebuffersCount;
+                    }
                 }
             }
         }
@@ -269,18 +251,16 @@ void SkiaTermRenderer::setupDrawing(cells<unsigned char>& matrix,
             }
         }
     }
-
-
-
 }
 
 void SkiaTermRenderer::drawTextLayer(std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, SkCanvas& canvas,
-                    cells<unsigned char>& matrix,
-                    int width, int height, int row_height, 
+                    int width, int height,
                     std::shared_ptr<TextCellsDataUpdate> modelUpdate) {
 
 
+    auto& matrix = *updateMatrix;
     const SkScalar w = width, h = height;
+    int row_height = height / matrix.getRows();
 
     const SkScalar gray_hsv[] { 0.0f, 0.0f, 0.7f };
     auto color = SkColor4f::FromColor(SkHSVToColor(255, gray_hsv));
@@ -337,17 +317,12 @@ void SkiaTermRenderer::drawTextLayer(std::shared_ptr<pgs::SkiaOverlay> skiaOverl
                     if (matrix(row, col) > 0) { matrix(row, col) -= 1; damaged = true; }
                 }
 
-                //if (damaged) std::cout << "damaged" << std::endl;
-
                 if (damaged) {
                     // Drawing
                     auto cells_image = drawCells(part_width * col_part,
                             part_width * (col_part + 1), row, 
                             buffer_width, row_height, skiaOverlay);
 
-                    //tlc.drawImage(cells_image, buffer_width * col_part, buffer_height * row);
-
-                    //void drawImageRect(const SkImage*, const SkRect& dst, const SkSamplingOptions&);
                     if (presize_horizontal) {
                         SkRect dst = {
                             (float)buffer_width * col_part, // * hscale, 
@@ -368,18 +343,11 @@ void SkiaTermRenderer::drawTextLayer(std::shared_ptr<pgs::SkiaOverlay> skiaOverl
 
     
     // draw cursor
-    //VTermScreenCell cell;
-    //vterm_screen_get_cell(screen, cursor_pos, &cell);
 
     auto cur_color = SkColor4f::FromColor(SkColorSetRGB(128, 128, 128));
-    // if (VTERM_COLOR_IS_INDEXED(&cell.fg)) {
-    //     vterm_screen_convert_color_to_rgb(screen, &cell.fg);
-    // }
 
     TextCell cell = text_cells(cursor_pos.row, cursor_pos.col);
-    //if (VTERM_COLOR_IS_RGB(&cell.fg)) {
-        cur_color = cell.foreColor; // SkColor4f::FromColor(SkColorSetRGB(cell.fg.rgb.red, cell.fg.rgb.green, cell.fg.rgb.blue));
-    //}
+    cur_color = cell.foreColor;
 
     SkRect rect = { 
         (float)cursor_pos.col * font_width_scaled, 
@@ -413,10 +381,10 @@ void SkiaTermRenderer::drawTextLayer(std::shared_ptr<pgs::SkiaOverlay> skiaOverl
 
     if (ringingFramebuffers > 0) {
         tlc.clear(color);
-        for (auto& mat_pair : screenUpdateMatrices) {
-            auto& matrix = *(mat_pair.second);
+        //for (auto& mat_pair : screenUpdateMatrices) {
+        //    auto& matrix = *(mat_pair.second);
             matrix.fill(framebuffersCount);
-        }
+        //}
         ringingFramebuffers -= 1;
     }
 
@@ -428,36 +396,29 @@ void SkiaTermRenderer::drawIntoSurface(std::shared_ptr<pg::Display> display,
                         std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, 
                         int width, int height, SkCanvas& canvas, bool refreshed) {
 
+
     if (framebuffersCount < display->getFramebuffersCount()) {
         // Setting how many framebuffers we should redraw at once
         framebuffersCount = display->getFramebuffersCount();
     }
 
-    if (screenUpdateMatrices.find(display->getConnectorId()) == screenUpdateMatrices.end()) {
-        screenUpdateMatrices[display->getConnectorId()] = std::make_shared<cells<unsigned char>>(rows, cols);
-        screenUpdateMatrices[display->getConnectorId()]->fill(framebuffersCount);
+    // if (screenUpdateMatrices.find(display->getConnectorId()) == screenUpdateMatrices.end()) {
+    //     screenUpdateMatrices[display->getConnectorId()] = std::make_shared<cells<unsigned char>>(rows, cols);
+    //     screenUpdateMatrices[display->getConnectorId()]->fill(framebuffersCount);
+    // }
+
+    if (updateMatrix == nullptr || updateMatrix->getCols() != cols || updateMatrix->getRows() != rows) {
+        updateMatrix = std::make_shared<cells<unsigned char>>(rows, cols, framebuffersCount);
+        //updateMatrix->fill(framebuffersCount);
     }
+    auto& matrix = *updateMatrix;
 
     auto modelUpdate = model->getContentsUpdate();
-    auto& matrix = *(screenUpdateMatrices[display->getConnectorId()]);
+    //auto& matrix = *(screenUpdateMatrices[display->getConnectorId()]);
 
-    int row_height = height / matrix.getRows();
-
-    setupDrawing(matrix, width, height, row_height, modelUpdate);
-    drawTextLayer(skiaOverlay, canvas, matrix, width, height, row_height, modelUpdate);
-    drawGraphicsLayer(skiaOverlay, canvas, width, height, row_height, modelUpdate);
-
-    //canvas.restoreToCount(0);
-    //canvas.resetMatrix();
-    // canvas.clear(SK_ColorTRANSPARENT);
-
-    // if (text_layer != nullptr) {
-    //     canvas.drawImage(text_layer->makeImageSnapshot(), 0, 0);
-    // }
-
-    // if (graphic_layer != nullptr) {
-    //     canvas.drawImage(graphic_layer->makeImageSnapshot(), 0, 0);
-    // }
+    setupDrawing(width, height, modelUpdate);
+    drawTextLayer(skiaOverlay, canvas, width, height, modelUpdate);
+    drawGraphicsLayer(skiaOverlay, canvas, width, height, modelUpdate);
 }
 
 

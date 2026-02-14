@@ -39,7 +39,6 @@ public:
     TermDisplayContents(std::weak_ptr<p::Platform> platform, uint32_t _rows, uint32_t _cols) 
             : platform(platform) {
 
-    
         std::string prog = getenv("SHELL");
         subprocess = std::make_shared<TermSubprocess>(_rows, _cols, prog, std::vector<std::string> {"-"});
         vtermWrapper = std::make_shared<VTermWrapper>(_rows, _cols, subprocess);

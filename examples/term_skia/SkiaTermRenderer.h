@@ -9,9 +9,6 @@
 // libpurist headers
 #include <purist/graphics/skia/DisplayContentsSkia.h>
 #include <purist/graphics/Display.h>
-// #include <purist/graphics/Mode.h>
-// #include <purist/input/KeyboardHandler.h>
-// #include <purist/Platform.h>
 #include <purist/graphics/skia/icu_common.h>
 
 // Skia headers
@@ -66,31 +63,27 @@ private:
 
     lru_cache<row_key, SurfaceAndImage> typesettingBox;
     std::vector<sk_sp<SkSurface>> letter_surfaces;
-    
-    //sk_sp<SkSurface> graphic_layer;
-    //sk_sp<SkSurface> text_layer;
-    
-    std::map<uint32_t, std::shared_ptr<cells<unsigned char>>> screenUpdateMatrices;  // The key is the display connector id
+        
+    //std::map<uint32_t, std::shared_ptr<cells<unsigned char>>> screenUpdateMatrices;  // The key is the display connector id
+    std::shared_ptr<cells<unsigned char>> updateMatrix;
 
     uint32_t framebuffersCount = 0;
 
     std::shared_ptr<TextCellsMatrixModel> model;
 
-    sk_sp<SkImage> drawCells(int col_min, int col_max, int row, //int row_min, int row_max, 
+    sk_sp<SkImage> drawCells(int col_min, int col_max, int row,
                    int buffer_width, int buffer_height,
                    std::shared_ptr<pgs::SkiaOverlay> skiaOverlay);
 
-    void setupDrawing(cells<unsigned char>& matrix,
-                    int width, int height, int row_height, 
+    void setupDrawing(int width, int height,
                     std::shared_ptr<TextCellsDataUpdate> modelUpdate);
 
     void drawGraphicsLayer(std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, SkCanvas& canvas,
-                      int width, int height, int row_height, 
+                      int width, int height,
                       std::shared_ptr<TextCellsDataUpdate> modelUpdate);
     
     void drawTextLayer(std::shared_ptr<pgs::SkiaOverlay> skiaOverlay, SkCanvas& canvas,
-                       cells<unsigned char>& matrix,
-                       int width, int height, int row_height, 
+                       int width, int height,
                        std::shared_ptr<TextCellsDataUpdate> modelUpdate);
 
 public:

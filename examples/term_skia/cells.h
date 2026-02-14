@@ -9,6 +9,10 @@ public:
     cells(int _rows, int _cols) : rows(_rows), cols(_cols) {
         buf = new T[cols * rows];
     }
+    cells(int _rows, int _cols, const T& value) : rows(_rows), cols(_cols) {
+        buf = new T[cols * rows];
+        fill(value);
+    }
     ~cells() {
         delete[] buf;
     }
@@ -19,7 +23,7 @@ public:
             }
         }
     }
-    T& operator()(int row, int col) {
+    inline T& operator()(int row, int col) {
         if (row < 0 || col < 0 || row >= rows || col >= cols) throw std::runtime_error("invalid position");
         return buf[cols * row + col];
     }

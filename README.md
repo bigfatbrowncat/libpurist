@@ -1,7 +1,3 @@
-<style>
-    h4 { font-size: 120%; margin: 0; padding: 0; font-weight: normal; }
-    .c { font-size: 90%; margin-top: 10px; line-height: 1.3;}
-</style>
 # libpurist
 
 A slim bare-linux (no XOrg/Wayland) graphics input/output library designed to be easy, transparent and portable. That includes binary portability of the user applivcations.
@@ -27,43 +23,72 @@ config:
         bottom: 5
 ---
 flowchart
-    
 
     subgraph libpurist
-        purist_graphics_skia["`<h4><b>libpurist</b> :: graphics :: skia</h4><div class='c'>Skia-dependent graphics API provider layer<div>`"]
+        purist_graphics_skia["
+            <div style="font-size:130%;"><b>libpurist</b> :: graphics :: skia</div>
+            <div style='font-size:90%;line-height:1.2;margin:5px 0 0 0'>Skia-dependent graphics API provider layer<div>
+        "]
 
-        purist_graphics["`<h4><b>libpurist</b> :: graphics</h4><div class='c'>Basic EGL and CPU framebuffer graphics API provider layer</div>`"]
+        purist_graphics["
+            <div style="font-size:130%;"><b>libpurist</b> :: graphics</div>
+            <div style='font-size:90%;line-height:1.2;margin:5px 0 0 0'>Basic EGL and CPU framebuffer graphics API provider layer</div>
+        "]
         
-        purist_input["`<h4><b>libpurist</b> :: input</h4><div class='c'>Input API provider</div>`"]
+        purist_input["
+            <div style="font-size:130%;"><b>libpurist</b> :: input</div>
+            <div style='font-size:90%;line-height:1.2;margin:5px 0 0 0'>Input API provider</div>
+        "]
 
         purist_graphics_skia --> purist_graphics
     end
 
+
     subgraph OS
-        gl["<h4><b>mesa:</b> libegl + libgles</h4><div class='c'>The underlying system OpenGL<br/> implementation</div>"]
-        kernel["<h4>Kernel</h4><div class='c'>Provides GPU<br/>and input devices</div>"]
+        gl["
+            <div style="font-size:130%;"><b>mesa:</b> libegl + libgles</div>
+            <div style='font-size:90%;line-height:1.2;margin:5px 0 0 0'>The underlying system OpenGL<br/> implementation</div>
+        "]
+        kernel["
+            <div style="font-size:130%;">Kernel</div>
+            <div style='font-size:90%;line-height:1.2;margin:5px 0 0 0'>Provides GPU<br/>and input devices</div>
+        "]
     end
     
+
     subgraph libpurist dependencies
     
-    purist_graphics_skia --> skia
+        purist_graphics_skia --> skia
 
-    purist_graphics --> glvnd
-    purist_graphics --> drm
-    
-    purist_input --> xkbcommon
+        purist_graphics --> glvnd
+        purist_graphics --> drm
+        
+        purist_input --> xkbcommon
 
-    skia["<h4><b>skia</b> + <em>deps</em></h4><div class='c'>A popular and powerful<br/>vector 2D<br/>rendering engine</div>"]
-    drm["<h4>libdrm + libgbm</h4><div class='c'>Controlling GPU,<br/> enumerating displays<br/>managing framebuffers</div>"]
-    
-    xkbcommon["<h4>libxkbcommon</h4><div class='c'>Processes keyboard input,<br/>converts scancodes<br/>to characters</div>"]
+        skia["
+            <div style="font-size:130%;"><b>skia</b> + <em>deps</em></div>
+            <div style='font-size:90%;line-height:1.2;margin:5px 0 0 0'>A popular and powerful<br/>vector 2D<br/>rendering engine</div>
+        "]
 
-    glvnd["<h4>libglvnd</h4><div class='c'>A universal dynamic<br/>wrapper over<br/>OpenGL/GLES API</div>"]
+        drm["
+            <div style="font-size:130%;">libdrm + libgbm</div>
+            <div style='font-size:90%;line-height:1.2;margin:5px 0 0 0'>Controlling GPU,<br/> enumerating displays<br/>managing framebuffers</div>
+        "]
+        
+        xkbcommon["
+            <div style="font-size:130%;">libxkbcommon</div>
+            <div style='font-size:90%;line-height:1.2;margin:5px 0 0 0'>Processes keyboard input,<br/>converts scancodes<br/>to characters</div>
+        "]
 
-    drm -->|/dev/dri/cardX| kernel
-    xkbcommon -- /dev/input/... --> kernel
-    
-    glvnd -- Dynamic load and calls --> gl
+        glvnd["
+            <div style="font-size:130%;">libglvnd</div>
+            <div style='font-size:90%;line-height:1.2;margin:5px 0 0 0'>A universal dynamic<br/>wrapper over<br/>OpenGL/GLES API</div>
+        "]
+
+        drm -->|/dev/dri/cardX| kernel
+        xkbcommon -- /dev/input/... --> kernel
+        
+        glvnd -- Dynamic load and calls --> gl
     end 
 
 ```

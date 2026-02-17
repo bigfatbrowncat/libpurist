@@ -98,9 +98,9 @@ int main(int argc, char **argv)
 		bool enableOpenGL = true;
 
 		std::shared_ptr<p::Platform> purist = std::make_shared<p::Platform>(enableOpenGL);
-		auto contentsFactory = std::make_shared<ColoredScreenDisplayContents>(purist, enableOpenGL);
+		auto contentsGenerator = std::make_shared<ColoredScreenDisplayContents>(purist, enableOpenGL);
 		
-		purist->run(contentsFactory, contentsFactory);
+		purist->run(contentsGenerator, contentsGenerator);
 
 		return 0;
 	

@@ -22,7 +22,7 @@ public:
         The standard implementation returns the first mode in the list (the highest resolution / refreshing rate)
     */
     virtual std::list<std::shared_ptr<Mode>>::const_iterator chooseMode(const std::list<std::shared_ptr<Mode>>& modes) {
-        return modes.begin(); 
+        return modes.begin();
     }
 
     /*

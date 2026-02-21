@@ -1,5 +1,7 @@
 #pragma once
 
+#include "purist/exceptions.h"
+#include <purist/Platform.h>
 #include <purist/graphics/DisplayContentsHandler.h>
 
 #include <memory>
@@ -23,7 +25,7 @@ namespace purist::graphics {
 
 class Displays;
 
-class Card {
+class Card : public DeviceClassProvider {
 private:
     // Forbidding object copying
     Card(const Card& other) = delete;
@@ -31,13 +33,16 @@ private:
 
     gbm_device *gbmDevice = nullptr;
     std::shared_ptr<Displays> displays;
-    int card_poll_counter = 0;
+    uint32_t card_poll_counter = 0;
+    uint32_t redraws_between_updates = 100;
 
     int initGBM(int fd, uint32_t width, uint32_t height);
     int initGL();
 
 
 public:
+    static std::unique_ptr<Card> probeCard(std::shared_ptr<DisplayContentsHandler> contents, bool enableOpenGL);
+
     EGLDisplay glDisplay = EGL_NO_DISPLAY;
     EGLConfig glConfig;
     EGLContext glContext = EGL_NO_CONTEXT;
@@ -52,9 +57,20 @@ public:
     virtual ~Card();
 
     //void runDrawingLoop();
-    void processFd(std::vector<pollfd>::iterator fds_iter);
+    void processFd(std::vector<pollfd>::iterator& fds_iter) override;
 
     gbm_device* getGBMDevice() const { return gbmDevice; }
+
+    std::vector<pollfd> getFds() override { 
+        return {
+            pollfd {
+                .fd = this->fd,
+                .events = POLLIN,
+                .revents = 0
+            }
+        };
+    }
+    void updateHardware() override;
 
 };
 

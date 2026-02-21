@@ -1,5 +1,7 @@
 #pragma once
 
+#include <purist/Platform.h>
+
 #include <cstdint>
 
 namespace purist::input {

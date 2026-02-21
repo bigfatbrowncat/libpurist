@@ -1,10 +1,14 @@
+#include "TextInput.h"
+
 // libpurist headers
-#include <purist/graphics/skia/TextInput.h>
 #include <purist/graphics/skia/DisplayContentsSkia.h>
+#include <purist/graphics/GPUProvider.h>
 #include <purist/graphics/Display.h>
 #include <purist/graphics/Mode.h>
 #include <purist/input/KeyboardHandler.h>
+#include <purist/input/KeyboardsProvider.h>
 #include <purist/Platform.h>
+#include <purist/exceptions.h>
 
 #include <Resource.h>
 
@@ -192,7 +196,11 @@ int main(int argc, char **argv)
 		auto contents = std::make_shared<ColoredScreenDisplayContents>(purist);
 		auto contents_handler_for_skia = std::make_shared<pgs::DisplayContentsHandlerForSkia>(contents, enableOpenGL);
 		
-		purist->run(contents_handler_for_skia, contents);
+        purist->run({ 
+			pi::createKeyboardsProvider(contents),
+			pg::createGPUProvider(contents_handler_for_skia, enableOpenGL)
+		});
+		//purist->run(contents_handler_for_skia, contents);
 
 		return 0;
 	

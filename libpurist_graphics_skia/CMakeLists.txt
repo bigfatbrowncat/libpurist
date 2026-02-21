@@ -4,7 +4,6 @@ add_library(purist_graphics_skia STATIC
     # Public includes
     include/purist/graphics/skia/DisplayContentsSkia.h
     include/purist/graphics/skia/SkiaOverlay.h
-    include/purist/graphics/skia/TextInput.h
 
     # Private includes/sources
     src/purist/graphics/skia/DisplayContentsSkia.cpp
@@ -13,7 +12,6 @@ add_library(purist_graphics_skia STATIC
     src/purist/graphics/skia/SkiaRasterOverlay.h
     src/purist/graphics/skia/SkiaEGLOverlay.cpp
     src/purist/graphics/skia/SkiaEGLOverlay.h
-    src/purist/graphics/skia/TextInput.cpp
 )
 
 target_compile_features(purist_graphics_skia PUBLIC cxx_std_17)

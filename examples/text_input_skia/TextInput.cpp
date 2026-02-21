@@ -1,4 +1,4 @@
-#include <purist/graphics/skia/TextInput.h>
+#include "TextInput.h"
 
 #include <modules/skparagraph/src/ParagraphBuilderImpl.h>
 #include <modules/skparagraph/include/FontCollection.h>

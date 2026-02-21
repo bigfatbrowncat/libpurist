@@ -41,6 +41,36 @@
 
 namespace purist::graphics {
 
+std::unique_ptr<graphics::Card> Card::probeCard(std::shared_ptr<graphics::DisplayContentsHandler> contents, bool enableOpenGL) {
+    // Probing dri cards
+    std::unique_ptr<graphics::Card> card;
+    fs::path dri_path = "/dev/dri";
+    std::string card_path;
+    for (const auto & entry : fs::directory_iterator(dri_path)) {
+        card_path = entry.path();
+        if (card_path.find(std::string(dri_path / "card")) == 0) {
+            try {
+                card = std::make_unique<graphics::Card>(card_path, enableOpenGL);
+                card->initialize(contents);
+            } catch (const errcode_exception& ex) {
+                if (ex.errcode == EOPNOTSUPP) {
+                    std::cout << "DRM not supported at " << card_path << std::endl;
+                } else {
+                    std::cout << "DRM can not be initialized at " << card_path << ": " << ex.what() << std::endl;
+                }
+                card = nullptr;
+                continue;
+            }
+            break; // Success
+        }
+    }
+    if (card == nullptr) {
+        throw std::runtime_error("Can't find a card supporting DRM.");
+    }
+    std::cout << "Using videocard device: " << card_path << std::endl;
+    return card;
+}
+
 Card::Card(const fs::path& node, bool enableOpenGL) 
 	: displays(std::make_shared<Displays>(*this, enableOpenGL)), 
 	  fd(-1), enableOpenGL(enableOpenGL), node(node) { }
@@ -347,7 +377,7 @@ Card::~Card() {
  * (you need to press RETURN after each keyboard input to make this work).
  */
 
-void Card::processFd(std::vector<pollfd>::iterator fds_iter)
+void Card::processFd(std::vector<pollfd>::iterator& fds_iter)
 {
 	drmEventContext ev;
 
@@ -373,15 +403,7 @@ void Card::processFd(std::vector<pollfd>::iterator fds_iter)
 
     }
 
-	if (card_poll_counter % redraws_between_updates == 0) {
-		int ret = displays->updateHardwareConfiguration();
-		if (ret) {
-			throw errcode_exception(ret, "Displays::updateHardwareConfiguration() failed");
-		}
-		displays->addNewlyConnectedToDrawingLoop();
-	}
-
-	card_poll_counter ++;
+	fds_iter++;
 }
 
 // void Card::runDrawingLoop()
@@ -478,5 +500,22 @@ void Card::processFd(std::vector<pollfd>::iterator fds_iter)
  *  - Hosted on http://github.com/dvdhrm/docs
  *  - Written by David Rheinsberg <david.rheinsberg@gmail.com>
  */
+
+void Card::updateHardware() {
+	if (card_poll_counter % redraws_between_updates == 0) {
+		int ret = displays->updateHardwareConfiguration();
+		if (ret) {
+			throw errcode_exception(ret, "Displays::updateHardwareConfiguration() failed");
+		}
+		displays->addNewlyConnectedToDrawingLoop();
+		card_poll_counter = 0;
+	}
+
+	card_poll_counter ++;
+}
+
+std::shared_ptr<DeviceClassProvider> createGPUProvider(std::shared_ptr<DisplayContentsHandler> displayContentsHandler, bool enableOpenGL) {
+	return Card::probeCard(displayContentsHandler, enableOpenGL);
+}
 
 }

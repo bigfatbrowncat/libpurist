@@ -12,7 +12,7 @@
 
 namespace purist::input {
 
-class Keyboards : private std::list<std::shared_ptr<Keyboard>> {
+class Keyboards : public DeviceClassProvider, private std::list<std::shared_ptr<Keyboard>> {
 private:
     // Forbidding object copying
     Keyboards(const Keyboards& other) = delete;
@@ -23,13 +23,20 @@ private:
     xkb_keymap *keymap = nullptr;
     xkb_compose_table *compose_table = NULL;
     bool with_compose = true;
-public:
-    Keyboards();
+
+    uint32_t keyboards_poll_counter = 0;
+    uint32_t polls_between_updates = 100;
+
+    std::shared_ptr<input::KeyboardHandler> keyboardHandler;
+
     void initialize();
-    int loop();
-    std::vector<pollfd> getFds();
-    void processFd(std::vector<pollfd>::iterator fds_iter);
-    void updateHardwareConfiguration(std::shared_ptr<input::KeyboardHandler> keyboardHandler);
+
+public:
+    Keyboards(std::shared_ptr<input::KeyboardHandler> keyboardHandler);
+//    int loop();
+    std::vector<pollfd> getFds() override;
+    void processFd(std::vector<pollfd>::iterator& fds_iter) override;
+    void updateHardware() override;
     virtual ~Keyboards();
 
 };

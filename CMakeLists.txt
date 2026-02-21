@@ -10,6 +10,8 @@ set(CMAKE_PREFIX_PATH "${purist_third_party}/prefix")
 include_directories(${purist_third_party}/embed-resource)
 add_subdirectory(${purist_third_party}/embed-resource)
 
+add_subdirectory(libpurist_platform)
+add_subdirectory(libpurist_input)
 add_subdirectory(libpurist_graphics)
 add_subdirectory(libpurist_graphics_skia)
 

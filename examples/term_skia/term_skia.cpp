@@ -4,10 +4,13 @@
 
 // libpurist headers
 #include <purist/graphics/skia/DisplayContentsSkia.h>
+#include <purist/graphics/GPUProvider.h>
 #include <purist/graphics/Display.h>
 #include <purist/graphics/Mode.h>
 #include <purist/input/KeyboardHandler.h>
+#include <purist/input/KeyboardsProvider.h>
 #include <purist/Platform.h>
+#include <purist/exceptions.h>
 // #include <purist/graphics/skia/icu_common.h>
 #include <Resource.h>
 
@@ -195,7 +198,12 @@ int main(int argc, char **argv)
         auto contents = std::make_shared<TermDisplayContents>(purist, rows, cols);
         auto contents_handler_for_skia = std::make_shared<pgs::DisplayContentsHandlerForSkia>(contents, enableOpenGL);
 
-        purist->run(contents_handler_for_skia, contents);
+        //purist->run(contents_handler_for_skia, contents);
+
+        purist->run({ 
+			pi::createKeyboardsProvider(contents),
+			pg::createGPUProvider(contents_handler_for_skia, enableOpenGL)
+		});
 
         return 0;
 

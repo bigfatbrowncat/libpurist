@@ -1,5 +1,12 @@
 #include <purist/Platform.h>
 #include <purist/graphics/TargetSurface.h>
+#include <purist/graphics/DisplayContentsHandler.h>
+#include <purist/graphics/GPUProvider.h>
+
+#include <purist/input/KeyboardHandler.h>
+#include <purist/input/KeyboardsProvider.h>
+
+#include <purist/exceptions.h>
 
 #define GL_GLEXT_PROTOTYPES 1
 #include <GLES2/gl2.h>
@@ -99,8 +106,11 @@ int main(int argc, char **argv)
 
 		std::shared_ptr<p::Platform> purist = std::make_shared<p::Platform>(enableOpenGL);
 		auto contentsGenerator = std::make_shared<ColoredScreenDisplayContents>(purist, enableOpenGL);
-		
-		purist->run(contentsGenerator, contentsGenerator);
+
+		purist->run({ 
+			purist::input::createKeyboardsProvider(contentsGenerator),
+			purist::graphics::createGPUProvider(contentsGenerator, enableOpenGL)
+		});
 
 		return 0;
 	

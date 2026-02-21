@@ -20,15 +20,20 @@ add_executable(term_skia
 target_include_directories(term_skia PUBLIC ../../third-party/libvterm/include)
 target_link_directories(term_skia PUBLIC ../../third-party/libvterm)
 target_link_libraries(term_skia PUBLIC 
+    purist_platform
+    purist_input
     purist_graphics_skia
-#    skparagraph
+
     skunicode_core
     skunicode_icu
-#    skshaper
     vterm
     util
 )
 
-add_dependencies(term_skia purist_graphics_skia)
+add_dependencies(term_skia 
+    purist_platform
+    purist_input
+    purist_graphics_skia
+)
 
 add_subdirectory(app_examples)

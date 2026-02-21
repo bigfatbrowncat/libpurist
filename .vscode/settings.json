@@ -1,11 +1,14 @@
 {
     "clangd.path": "/usr/bin/clangd-19",
-    "clangd.arguments": ["-log=verbose", 
-                         "-pretty", 
-                         "--background-index", 
-                         "--suggest-missing-includes",
-                         "--query-driver=/usr/local/bin/neo-clang++", //for cross compile usage
-                         "--compile-commands-dir=${workspaceRoot}/build-${buildType}"],
+    "clangd.arguments": [
+        "-log=verbose",
+        "-pretty",
+        "--background-index",
+        "--suggest-missing-includes",
+        "--query-driver=/usr/local/bin/neo-clang++",
+        "--compile-commands-dir=${workspaceRoot}/build-${buildType}",
+        "--compile-commands-dir=${workspaceRoot}/third-party/skia-world"
+    ],
     "files.watcherExclude": {
         "**/.git/objects/**": true,
         "**/.git/subtree-cache/**": true

@@ -1,8 +1,10 @@
 #include "Keyboards.h"
 #include "Keyboard.h"
-#include <cerrno>
+#include <purist/input/KeyboardsProvider.h>
 #include <purist/exceptions.h>
 
+#include <cerrno>
+#include <memory>
 #include <vector>
 #include <cstring>
 #include <iostream>
@@ -10,8 +12,10 @@
 
 namespace purist::input {
 
-Keyboards::Keyboards() {
+Keyboards::Keyboards(std::shared_ptr<input::KeyboardHandler> keyboardHandler) 
+    : keyboardHandler(keyboardHandler) {
 
+    initialize();
 }
 
 Keyboards::~Keyboards() {
@@ -138,36 +142,40 @@ void Keyboards::initialize() {
     }
 }
 
-void Keyboards::updateHardwareConfiguration(std::shared_ptr<input::KeyboardHandler> keyboardHandler) {
-    // Probing keyboards
-    std::shared_ptr<input::Keyboard> keyboard;
-    fs::path input_path = "/dev/input/by-path/";
-    std::string suffix = "-event-kbd";
-    std::string device_path;
-    if (fs::is_directory(input_path)) {
-        for (const auto & entry : fs::directory_iterator(input_path)) {
-            device_path = entry.path();
-            if (device_path.find(std::string(suffix)) == device_path.length() - suffix.size()) {
-                // Looking for an existing keyboard
-                bool exists = false;
-                for (auto kbd : *this) {
-                    if (kbd->getNode() == device_path) {
-                        exists = true;
-                        break;
+void Keyboards::updateHardware() {
+    if (keyboards_poll_counter % polls_between_updates == 0) {
+        // Probing keyboards
+        std::shared_ptr<input::Keyboard> keyboard;
+        fs::path input_path = "/dev/input/by-path/";
+        std::string suffix = "-event-kbd";
+        std::string device_path;
+        if (fs::is_directory(input_path)) {
+            for (const auto & entry : fs::directory_iterator(input_path)) {
+                device_path = entry.path();
+                if (device_path.find(std::string(suffix)) == device_path.length() - suffix.size()) {
+                    // Looking for an existing keyboard
+                    bool exists = false;
+                    for (auto kbd : *this) {
+                        if (kbd->getNode() == device_path) {
+                            exists = true;
+                            break;
+                        }
                     }
-                }
-                if (!exists) {
-                    keyboard = std::make_unique<input::Keyboard>(device_path);
-                    if (keyboard->initializeAndProbe(keymap, compose_table, keyboardHandler)) {
-                        std::cout << "Adding found keyboard: " << device_path << std::endl;
-                        this->push_back(keyboard);
-                        //break;  // Success
+                    if (!exists) {
+                        keyboard = std::make_unique<input::Keyboard>(device_path);
+                        if (keyboard->initializeAndProbe(keymap, compose_table, keyboardHandler)) {
+                            std::cout << "Adding found keyboard: " << device_path << std::endl;
+                            this->push_back(keyboard);
+                            //break;  // Success
+                        }
                     }
+                    //keyboard = nullptr;
                 }
-                //keyboard = nullptr;
             }
         }
+        keyboards_poll_counter = 0;
     }
+    keyboards_poll_counter ++;
 }
 
 std::vector<pollfd> Keyboards::getFds() {
@@ -186,26 +194,35 @@ std::vector<pollfd> Keyboards::getFds() {
     return fds;
 }
 
-void Keyboards::processFd(std::vector<pollfd>::iterator fds_iter)
+void Keyboards::processFd(std::vector<pollfd>::iterator& fds_iter)
 {
-    std::shared_ptr<Keyboard> found_kbd = nullptr;
-    for (auto& kbd : *this) {
-        if (kbd->getFd() == fds_iter->fd) {
-            found_kbd = kbd;
-            break;
+    for (int i = 0; i < this->size(); i++) {
+        std::shared_ptr<Keyboard> found_kbd = nullptr;
+        for (auto& kbd : *this) {
+            if (kbd->getFd() == fds_iter->fd) {
+                found_kbd = kbd;
+                break;
+            }
         }
-    }
 
-    if (found_kbd == nullptr) {
-        throw errcode_exception(-1, std::string("Can't find a keyboard with fd = ") + std::to_string(fds_iter->fd));
-    }
-    
-    if (fds_iter->revents != 0) {
-        if (!found_kbd->read_keyboard(with_compose)) {
-            std::cerr << "Keyboard " << found_kbd->getNode() << " was disconnected" << std::endl;
-            this->remove(found_kbd);
+        if (found_kbd == nullptr) {
+            throw errcode_exception(-1, std::string("Can't find a keyboard with fd = ") + std::to_string(fds_iter->fd));
         }
+        
+        if (fds_iter->revents != 0) {
+            if (!found_kbd->read_keyboard(with_compose)) {
+                std::cerr << "Keyboard " << found_kbd->getNode() << " was disconnected" << std::endl;
+                this->remove(found_kbd);
+            }
+        }
+        
+        // This iter has been processed. Incrementing it to the next
+        fds_iter++;
     }
+}
+
+std::shared_ptr<DeviceClassProvider> createKeyboardsProvider(std::shared_ptr<input::KeyboardHandler> keyboardHandler) {
+    return std::make_shared<Keyboards>(keyboardHandler);
 }
 
 }

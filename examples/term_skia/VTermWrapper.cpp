@@ -263,36 +263,36 @@ void VTermWrapper::setStandardColorPalette(VTermState* state) {
     VTermColor black;
     vterm_color_rgb(&black, 1, 1, 1);
     VTermColor red;
-    vterm_color_rgb(&red, 222, 56, 43);
+    vterm_color_rgb(&red, 0xd1, 0x25, 0x25);
     VTermColor green;
-    vterm_color_rgb(&green, 57, 181, 74);
+    vterm_color_rgb(&green, 0x4e, 0x9a, 0x06);
     VTermColor yellow;
-    vterm_color_rgb(&yellow, 255, 199, 6);
+    vterm_color_rgb(&yellow, 0xc4, 0xa0, 0x00);
     VTermColor blue;
-    vterm_color_rgb(&blue, 0, 85, 190); //vterm_color_rgb(&blue, 0, 111, 184);
+    vterm_color_rgb(&blue, 0x28, 0x65, 0xda); //vterm_color_rgb(&blue, 0, 111, 184);
     VTermColor magenta;
-    vterm_color_rgb(&magenta, 118, 38, 113);
+    vterm_color_rgb(&magenta, 0x99, 0x4b, 0xa6);
     VTermColor cyan;
-    vterm_color_rgb(&cyan, 30, 160, 200); //vterm_color_rgb(&cyan, 44, 181, 233);
+    vterm_color_rgb(&cyan, 0x06, 0x98, 0x9a); //vterm_color_rgb(&cyan, 44, 181, 233);
     VTermColor light_gray;
-    vterm_color_rgb(&light_gray, 190, 190, 190); //vterm_color_rgb(&light_gray, 204, 204, 204);
+    vterm_color_rgb(&light_gray, 0xc0, 0xc0, 0xc0); //vterm_color_rgb(&light_gray, 204, 204, 204);
 
     VTermColor dark_gray;
-    vterm_color_rgb(&dark_gray, 128, 128, 128);
+    vterm_color_rgb(&dark_gray, 0x3f, 0x3f, 0x3f);
     VTermColor lred;
-    vterm_color_rgb(&lred, 255, 0, 0);
+    vterm_color_rgb(&lred, 0xe6, 0x4a, 0x4a);
     VTermColor lgreen;
-    vterm_color_rgb(&lgreen, 0, 255, 0);
+    vterm_color_rgb(&lgreen, 0x8d, 0xc8, 0x53);
     VTermColor lyellow;
-    vterm_color_rgb(&lyellow, 255, 255, 0);
+    vterm_color_rgb(&lyellow, 0xfc, 0xe9, 0x4f);
     VTermColor lblue;
-    vterm_color_rgb(&lblue, 0, 0, 255);
+    vterm_color_rgb(&lblue, 0x72, 0x9f, 0xcf);
     VTermColor lmagenta;
-    vterm_color_rgb(&lmagenta, 255, 0, 255);
+    vterm_color_rgb(&lmagenta, 0xad, 0x7f, 0xa8);
     VTermColor lcyan;
-    vterm_color_rgb(&lcyan, 0, 255, 255);
+    vterm_color_rgb(&lcyan, 0x43, 0xb7, 0xb7);
     VTermColor white;
-    vterm_color_rgb(&white, 255, 255, 255);
+    vterm_color_rgb(&white, 0xef, 0xef, 0xef);
 
     VTermColor equalized_palette[] = {
         black,     red,  green,  yellow,  blue,  magenta,  cyan,  light_gray,

@@ -124,3 +124,6 @@ To run any `libpurist`-based application (including the provided examples), the 
 These packages have to be installed for the building to succeed
 
     $ sudo apt install --no-install-recommends cmake libtool-bin libfreetype-dev libfontconfig-dev libegl-dev libgles-dev libjpeg-dev libwebp-dev libxkbcommon-dev libgbm-dev libdrm-dev libevdev-dev
+
+## Terminal color palette
+<img src="https://github.com/bigfatbrowncat/libpurist/raw/refs/heads/master/img/16+8%20palette.svg" />

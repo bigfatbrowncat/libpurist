@@ -263,36 +263,36 @@ void VTermWrapper::setStandardColorPalette(VTermState* state) {
     VTermColor black;
     vterm_color_rgb(&black, 1, 1, 1);
     VTermColor red;
-    vterm_color_rgb(&red, 0xd1, 0x25, 0x25);
+    vterm_color_rgb(&red, 185, 37, 37);
     VTermColor green;
-    vterm_color_rgb(&green, 0x4e, 0x9a, 0x06);
+    vterm_color_rgb(&green, 25, 136, 38);
     VTermColor yellow;
-    vterm_color_rgb(&yellow, 0xc4, 0xa0, 0x00);
+    vterm_color_rgb(&yellow, 154, 103, 0);
     VTermColor blue;
-    vterm_color_rgb(&blue, 0x28, 0x65, 0xda); //vterm_color_rgb(&blue, 0, 111, 184);
+    vterm_color_rgb(&blue, 61, 92, 217);
     VTermColor magenta;
-    vterm_color_rgb(&magenta, 0x99, 0x4b, 0xa6);
+    vterm_color_rgb(&magenta, 139, 62, 166);
     VTermColor cyan;
-    vterm_color_rgb(&cyan, 0x06, 0x98, 0x9a); //vterm_color_rgb(&cyan, 44, 181, 233);
+    vterm_color_rgb(&cyan, 30, 118, 126);
     VTermColor light_gray;
-    vterm_color_rgb(&light_gray, 0xc0, 0xc0, 0xc0); //vterm_color_rgb(&light_gray, 204, 204, 204);
+    vterm_color_rgb(&light_gray, 160, 160, 160);
 
     VTermColor dark_gray;
-    vterm_color_rgb(&dark_gray, 0x3f, 0x3f, 0x3f);
+    vterm_color_rgb(&dark_gray, 66, 66, 66);
     VTermColor lred;
-    vterm_color_rgb(&lred, 0xe6, 0x4a, 0x4a);
+    vterm_color_rgb(&lred, 255, 100, 100);
     VTermColor lgreen;
-    vterm_color_rgb(&lgreen, 0x8d, 0xc8, 0x53);
+    vterm_color_rgb(&lgreen, 53, 221, 79);
     VTermColor lyellow;
-    vterm_color_rgb(&lyellow, 0xfc, 0xe9, 0x4f);
+    vterm_color_rgb(&lyellow, 230, 175, 73);
     VTermColor lblue;
-    vterm_color_rgb(&lblue, 0x72, 0x9f, 0xcf);
+    vterm_color_rgb(&lblue, 151, 176, 255);
     VTermColor lmagenta;
-    vterm_color_rgb(&lmagenta, 0xad, 0x7f, 0xa8);
+    vterm_color_rgb(&lmagenta, 225, 143, 255);
     VTermColor lcyan;
-    vterm_color_rgb(&lcyan, 0x43, 0xb7, 0xb7);
+    vterm_color_rgb(&lcyan, 76, 202, 215);
     VTermColor white;
-    vterm_color_rgb(&white, 0xef, 0xef, 0xef);
+    vterm_color_rgb(&white, 220, 220, 220);
 
     VTermColor equalized_palette[] = {
         black,     red,  green,  yellow,  blue,  magenta,  cyan,  light_gray,

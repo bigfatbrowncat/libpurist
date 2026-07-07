@@ -31,3 +31,6 @@
 [submodule "third-party/libpciaccess"]
 	path = third-party/libpciaccess
 	url = https://gitlab.freedesktop.org/xorg/lib/libpciaccess
+[submodule "third-party/meson"]
+	path = third-party/meson
+	url = https://github.com/xclaesse/meson.git

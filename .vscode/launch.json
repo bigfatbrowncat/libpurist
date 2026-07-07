@@ -51,6 +51,8 @@
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "env": {
+                "MESA_DEBUG": "1",
+                "GBM_BACKENDS_PATH": "/home/il/projects/libpurist/third-party/prefix/lib/aarch64-linux-musl/gbm",
                 //"GBM_BACKEND": "dri",
                 //"GBM_BACKENDS_PATH": "/usr/lib/aarch64-linux-gnu/gbm",
                 //"__EGL_VENDOR_LIBRARY_FILENAMES": "/usr/share/glvnd/egl_vendor.d/50_mesa.json",
@@ -63,8 +65,9 @@
             "request": "launch",
             "program": "${command:cmake.buildDirectory}/examples/term_skia/term_skia",
             "args": [],
-            "cwd": "${workspaceFolder}",
+            "cwd": "${command:cmake.buildDirectory}/examples/term_skia",
             "env": {
+                //"MESA_LOADER_DRIVER_OVERRIDE": "zink"
                 //"GBM_BACKEND": "dri",
                 //"GBM_BACKENDS_PATH": "/usr/lib/aarch64-linux-gnu/gbm",
                 //"__EGL_VENDOR_LIBRARY_FILENAMES": "/usr/share/glvnd/egl_vendor.d/50_mesa.json",

@@ -519,3 +519,4 @@ std::shared_ptr<DeviceClassProvider> createGPUProvider(std::shared_ptr<DisplayCo
 }
 
 }
+

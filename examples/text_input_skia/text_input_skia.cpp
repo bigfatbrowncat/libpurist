@@ -161,6 +161,7 @@ public:
 		canvas.drawRect(rect, paint2);
 
 		int sz = (int)(0.8 * h / sqrt(4 * fmax(1, textInput.getText().countChar32() - 2)));
+		std::cout << "SZ: " << sz << std::endl;
 		textInput.setFontSize(sz);
 
     	textInput.setWidth(3 * w / 5);

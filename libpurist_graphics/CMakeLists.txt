@@ -39,11 +39,11 @@ add_library(purist_graphics STATIC
 
 find_package(PkgConfig REQUIRED)
 #pkg_search_module(EVDEV REQUIRED libevdev)
-pkg_search_module(DRM REQUIRED libdrm)
-pkg_search_module(GBM REQUIRED gbm)
+#pkg_search_module(DRM REQUIRED libdrm)
+#pkg_search_module(GBM REQUIRED gbm)
 #pkg_search_module(XKB_COMMON REQUIRED xkbcommon)
-pkg_search_module(GLES2 REQUIRED glesv2)
-pkg_search_module(GLVND REQUIRED libglvnd)
+#pkg_search_module(GLES2 REQUIRED glesv2)
+#pkg_search_module(GLVND REQUIRED libglvnd)
 
 target_compile_features(purist_graphics PUBLIC cxx_std_17)
 set_property(TARGET purist_graphics PROPERTY POSITION_INDEPENDENT_CODE ON)
@@ -62,18 +62,117 @@ target_include_directories(purist_graphics PUBLIC ${purist_graphics_SOURCE_DIR}/
 target_include_directories(purist_graphics PUBLIC ${purist_platform_SOURCE_DIR}/include)
 
 
+target_include_directories(purist_graphics PUBLIC ${purist_third_party}/prefix/include)
+target_include_directories(purist_graphics PUBLIC ${purist_third_party}/prefix/include/libdrm)  # TODO Remove this when the third party components are ordered
 target_link_directories(purist_graphics PUBLIC ${purist_third_party}/prefix/lib/${CMAKE_SYSTEM_PROCESSOR}-linux-musl)
 target_link_directories(purist_graphics PUBLIC ${purist_third_party}/prefix/lib)
+
+target_link_options(purist_graphics PRIVATE "-Wl,-z,muldefs")
 
 target_link_libraries(purist_graphics PUBLIC 
     evdev
     xkbcommon
 
+    
     drm 
     gbm 
+    #GLdispatch  # from glvnd
+    #GLESv2      # from glvnd
+
+    #EGL_mesa
+
+    #-Wl,-Bdynamic
+    #$<LINK_LIBRARY:WHOLE_ARCHIVE,/home/il/projects/libpurist/third-party/prefix/lib/aarch64-linux-musl/libgallium_dri.so>
+    #-Wl,-Bstatic
+
+    ${purist_third_party}/prefix/lib/aarch64-linux-musl/libgallium_dri.a
+    $<LINK_LIBRARY:WHOLE_ARCHIVE,${purist_third_party}/prefix/lib/aarch64-linux-musl/gbm/dri_gbm.a>
+
+
+    #$<LINK_LIBRARY:WHOLE_ARCHIVE,/home/il/projects/libpurist/third-party/mesa-meson-build/src/mesa/libmesa.a>
+
+    #$<LINK_LIBRARY:WHOLE_ARCHIVE,/home/il/projects/libpurist/third-party/mesa-meson-build/src/compiler/nir/libnir.a>
+    #$<LINK_LIBRARY:WHOLE_ARCHIVE,/home/il/projects/libpurist/third-party/mesa-meson-build/src/compiler/libcompiler.a>
+    #$<LINK_LIBRARY:WHOLE_ARCHIVE,/home/il/projects/libpurist/third-party/mesa-meson-build/src/compiler/glsl/libglsl.a>
+    #$<LINK_LIBRARY:WHOLE_ARCHIVE,/home/il/projects/libpurist/third-party/mesa-meson-build/src/compiler/glsl/libglsl_util.a>
+    #$<LINK_LIBRARY:WHOLE_ARCHIVE,/home/il/projects/libpurist/third-party/mesa-meson-build/src/gallium/auxiliary/pipe-loader/libpipe_loader_static.a>
+
+    #$<LINK_LIBRARY:WHOLE_ARCHIVE,/home/il/projects/libpurist/third-party/mesa-meson-build/src/gallium/auxiliary/libgallium.a>
+
+    #$<LINK_LIBRARY:WHOLE_ARCHIVE,/home/il/projects/libpurist/third-party/mesa-meson-build/src/mesa/glapi/shared-glapi/libglapi.a>
+    #$<LINK_LIBRARY:WHOLE_ARCHIVE,/home/il/projects/libpurist/third-party/mesa-meson-build/src/gallium/frontends/dri/libdri.a>
+    #$<LINK_LIBRARY:WHOLE_ARCHIVE,/home/il/projects/libpurist/third-party/mesa-meson-build/src/gallium/winsys/sw/kms-dri/libswkmsdri.a>
+    #$<LINK_LIBRARY:WHOLE_ARCHIVE,EGL_mesa>
+
     EGL         # from glvnd
-    GLdispatch  # from glvnd
-    GLESv2      # from glvnd
+    GLESv2
+
+    SPIRV-Tools
+    #$<LINK_LIBRARY:WHOLE_ARCHIVE,/home/il/projects/libpurist/third-party/prefix/lib/aarch64-linux-musl/gbm/dri_gbm.a>
+    #/home/il/projects/libpurist/third-party/prefix/lib/aarch64-linux-musl/gbm/dri_gbm.a
+    
+    -Wl,--allow-multiple-definition
+    #-Wl,-u,gbmint_get_backend
+    
+    
+    #/home/il/projects/libpurist/third-party/prefix/lib/aarch64-linux-musl/libgallium.a
+    
+    LLVMCore
+    LLVMSupport
+    LLVMAArch64Desc
+    LLVMMC
+    LLVMTargetParser
+    LLVMAArch64Utils
+    LLVMRuntimeDyld
+    LLVMObject
+    LLVMBitReader
+    LLVMTextAPI
+    LLVMBinaryFormat
+    LLVMDemangle
+    LLVMTarget
+    LLVMRemarks
+    LLVMMCJIT
+    LLVMAArch64CodeGen
+    LLVMCodeGen
+    LLVMAnalysis
+    LLVMTransformUtils
+    LLVMProfileData
+    LLVMGlobalISel
+    LLVMDebugInfoDWARF
+    LLVMCodeGenTypes
+    LLVMAsmPrinter
+    LLVMDebugInfoCodeView
+    LLVMDebugInfoDWARFLowLevel
+    LLVMCGData
+    LLVMMCParser
+    LLVMScalarOpts
+    LLVMSelectionDAG
+    LLVMExecutionEngine
+    LLVMAArch64Info
+    LLVMPasses
+    LLVMInstrumentation
+    LLVMipo
+    LLVMFrontendOpenMP
+    LLVMLinker
+    LLVMVectorize
+    LLVMSandboxIR
+    LLVMOrcTargetProcess
+    LLVMIRPrinter
+    LLVMFrontendAtomic
+    LLVMCoroutines
+    LLVMHipStdPar
+    LLVMObjCARCOpts
+    LLVMCFGuard
+    LLVMBitstreamReader
+    LLVMAArch64Disassembler
+    LLVMBitWriter
+    LLVMIRReader
+    LLVMMCDisassembler
+    LLVMInstCombine
+    LLVMFrontendOffloading
+    LLVMAggressiveInstCombine
+    LLVMObjectYAML
+    LLVMAsmParser
 )
 
 # Installing the library

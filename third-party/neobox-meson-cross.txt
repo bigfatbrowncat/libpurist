@@ -1,0 +1,20 @@
+[binaries]
+# Compilers
+c = '/usr/local/toolchain/aarch64-neobox-linux-musl-toolchain/bin/clang'
+cpp = '/usr/local/toolchain/aarch64-neobox-linux-musl-toolchain/bin/clang++'
+strip = '/usr/local/toolchain/aarch64-neobox-linux-musl-toolchain/bin/llvm-strip'
+
+# Other binaries
+
+[built-in options]
+
+[properties]
+sys_root = '/usr/local/toolchain/aarch64-neobox-linux-musl-toolchain'
+
+[host_machine]
+cpu = 'aarch64'
+cpu_family = 'aarch64'
+endian = 'little'
+system = 'linux'
+subsystem = 'neobox'
+

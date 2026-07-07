@@ -21,7 +21,7 @@ namespace purist {
 
 Platform::Platform(bool enableOpenGL)
         : enableOpenGL(enableOpenGL) { 
-    fix_ld_library_path();
+    //fix_ld_library_path();
 }
 
 void Platform::run(const std::vector<std::shared_ptr<DeviceClassProvider>>& dcProviders) {

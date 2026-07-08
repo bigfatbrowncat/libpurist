@@ -75,6 +75,8 @@ target_link_libraries(purist_graphics PUBLIC
 
     
     drm 
+    pciaccess
+    #$<LINK_LIBRARY:WHOLE_ARCHIVE,drm_intel>
     gbm 
     #GLdispatch  # from glvnd
     #GLESv2      # from glvnd
@@ -85,8 +87,8 @@ target_link_libraries(purist_graphics PUBLIC
     #$<LINK_LIBRARY:WHOLE_ARCHIVE,/home/il/projects/libpurist/third-party/prefix/lib/aarch64-linux-musl/libgallium_dri.so>
     #-Wl,-Bstatic
 
-    ${purist_third_party}/prefix/lib/aarch64-linux-musl/libgallium_dri.a
-    $<LINK_LIBRARY:WHOLE_ARCHIVE,${purist_third_party}/prefix/lib/aarch64-linux-musl/gbm/dri_gbm.a>
+    ${purist_third_party}/prefix/lib/${CMAKE_SYSTEM_PROCESSOR}-linux-musl/libgallium_dri.a
+    $<LINK_LIBRARY:WHOLE_ARCHIVE,${purist_third_party}/prefix/lib/${CMAKE_SYSTEM_PROCESSOR}-linux-musl/gbm/dri_gbm.a>
 
 
     #$<LINK_LIBRARY:WHOLE_ARCHIVE,/home/il/projects/libpurist/third-party/mesa-meson-build/src/mesa/libmesa.a>
@@ -105,6 +107,7 @@ target_link_libraries(purist_graphics PUBLIC
     #$<LINK_LIBRARY:WHOLE_ARCHIVE,EGL_mesa>
 
     EGL         # from glvnd
+    #GLdispatch
     GLESv2
 
     SPIRV-Tools
@@ -120,6 +123,7 @@ target_link_libraries(purist_graphics PUBLIC
     LLVMCore
     LLVMSupport
     LLVMAArch64Desc
+    LLVMX86Desc
     LLVMMC
     LLVMTargetParser
     LLVMAArch64Utils
@@ -133,6 +137,7 @@ target_link_libraries(purist_graphics PUBLIC
     LLVMRemarks
     LLVMMCJIT
     LLVMAArch64CodeGen
+    LLVMX86CodeGen
     LLVMCodeGen
     LLVMAnalysis
     LLVMTransformUtils
@@ -149,6 +154,7 @@ target_link_libraries(purist_graphics PUBLIC
     LLVMSelectionDAG
     LLVMExecutionEngine
     LLVMAArch64Info
+    LLVMX86Info
     LLVMPasses
     LLVMInstrumentation
     LLVMipo
@@ -165,6 +171,7 @@ target_link_libraries(purist_graphics PUBLIC
     LLVMCFGuard
     LLVMBitstreamReader
     LLVMAArch64Disassembler
+    LLVMX86Disassembler
     LLVMBitWriter
     LLVMIRReader
     LLVMMCDisassembler

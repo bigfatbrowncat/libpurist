@@ -13,7 +13,7 @@ export PKG_CONFIG_SYSROOT_DIR="/usr/local/toolchain/${ARCH}-neobox-linux-musl-to
 export LLVM_CONFIG="/usr/local/toolchain/${ARCH}-neobox-linux-musl-toolchain/bin/llvm-config"
 
 # for system clang
-#export PKG_CONFIG_PATH="/usr/lib/pkgconfig:/usr/lib/aarch64-linux-gnu/pkgconfig:`pwd`/prefix/lib/${ARCH}-linux-musl/pkgconfig/:`pwd`/prefix/lib/pkgconfig/"
+#export PKG_CONFIG_PATH="/usr/lib/pkgconfig:/usr/lib/${ARCH}-linux-gnu/pkgconfig:`pwd`/prefix/lib/${ARCH}-linux-musl/pkgconfig/:`pwd`/prefix/lib/pkgconfig/"
 #export PKG_CONFIG_SYSROOT_DIR="/"
 
 export MESON="`pwd`/meson/meson.py"
@@ -32,6 +32,7 @@ export CXX=neo-clang++
  -Denable-wayland=false \
  -Denable-xkbregistry=false \
  -Denable-bash-completion=false \
+ --libdir="lib/${ARCH}-linux-musl" \
  --prefix=`pwd`/../prefix && \
  $MESON compile -C ../libxkbcommon-meson-build && \
  $MESON install -C ../libxkbcommon-meson-build
@@ -44,14 +45,19 @@ then
    -Dbuildtype=${BUILD_TYPE} \
    -Dzlib=disabled \
    -Ddefault_library=static \
+   --libdir="lib/${ARCH}-linux-musl" \
    --prefix=`pwd`/../prefix && \
    $MESON compile -C ../libpciaccess-meson-build && \
    $MESON install -C ../libpciaccess-meson-build \
-  )
+ )
 fi
 
 (cd drm && \
+ CFLAGS="-I`pwd`/../prefix/include" \
+ CXXFLAGS="-I`pwd`/../prefix/include" \
+ LDFLAGS="-L`pwd`/../prefix/lib/${ARCH}-linux-musl" \
   $MESON setup --prefer-static ../drm-meson-build \
+ --cross-file `pwd`/../neobox-meson-cross-${ARCH}.txt \
  -Dbuildtype=${BUILD_TYPE} \
  -Ddefault_library=static \
  -Dtests=false \
@@ -75,12 +81,12 @@ fi
  CXXFLAGS="-I`pwd`/../prefix/include -I`pwd`/../prefix/include/libdrm -mno-outline-atomics" \
  LDFLAGS="-L`pwd`/../prefix/lib -Wl,--undefined-version -Wl,--allow-shlib-undefined" \
   $MESON setup --prefer-static ../mesa-meson-build \
- --cross-file `pwd`/../neobox-meson-cross.txt \
+ --cross-file `pwd`/../neobox-meson-cross-${ARCH}.txt \
  -Dbuildtype=${BUILD_TYPE} \
  -Degl=enabled \
  -Dgles2=enabled \
  -Dplatforms= \
- -Dgallium-drivers='panfrost' \
+ -Dgallium-drivers='panfrost,iris' \
  \
  -Dvulkan-drivers='' \
  -Dunversion-libgallium=true \
@@ -107,7 +113,9 @@ cmake --build . --target help && cmake --build . && cmake --install . )
 (cd libevdev && \
  CFLAGS="-I`pwd`/../prefix/include" \
  LDFLAGS="-L`pwd`/../prefix/lib" \
-  $MESON setup --prefer-static ../libevdev-meson-build -Dbuildtype=${BUILD_TYPE} -Ddocumentation=disabled --prefix=`pwd`/../prefix && \
+  $MESON setup --prefer-static ../libevdev-meson-build -Dbuildtype=${BUILD_TYPE} -Ddocumentation=disabled \
+ --libdir="lib/${ARCH}-linux-musl" \
+ --prefix=`pwd`/../prefix && \
  $MESON compile -C ../libevdev-meson-build && \
  $MESON install -C ../libevdev-meson-build
 )

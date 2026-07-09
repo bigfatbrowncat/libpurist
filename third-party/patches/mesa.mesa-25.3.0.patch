@@ -129,7 +129,7 @@ index 2bda1d28872..c76e50ee990 100644
 +  build_by_default : true,
  )
 diff --git a/src/gallium/targets/dri/meson.build b/src/gallium/targets/dri/meson.build
-index 134d7e4adf8..6760c6932d6 100644
+index 134d7e4adf8..296a7b878c6 100644
 --- a/src/gallium/targets/dri/meson.build
 +++ b/src/gallium/targets/dri/meson.build
 @@ -37,7 +37,7 @@ else
@@ -141,6 +141,15 @@ index 134d7e4adf8..6760c6932d6 100644
    libgallium_name,
    files('dri_target.c'),
    include_directories : [
+@@ -62,7 +62,7 @@ libgallium_dri = shared_library(
+     driver_asahi, driver_crocus, driver_rocket, driver_ethosu
+   ],
+   install : true,
+-  name_suffix : libname_suffix,
++#  name_suffix : libname_suffix,
+ )
+ 
+ shared_glapi_lib = libgallium_dri
 diff --git a/src/gbm/backends/dri/meson.build b/src/gbm/backends/dri/meson.build
 index 5c33a3a907e..71a089aca62 100644
 --- a/src/gbm/backends/dri/meson.build

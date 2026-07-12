@@ -73,9 +73,11 @@ target_link_libraries(purist_graphics PUBLIC
     evdev
     xkbcommon
 
-    
+    z
     drm 
+
     pciaccess
+
     #$<LINK_LIBRARY:WHOLE_ARCHIVE,drm_intel>
     gbm 
     #GLdispatch  # from glvnd

@@ -12,8 +12,8 @@ add_library(purist_input STATIC
 )
 
 find_package(PkgConfig REQUIRED)
-pkg_search_module(EVDEV REQUIRED libevdev)
-pkg_search_module(XKB_COMMON REQUIRED xkbcommon)
+#pkg_search_module(EVDEV REQUIRED libevdev)
+#pkg_search_module(XKB_COMMON REQUIRED xkbcommon)
 
 target_compile_features(purist_input PUBLIC cxx_std_17)
 set_property(TARGET purist_input PROPERTY POSITION_INDEPENDENT_CODE ON)
@@ -21,6 +21,7 @@ target_include_directories(purist_input PRIVATE ${EVDEV_INCLUDE_DIRS})
 target_include_directories(purist_input PRIVATE ${XKB_COMMON_INCLUDE_DIRS})
 
 target_include_directories(purist_input PUBLIC ${purist_third_party}/evdevw/include)
+target_include_directories(purist_input PUBLIC ${purist_third_party}/prefix/include)
 
 # Publishing the include dir
 target_include_directories(purist_input PUBLIC ${purist_input_SOURCE_DIR}/include)

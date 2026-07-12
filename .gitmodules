@@ -34,3 +34,6 @@
 [submodule "third-party/meson"]
 	path = third-party/meson
 	url = https://github.com/xclaesse/meson.git
+[submodule "third-party/zlib"]
+	path = third-party/zlib
+	url = https://github.com/madler/zlib.git

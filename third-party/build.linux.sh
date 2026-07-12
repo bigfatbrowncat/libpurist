@@ -5,6 +5,8 @@ echo "ARCH = "${ARCH:=x86_64}
 echo "BUILD_TYPE = "${BUILD_TYPE:=release}
 echo ""
 #echo "ARCH set to ${ARCH}"
+
+
 echo "* Building libvterm..."
 
 # for neo-clang
@@ -20,6 +22,11 @@ export MESON="`pwd`/meson/meson.py"
 export MESON_PKG_CONFIG=1
 export CC=neo-clang
 export CXX=neo-clang++
+
+(mkdir -p zlib-build && cd zlib-build && \
+cmake -DCMAKE_INSTALL_PREFIX="`pwd`/../prefix" -DCMAKE_C_COMPILER="$CC" -DCMAKE_CXX_COMPILER="$CXX" -DCMAKE_SYSROOT="${PKG_CONFIG_SYSROOT_DIR}" -DZLIB_BUILD_STATIC=ON -DZLIB_BUILD_SHARED=OFF ../zlib &&
+cmake --build . --target help && cmake --build . && cmake --install . )
+
 
 #(cd libvterm && CC=neo-clang CFLAGS="-g3 -Og" make VERBOSE=1 DEBUG=1)
 (cd libvterm && CFLAGS="-g0 -O3" make VERBOSE=1)
@@ -38,19 +45,22 @@ export CXX=neo-clang++
  $MESON install -C ../libxkbcommon-meson-build
 )
 
-if [[ "$ARCH" == "x86_64" ]]
-then
+#if [[ "$ARCH" == "x86_64" ]]
+#then
   (cd libpciaccess && \
+ CFLAGS="-I`pwd`/../prefix/include" \
+ CXXFLAGS="-I`pwd`/../prefix/include" \
+ LDFLAGS="-L`pwd`/../prefix/lib" \
     $MESON setup --prefer-static ../libpciaccess-meson-build \
    -Dbuildtype=${BUILD_TYPE} \
-   -Dzlib=disabled \
+   -Dzlib=enabled \
    -Ddefault_library=static \
    --libdir="lib/${ARCH}-linux-musl" \
    --prefix=`pwd`/../prefix && \
    $MESON compile -C ../libpciaccess-meson-build && \
    $MESON install -C ../libpciaccess-meson-build \
  )
-fi
+#fi
 
 (cd drm && \
  CFLAGS="-I`pwd`/../prefix/include" \
@@ -86,7 +96,7 @@ fi
  -Degl=enabled \
  -Dgles2=enabled \
  -Dplatforms= \
- -Dgallium-drivers='panfrost,iris' \
+ -Dgallium-drivers='panfrost,iris,v3d,vc4' \
  \
  -Dvulkan-drivers='' \
  -Dunversion-libgallium=true \
@@ -94,7 +104,7 @@ fi
  -Dgbm=enabled \
  -Dglx=disabled \
  -Dexpat=disabled \
- -Dzlib=disabled \
+ -Dzlib=enabled \
  -Dshader-cache=disabled \
  -Ddefault_library=static \
  -Dshared-llvm=disabled \
@@ -123,6 +133,7 @@ cmake --build . --target help && cmake --build . && cmake --install . )
 (cd libexecinfo && \
  make DESTDIR=`pwd`/../prefix install-static install-headers)
 
+# *************************************************
 
 echo "* Building skia..."
 (cd skia-world && \

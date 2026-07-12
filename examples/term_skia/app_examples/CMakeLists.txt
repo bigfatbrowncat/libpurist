@@ -12,6 +12,7 @@ target_include_directories(apc_test PUBLIC ${purist_third_party}/prefix/include/
 target_include_directories(apc_test PUBLIC ${purist_third_party}/prefix/include/skia/icu/source/common)
 
 target_link_directories(apc_test PUBLIC ${purist_third_party}/prefix/lib-$<IF:$<CONFIG:Debug>,debug,release>)
+target_link_directories(apc_test PUBLIC ${purist_third_party}/prefix/lib)
 
 target_link_libraries(apc_test PUBLIC 
     skia
@@ -22,6 +23,7 @@ target_link_libraries(apc_test PUBLIC
     png
     freetype2
     piex
+    z
 #    GLX
 #    fontconfig
 #    z

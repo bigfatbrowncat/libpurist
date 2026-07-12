@@ -128,6 +128,23 @@ index 2bda1d28872..c76e50ee990 100644
 -  build_by_default : false,
 +  build_by_default : true,
  )
+diff --git a/src/gallium/drivers/v3d/v3d_screen.c b/src/gallium/drivers/v3d/v3d_screen.c
+index 0beb8481cd6..170e22116fb 100644
+--- a/src/gallium/drivers/v3d/v3d_screen.c
++++ b/src/gallium/drivers/v3d/v3d_screen.c
+@@ -753,8 +753,11 @@ static struct disk_cache *
+ v3d_screen_get_disk_shader_cache(struct pipe_screen *pscreen)
+ {
+         struct v3d_screen *screen = v3d_screen(pscreen);
+-
++#ifdef ENABLE_SHADER_CACHE
+         return screen->disk_cache;
++#else
++        return NULL;
++#endif
+ }
+ 
+ static int
 diff --git a/src/gallium/targets/dri/meson.build b/src/gallium/targets/dri/meson.build
 index 134d7e4adf8..296a7b878c6 100644
 --- a/src/gallium/targets/dri/meson.build

@@ -29,7 +29,7 @@ cmake --build . --target help && cmake --build . && cmake --install . )
 
 
 #(cd libvterm && CC=neo-clang CFLAGS="-g3 -Og" make VERBOSE=1 DEBUG=1)
-(cd libvterm && CFLAGS="-g0 -O3" make VERBOSE=1)
+(cd libvterm && CC=$CC CFLAGS="-g0 -O3" make VERBOSE=1 PREFIX="`pwd`/../prefix" install-lib)
 
 (cd libxkbcommon && \
   $MESON setup --prefer-static ../libxkbcommon-meson-build \
@@ -50,7 +50,7 @@ cmake --build . --target help && cmake --build . && cmake --install . )
   (cd libpciaccess && \
  CFLAGS="-I`pwd`/../prefix/include" \
  CXXFLAGS="-I`pwd`/../prefix/include" \
- LDFLAGS="-L`pwd`/../prefix/lib" \
+ LDFLAGS="-L`pwd`/../prefix/lib -L`pwd`/../prefix/lib/${ARCH}-linux-musl" \
     $MESON setup --prefer-static ../libpciaccess-meson-build \
    -Dbuildtype=${BUILD_TYPE} \
    -Dzlib=enabled \
@@ -65,7 +65,7 @@ cmake --build . --target help && cmake --build . && cmake --install . )
 (cd drm && \
  CFLAGS="-I`pwd`/../prefix/include" \
  CXXFLAGS="-I`pwd`/../prefix/include" \
- LDFLAGS="-L`pwd`/../prefix/lib/${ARCH}-linux-musl" \
+ LDFLAGS="-L`pwd`/../prefix/lib -L`pwd`/../prefix/lib/${ARCH}-linux-musl" \
   $MESON setup --prefer-static ../drm-meson-build \
  --cross-file `pwd`/../neobox-meson-cross-${ARCH}.txt \
  -Dbuildtype=${BUILD_TYPE} \

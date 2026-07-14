@@ -8,6 +8,7 @@
 #include <vector>
 #include <cstring>
 #include <iostream>
+#include <unordered_set>
 #include <xkbcommon/xkbcommon.h>
 
 namespace purist::input {
@@ -196,6 +197,8 @@ std::vector<pollfd> Keyboards::getFds() {
 
 void Keyboards::processFd(std::vector<pollfd>::iterator& fds_iter)
 {
+    std::unordered_set<std::shared_ptr<Keyboard>> disconnected_keyboards;
+
     for (int i = 0; i < this->size(); i++) {
         std::shared_ptr<Keyboard> found_kbd = nullptr;
         for (auto& kbd : *this) {
@@ -212,13 +215,18 @@ void Keyboards::processFd(std::vector<pollfd>::iterator& fds_iter)
         if (fds_iter->revents != 0) {
             if (!found_kbd->read_keyboard(with_compose)) {
                 std::cerr << "Keyboard " << found_kbd->getNode() << " was disconnected" << std::endl;
-                this->remove(found_kbd);
+                disconnected_keyboards.insert(found_kbd);
             }
         }
         
         // This iter has been processed. Incrementing it to the next
         fds_iter++;
     }
+
+    // Erasing disconnected keyboards
+    this->erase(std::remove_if(this->begin(), this->end(), [&disconnected_keyboards](std::shared_ptr<Keyboard> item) {
+        return disconnected_keyboards.count(item) > 0;
+    }), this->end());
 }
 
 std::shared_ptr<DeviceClassProvider> createKeyboardsProvider(std::shared_ptr<input::KeyboardHandler> keyboardHandler) {

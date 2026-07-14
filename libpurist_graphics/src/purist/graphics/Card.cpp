@@ -400,7 +400,6 @@ void Card::processFd(std::vector<pollfd>::iterator& fds_iter)
 
     if (fds_iter->revents != 0) {
         drmHandleEvent(fd, &ev);
-
     }
 
 	fds_iter++;

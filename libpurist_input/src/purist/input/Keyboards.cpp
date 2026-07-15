@@ -3,6 +3,8 @@
 #include <purist/input/KeyboardsProvider.h>
 #include <purist/exceptions.h>
 
+#include <Resource.h>
+
 #include <cerrno>
 #include <memory>
 #include <vector>
@@ -10,6 +12,8 @@
 #include <iostream>
 #include <unordered_set>
 #include <xkbcommon/xkbcommon.h>
+
+static Resource Compose_res = LOAD_RESOURCE(res_locale_en_US_UTF_8_Compose);
 
 namespace purist::input {
 
@@ -129,13 +133,16 @@ void Keyboards::initialize() {
 
     if (with_compose) {
         char* locale = setlocale(LC_CTYPE, NULL);
-        compose_table =
+//        compose_table =
 //            xkb_compose_table_new_from_locale(ctx, locale,
 //                                              XKB_COMPOSE_COMPILE_NO_FLAGS);
 
+        // The original file taken from /usr/share/X11/locale/en_US.UTF-8/Compose
         compose_table =
-            xkb_compose_table_new_from_file(ctx, fopen("/usr/share/X11/locale/en_US.UTF-8/Compose", "r"), "en_US.UTF-8",
-                XKB_COMPOSE_FORMAT_TEXT_V1, XKB_COMPOSE_COMPILE_NO_FLAGS); 
+            xkb_compose_table_new_from_buffer(ctx,
+                                  Compose_res.data(), Compose_res.size(),
+                                  "en_US.UTF-8",
+                                  XKB_COMPOSE_FORMAT_TEXT_V1, XKB_COMPOSE_COMPILE_NO_FLAGS);
 
         if (!compose_table) {
             throw std::runtime_error("Couldn't create compose from locale");

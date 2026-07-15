@@ -47,7 +47,7 @@ int DisplayImpl::setup(const ModeResources& res, const ModeConnector& conn) {
 
 	/* check if there is at least one valid mode */
 	if (conn.connector->count_modes == 0) {
-		fprintf(stderr, "no valid mode for connector %u\n",	conn.connector->connector_id);
+		fprintf(stderr, "No valid mode for connector %u\n",	conn.connector->connector_id);
 		return -EFAULT;
 	}
 
@@ -80,7 +80,7 @@ int DisplayImpl::setup(const ModeResources& res, const ModeConnector& conn) {
 			uint32_t freq2 = selected_mode->getFreq();  //.clock * 1000.0f / (selected_mode.htotal * selected_mode.vtotal);
 			freq2 = (uint32_t)(freq2 * 1000.0f) / 1000.0f;
 
-			fprintf(stderr, "changing the mode from %ux%u @ %uHz to %ux%u @ %uHz\n", mode->getWidth(), mode->getHeight(), freq1, 
+			fprintf(stderr, "Changing the mode from %ux%u @ %uHz to %ux%u @ %uHz\n", mode->getWidth(), mode->getHeight(), freq1, 
 			                                                                                        new_width, new_height, freq2);
 			for (auto& fb : framebuffers) {
 				fb->removeAndDestroy();
@@ -93,7 +93,7 @@ int DisplayImpl::setup(const ModeResources& res, const ModeConnector& conn) {
 			mode = nullptr;
 		}
 	} else {
-		fprintf(stderr, "mode for connector %u is %ux%u\n", conn.connector->connector_id, new_width, new_height);
+		fprintf(stderr, "Mode for connector %u is %ux%u\n", conn.connector->connector_id, new_width, new_height);
 	}
 
 	/* copy the mode information into our device structure and into both buffers */
@@ -103,7 +103,7 @@ int DisplayImpl::setup(const ModeResources& res, const ModeConnector& conn) {
 		/* find a crtc for this connector */
 		ret = this->connectDisplayToNotOccupiedCrtc(res, conn);
 		if (ret) {
-			fprintf(stderr, "no valid crtc for connector %u: \n",
+			fprintf(stderr, "No valid crtc for connector %u: \n",
 				conn.connector->connector_id);
 			return ret;
 		}
@@ -116,7 +116,7 @@ int DisplayImpl::setup(const ModeResources& res, const ModeConnector& conn) {
 	}
 	state = State::CRTC_SET_SUCCESSFULLY;
 
-	printf("display connected to connector: %d\n", connector_id); fflush(stdout);
+	printf("Display connected to connector: %d\n", connector_id); fflush(stdout);
 	return 0;
 }
 
@@ -216,7 +216,7 @@ void DisplayImpl::setContentsHandler(std::shared_ptr<DisplayContentsHandler> con
 void DisplayImpl::updateInDrawingLoop() {
 	if (state == State::CRTC_SET_SUCCESSFULLY) { //crtc_set_successfully && !is_in_drawing_loop) {
 		state = State::IN_DRAWING_LOOP; //is_in_drawing_loop = true;
-		printf("display initialized at connector: %d\n", connector_id); fflush(stdout);
+		printf("Display initialized at connector: %d\n", connector_id); fflush(stdout);
 		draw();
 	}
 }

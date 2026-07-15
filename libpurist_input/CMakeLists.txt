@@ -1,6 +1,12 @@
 project(purist_input)
 
+embed_resources(res_locale_en_US_UTF_8_Compose
+    res/locale/en_US.UTF-8/Compose
+)
+
 add_library(purist_input STATIC
+    ${res_locale_en_US_UTF_8_Compose}
+
     # Public includes
     include/purist/input/KeyboardHandler.h
     include/purist/input/KeyboardsProvider.h
